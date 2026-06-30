@@ -1,0 +1,26 @@
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+
+    --background: #f3f4f6;
+
+    --sidebar: #ffffff;
+    --navbar: #ffffff;
+    --footer: #ffffff;
+
+    --text: #111827;
+    --text-secondary: #6b7280;
+
+    --border: #e5e7eb;
+
+    --hover: #eff6ff;
+
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+
+    --shadow: 0 8px 24px rgba(0, 0, 0, .08);
+
+    --radius: 8px;
+
+    --transition: .2s ease;
+}

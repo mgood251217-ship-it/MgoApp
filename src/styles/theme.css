@@ -1,0 +1,16 @@
+:root {
+    --primary: #2563eb;
+
+    --bg-body: #f3f4f6;
+    --bg-sidebar: #ffffff;
+    --bg-navbar: #ffffff;
+    --bg-footer: #ffffff;
+
+    --text: #111827;
+    --text-secondary: #6b7280;
+
+    --border: #e5e7eb;
+
+    --hover: #eff6ff;
+    --active: #2563eb;
+}

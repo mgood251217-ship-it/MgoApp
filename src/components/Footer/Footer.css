@@ -1,0 +1,15 @@
+.footer {
+    position: fixed;
+    left: 60px;
+    right: 0;
+    bottom: 0;
+    height: 30px;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    color: #6b7280;
+    z-index: 900;
+}
