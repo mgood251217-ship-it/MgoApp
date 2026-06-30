@@ -7,6 +7,7 @@ import {
 import Login from "../pages/Login/Login";
 import Boot from "../pages/Boot/Boot";
 
+import AuthGuard from "../guards/AuthGuard";
 import MainLayout from "../layouts/MainLayout";
 
 import Dashboard from "../pages/Dashboard";
@@ -33,7 +34,13 @@ export default function AppRouter() {
                     element={<Login />}
                 />
 
-                <Route element={<MainLayout />}>
+                <Route
+                    element={
+                        <AuthGuard>
+                            <MainLayout />
+                        </AuthGuard>
+                    }
+                >
                     <Route
                         path="/dashboard"
                         element={<Dashboard />}
