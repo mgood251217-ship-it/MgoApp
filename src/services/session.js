@@ -1,9 +1,18 @@
+import api from "../api/axios";
+
 export async function hasSession() {
-    return false;
+    try {
+        const response = await api.get("?action=session");
+        return response.data.success;
+    } catch (err) {
+        if (err.response?.status === 401) return false;
+        throw err;
+    }
 }
 
 export async function saveSession(data) {
-    return true;
+    const { data: response } = await api.post("/index.php?action=session", data);
+    return response;
 }
 
 export async function clearSession() {
@@ -11,5 +20,6 @@ export async function clearSession() {
 }
 
 export async function getSession() {
-    return null;
+    const { data } = await api.get("/index.php?action=session");
+    return data;
 }

@@ -1,7 +1,7 @@
 const config = {
     appName: "MGO Desktop",
     version: "1.0.0",
-    serverUrl: "https://your-domain.com",
+    serverUrl: "https://mgood.my.id/admin",
     timeout: 30000
 };
 

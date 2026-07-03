@@ -1,12 +1,14 @@
 import "./Sidebar.css";
 import { RiStore2Line } from "react-icons/ri";
-import {LuPackage} from "react-icons/lu";
-import {FiShoppingBag,FiFileText} from "react-icons/fi";
-import {FaBoxes} from "react-icons/fa";
-import {TbRulerMeasure} from "react-icons/tb";
-import {MdOutlineErrorOutline} from "react-icons/md";
-import {GiSewingMachine} from "react-icons/gi";
+import { LuPackage } from "react-icons/lu";
+import { FiShoppingBag, FiFileText } from "react-icons/fi";
+import { FaBoxes } from "react-icons/fa";
+import { TbRulerMeasure } from "react-icons/tb";
+import { MdOutlineErrorOutline } from "react-icons/md";
 import { NavLink } from "react-router-dom";
+import { LiaWindowRestore } from "react-icons/lia";
+import { authStore } from "../../store/auth.store";
+import config from "../../services/config";
 
 const menus = [
     { title: "Store", path: "/store", icon: <RiStore2Line /> },
@@ -15,22 +17,32 @@ const menus = [
     { title: "Global Stocks", path: "/global-stocks", icon: <FaBoxes /> },
     { title: "Meteran", path: "/meteran", icon: <TbRulerMeasure /> },
     { title: "Failure", path: "/failure", icon: <MdOutlineErrorOutline /> },
-    { title: "Maklun", path: "/maklun", icon: <GiSewingMachine /> },
+    { title: "Maklun", path: "/maklun", icon: <LiaWindowRestore /> },
     { title: "Report", path: "/report", icon: <FiFileText /> }
 ];
 
 export default function Sidebar() {
+    const session = authStore.getUser();
+    const role = session?.user?.role ?? "guest";
+    const name = session?.user?.name ?? "Guest";
+    const subtitle = session?.user?.initial ?? role;
+    const baseUrl = config.serverUrl;
+    const avatar = session?.user?.foto
+    ? session.user.foto.startsWith("http")
+        ? session.user.foto
+        : `${baseUrl}/assets/img/user/${session.user.foto}`
+    : "...";
     return (
         <aside className="sidebar">
             <div className="sidebar-profile">
                 <img
-                    src="https://i.pravatar.cc/100"
+                    src={avatar}
                     alt="Profile"
                 />
 
                 <div className="sidebar-user">
-                    <h4>Administrator</h4>
-                    <span>Super Admin</span>
+                    <h4>{name}</h4>
+                    <span>{subtitle}</span>
                 </div>
             </div>
 
