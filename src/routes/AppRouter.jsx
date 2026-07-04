@@ -10,7 +10,6 @@ import Boot from "../pages/Boot/Boot";
 import AuthGuard from "../guards/AuthGuard";
 import MainLayout from "../layouts/MainLayout";
 
-import Dashboard from "../pages/Dashboard";
 import Store from "../pages/Store";
 import Orders from "../pages/Orders";
 import Products from "../pages/Products";
@@ -33,7 +32,6 @@ export default function AppRouter() {
                         </AuthGuard>
                     }
                 >
-                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/store" element={<Store />} />
                 <Route
                     path="/orders"

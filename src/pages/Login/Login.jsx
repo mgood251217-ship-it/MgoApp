@@ -8,7 +8,7 @@ export default function Login() {
 
     function handleSuccess(data) {
         authStore.login(data);
-        navigate("/dashboard", { replace: true });
+        navigate("/store", { replace: true });
     }
 
     return (

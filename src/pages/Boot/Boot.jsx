@@ -40,7 +40,7 @@ export default function Boot() {
                 }
 
                 navigate(
-                    hasSession ? "/dashboard" : "/login",
+                    hasSession ? "/store" : "/login",
                     {
                         replace: true
                     }

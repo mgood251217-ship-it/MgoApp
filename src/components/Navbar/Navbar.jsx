@@ -1,16 +1,47 @@
-import "./Navbar.css";
-import { FiBell, FiLogOut, FiMoon } from "react-icons/fi";
+﻿import "./Navbar.css";
+import { useEffect, useState } from "react";
+import { FiBell, FiLogOut, FiMoon, FiSun } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { authStore } from "../../store/auth.store";
 import { logout as apiLogout } from "../../services/auth";
+import { changeTheme } from "../../services/setting";
 import config from "../../services/config";
+
+const THEME_KEY = "theme";
+
+function normalizeTheme(mode) {
+    return Number(mode) === 1 || mode === "dark" ? "dark" : "light";
+}
+
+function getSessionMode(session) {
+    return session?.setting?.mode ?? session?.settings?.mode ?? session?.user?.mode ?? session?.mode;
+}
+
+function getInitialTheme(session) {
+    const sessionMode = getSessionMode(session);
+
+    if (sessionMode !== undefined && sessionMode !== null) {
+        return normalizeTheme(sessionMode);
+    }
+
+    const savedTheme = localStorage.getItem(THEME_KEY);
+
+    if (savedTheme === "dark" || savedTheme === "light") {
+        return savedTheme;
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 export default function Navbar() {
     const navigate = useNavigate();
     const session = authStore.getUser();
+    const [theme, setTheme] = useState(() => getInitialTheme(session));
+    const [themeLoading, setThemeLoading] = useState(false);
     const storeName = session?.store?.name ?? "MGO Store";
     const userName = session?.user?.name ?? "Guest";
     const role = session?.user?.role ?? "";
+    const userId = session?.user?.user_id ?? session?.user_id;
     const baseUrl = config.serverUrl;
     const avatar = session?.store?.logo
     ? session.store.logo.startsWith("http")
@@ -18,10 +49,39 @@ export default function Navbar() {
         : `${baseUrl}/assets/img/store/${session.store.logo}`
     : "...";
 
+    useEffect(() => {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem(THEME_KEY, theme);
+    }, [theme]);
+
     async function handleLogout() {
         try { await apiLogout(); } catch (e) {}
         authStore.logout();
         navigate("/login", { replace: true });
+    }
+
+    async function handleTheme() {
+        if (!userId || themeLoading) return;
+
+        const currentTheme = theme;
+        const nextTheme = currentTheme === "dark" ? "light" : "dark";
+        const mode = nextTheme === "dark" ? 1 : 0;
+
+        setTheme(nextTheme);
+        setThemeLoading(true);
+
+        try {
+            const response = await changeTheme({ user_id: userId, mode });
+
+            if (!response?.success) {
+                throw new Error(response?.message || "Gagal menyimpan tema.");
+            }
+        } catch (error) {
+            setTheme(currentTheme);
+            console.log("Gagal mengubah tema:", error?.message || error);
+        } finally {
+            setThemeLoading(false);
+        }
     }
 
     return (
@@ -30,12 +90,20 @@ export default function Navbar() {
                 <img src={avatar} alt="Logo" className="navbar-logo" />
                 <div className="navbar-store">
                     <h3>{storeName}</h3>
-                    <span>{userName} {role ? `• ${role}` : ""}</span>
+                    <span>{userName} {role ? `\u2022 ${role}` : ""}</span>
                 </div>
             </div>
 
             <div className="navbar-right">
-                <button className="navbar-button"><FiMoon /></button>
+                <button
+                    className="navbar-button"
+                    onClick={handleTheme}
+                    disabled={themeLoading || !userId}
+                    aria-label={theme === "dark" ? "Aktifkan light mode" : "Aktifkan dark mode"}
+                    title={theme === "dark" ? "Light mode" : "Dark mode"}
+                >
+                    {theme === "dark" ? <FiSun /> : <FiMoon />}
+                </button>
                 <button className="navbar-button">
                     <FiBell />
                     <span className="navbar-badge">3</span>

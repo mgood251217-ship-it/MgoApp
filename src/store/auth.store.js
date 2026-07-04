@@ -25,6 +25,10 @@ export const authStore = {
     }
 };
 
+export const productStore = {
+    getProducts: () => currentUser?.products || []
+};
+
 function notify() {
     listeners.forEach((cb) => cb(currentUser));
 }

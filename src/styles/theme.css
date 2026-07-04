@@ -1,16 +1,42 @@
-:root {
-    --primary: #2563eb;
-
-    --bg-body: #f3f4f6;
-    --bg-sidebar: #ffffff;
-    --bg-navbar: #ffffff;
-    --bg-footer: #ffffff;
-
-    --text: #111827;
-    --text-secondary: #6b7280;
-
-    --border: #e5e7eb;
-
-    --hover: #eff6ff;
+﻿:root {
+    color-scheme: light;
     --active: #2563eb;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --primary: #60a5fa;
+    --primary-hover: #3b82f6;
+
+    --background: #111827;
+    --bg-body: #111827;
+    --bg-sidebar: #111827;
+    --bg-navbar: #111827;
+    --bg-footer: #111827;
+
+    --sidebar: #111827;
+    --navbar: #111827;
+    --footer: #111827;
+
+    --text: #f9fafb;
+    --text-secondary: #d1d5db;
+
+    --border: #374151;
+
+    --hover: #1f2937;
+    --active: #2563eb;
+
+    --danger: #f87171;
+    --danger-hover: #ef4444;
+
+    --shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+
+body,
+.app,
+.main,
+.content {
+    background: var(--background);
+    color: var(--text);
 }
