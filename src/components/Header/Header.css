@@ -1,0 +1,39 @@
+.header {
+    margin-bottom: 20px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.header-subtitle {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .header-actions {
+        justify-content: flex-end;
+    }
+}

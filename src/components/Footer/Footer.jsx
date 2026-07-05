@@ -1,9 +1,11 @@
+import './Footer.css';
+
 export default function Footer(){
 
     return(
 
-        <div>
-
+        <div className="footer">
+            <div>© 2026 Mgo. All rights reserved.</div>
         </div>
 
     )

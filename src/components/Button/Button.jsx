@@ -2,11 +2,13 @@ import "./Button.css";
 
 export default function Button({
     children,
+    icon,
     onClick,
     type = "button",
     loading = false,
     disabled = false,
-    variant = "primary"
+    variant = "primary",
+    size = "md"
 }) {
     const isDisabled = disabled || loading;
 
@@ -15,9 +17,11 @@ export default function Button({
             type={type}
             onClick={onClick}
             disabled={isDisabled}
-            className={`btn btn-${variant} ${isDisabled ? "btn-disabled" : ""}`}
+            className={`btn btn-${variant} btn-${size} ${isDisabled ? "btn-disabled" : ""}`}
         >
-            {loading ? "Loading..." : children}
+            {icon}
+            {!loading && children}
+            {loading && "Loading..."}
         </button>
     );
 }

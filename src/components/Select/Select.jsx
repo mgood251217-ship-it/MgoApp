@@ -1,15 +1,15 @@
 import { useId } from "react";
-import "./Input.css";
+import "./Select.css";
 
-export default function Input({
+export default function Select({
     name,
     label,
     labelPosition = "top",
     labelWidth = 140,
-    type = "text",
     value,
     onChange,
-    placeholder,
+    options = [],
+    placeholder = "Pilih...",
     error,
     disabled = false,
     autoFocus = false,
@@ -19,33 +19,42 @@ export default function Input({
 
     return (
         <div
-            className={`input-wrapper input-${labelPosition}`}
+            className={`select-wrapper select-${labelPosition}`}
             style={{
                 "--label-width": `${labelWidth}px`
             }}
         >
             {label && (
-                <label htmlFor={id} className="input-label">
+                <label htmlFor={id} className="select-label">
                     {label}
                     {required && <span className="required">*</span>}
                 </label>
             )}
 
-            <div className="input-control">
-                <input
+            <div className="select-control">
+                <select
                     id={id}
                     name={name}
-                    type={type}
                     value={value}
                     onChange={onChange}
-                    placeholder={placeholder}
                     disabled={disabled}
                     autoFocus={autoFocus}
-                    className={`input ${error ? "input-error" : ""}`}
-                />
+                    className={`select ${error ? "select-error" : ""}`}
+                >
+                    <option value="">{placeholder}</option>
+
+                    {options.map((option) => (
+                        <option
+                            key={option.value}
+                            value={option.value}
+                        >
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
 
                 {error && (
-                    <div className="input-error-text">
+                    <div className="select-error-text">
                         {error}
                     </div>
                 )}

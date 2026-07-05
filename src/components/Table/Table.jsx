@@ -1,31 +1,74 @@
-import './Table.css';
+import "./Table.css";
 
-export default function Table({ columns, data, id }) {
+export default function Table({
+    id,
+    columns = [],
+    rows = [],
+    rowKey = "id",
+    rowDataKey = "id",
+    size = "md",
+    actions,
+    showNumber = false,
+}) {
     return (
-        <table className="custom-table" id={id}>
+        <table
+            id={id}
+            className={`table table-${size}`}
+        >
             <thead>
                 <tr>
-                    {columns.map((column) => (
-                        <th key={column.key}>{column.title}</th>
+                    {showNumber && (
+                        <th className="table-number">No.</th>
+                    )}
+                    {columns.map(column => (
+                        <th key={column.key}>
+                            {column.title}
+                        </th>
                     ))}
+
+                    {actions && <th width="140">Aksi</th>}
                 </tr>
             </thead>
+
             <tbody>
-                {data.map((row, index) => (
-                    <tr key={index}>
-                        {columns.map((column) => (
-                            <td key={column.key}>{row[column.key]}</td>
-                        ))}
+                {rows.length === 0 ? (
+                    <tr>
+                        <td
+                            colSpan={columns.length + (actions ? 1 : 0)}
+                            className="text-center"
+                        >
+                            Tidak ada data
+                        </td>
                     </tr>
-                ))}
+                ) : (
+                    rows.map((row, index) => (
+                        <tr
+                            key={row[rowKey]}
+                            data-id={row[rowDataKey]}
+                        >
+                            {showNumber && (
+                                <td className="table-number">
+                                    {index + 1}
+                                </td>
+                            )}
+
+                            {columns.map(column => (
+                                <td key={column.key}>
+                                    {column.render
+                                        ? column.render(row)
+                                        : row[column.key]}
+                                </td>
+                            ))}
+
+                            {actions && (
+                                <td className="table-actions">
+                                    {actions(row)}
+                                </td>
+                            )}
+                        </tr>
+                    ))
+                )}
             </tbody>
-            <tfoot>
-                <tr>
-                    <td colSpan={columns.length}>
-                        {/* Footer content goes here */}
-                    </td>
-                </tr>
-            </tfoot>
         </table>
     );
 }

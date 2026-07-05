@@ -1,9 +1,6 @@
 import Table from '../components/Table/Table';
-import { productStore } from "../store/auth.store";
 
 export default function Store() {
-    const products = productStore.getProducts();
-    console.log('Products:', products);
     const columns = [
         { key: 'name', title: 'Name' },
         { key: 'price', title: 'Price' },

@@ -85,6 +85,7 @@ export default function LoginForm({ onSuccess }) {
             />
 
             <Button
+                size = "full-lg"
                 loading={loading}
                 disabled={loading}
                 onClick={handleLogin}
