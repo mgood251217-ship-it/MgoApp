@@ -13,7 +13,8 @@ export default function Input({
     error,
     disabled = false,
     autoFocus = false,
-    required = false
+    required = false,
+    readOnly = false
 }) {
     const id = useId();
 
@@ -41,6 +42,7 @@ export default function Input({
                     placeholder={placeholder}
                     disabled={disabled}
                     autoFocus={autoFocus}
+                    readOnly={readOnly}
                     className={`input ${error ? "input-error" : ""}`}
                 />
 

@@ -1,0 +1,34 @@
+.payment-modal-summary {
+    margin-bottom: 20px;
+    background-color: var(--bg-content);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.payment-modal-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.payment-modal-row.danger {
+    color: var(--text);
+    background-color: var(--danger);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.payment-modal-label {
+    font-weight: bold;
+}
+
+.payment-modal-value.bold {
+    font-weight: bold;
+}
+
+.payment-modal-quick-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}

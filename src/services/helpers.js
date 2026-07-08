@@ -3,6 +3,16 @@ export const sanitize = (data) => {
     return data.trim();
 };
 
+
+export const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
+
 export const formatKeInternasional = (nomor) => {
     if (!nomor) return "";
     let cleaned = nomor.toString().replace(/[^0-9]/g, "");

@@ -3,6 +3,7 @@
     --primary-hover: #1d4ed8;
 
     --secondary: #6b7280;
+    --warning: rgb(141, 152, 20);
     --success: #22c55e;
     --info: #38bdf8;
 
@@ -27,4 +28,6 @@
     --radius: 8px;
 
     --transition: .2s ease;
+
+    --wallpaper: url("../../public/wallpaper.png");
 }

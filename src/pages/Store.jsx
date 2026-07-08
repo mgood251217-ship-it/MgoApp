@@ -1,22 +1,46 @@
-import Table from '../components/Table/Table';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import api from "../api/axios";
+import Header from "../components/Header/Header";
+import Input from "../components/Input/Input";
+import Table from "../components/Table/Table";
+import Button from "../components/Button/Button";
+import Select from "../components/Select/Select";
+import Form from "../components/Form/Form";
+import Modal from "../components/Modal/Modal";
+import Icon from "../components/Icon/Icon";
 
 export default function Store() {
-    const columns = [
-        { key: 'name', title: 'Name' },
-        { key: 'price', title: 'Price' },
-        { key: 'quantity', title: 'Quantity' }
-    ];
+    const [users, setUsers] = useState([]);
+    const [machines, setMachines] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const loadData = useCallback(async () => {
+        try{
+            const resUsers = await api.get("", {
+                params : 'users'
+            })
+            setUsers(resUsers.data?.data ?? [])
 
-    const data = [
-        { name: 'Product 1', price: 10.99, quantity: 5 },
-        { name: 'Product 2', price: 15.99, quantity: 3 },
-        { name: 'Product 3', price: 20.99, quantity: 2 }
-    ];
+            const resMachines = await api.get("", {
+                params : 'machines'
+            })
+            setMachines(resMachines.data?.data ?? [])
+
+            const resLocations = await api.get("", {
+                params : 'locations'
+            })
+            setLocations(resLocations.data?.data ?? [])
+
+            console.log(resUsers);
+            
+        }catch (error){
+            console.log(error)
+        }
+    });
+
+
 
     return (
-        <div>
-            <h1>Store</h1>
-            <Table columns={columns} data={data} id="store-table" />
-        </div>
+        <>
+        </>
     );
 }

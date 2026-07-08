@@ -4,24 +4,42 @@ import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
 import Table from "../components/Table/Table";
 import Button from "../components/Button/Button";
+import Select from "../components/Select/Select";
+import Form from "../components/Form/Form";
+import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
-import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInternasional } from "../services/helpers";
+import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInternasional, getTodayDate } from "../services/helpers";
+import PaymentModal from "../components/PaymentModal/PaymentModal";
 
 export default function Orders() {
-    const getTodayDate = () => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, "0");
-        const day = String(today.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    };
-
     const [ordersOnline, setOrdersOnline] = useState([]);
     const [ordersOffline, setOrdersOffline] = useState([]);
+    const [operators, setOperators] = useState([]);
     
     const [search, setSearch] = useState("");
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
+
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
+
+    const [addModalOpen, setAddModalOpen] = useState(false);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    
+    const [viewModalOpen, setViewModalOpen] = useState(false);
+    const [viewOrderData, setViewOrderData] = useState({ total: 0, items: [], diskon_per_produk: {} });
+    const [viewOrderDetails, setViewOrderDetails] = useState(null);
+
+    const [formOrder, setFormOrder] = useState({
+        order_id: "",
+        nomorator: "",
+        customer_name: "",
+        nomor: "",
+        deadline: "",
+        date: "",
+        user_id: "",
+        system: "OFFLINE"
+    });
 
     const formatTableData = useCallback((data) => {
         return data.map(row => ({
@@ -53,9 +71,122 @@ export default function Orders() {
         }
     }, [search, startDate, endDate, formatTableData]);
 
+    const getOperators = useCallback(async () => {
+        try {
+            const res = await api.get("", { params: { action: "get_initial" } });
+            setOperators(res.data?.data || []);
+        } catch (err) {
+            console.error(err);
+        }
+    }, []);
+
     useEffect(() => {
         loadData();
+        getOperators();
     }, []); 
+
+    const handlePayClick = useCallback((row) => {
+        setSelectedOrder(row);
+        setPaymentModalOpen(true);
+    }, []);
+
+    const handlePaymentSuccess = useCallback(() => {
+        setPaymentModalOpen(false);
+        loadData();
+    }, [loadData]);
+
+    const handleViewOrder = useCallback(async (row) => {
+        try {
+            const res = await api.get("", { 
+                params: { action: "order_detail", order_id: row.order_id } 
+            });
+            setViewOrderData(res.data?.data || { total: 0, items: [], diskon_per_produk: {} });
+            setViewOrderDetails(row);
+            setViewModalOpen(true);
+        } catch (err) {
+            console.error(err);
+        }
+    }, []);
+
+    const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setFormOrder(prev => ({ ...prev, [name]: value }));
+    };
+
+    const formatDateTime = (val) => {
+        if (!val) return "";
+        return val.replace(" ", "T").substring(0, 16);
+    };
+
+    const handleAddOrder = () => {
+        let defaultSystem = "OFFLINE";
+        const sessionRole = localStorage.getItem("role") || "";
+        if (sessionRole === "ONLINE") defaultSystem = "ONLINE";
+
+        setFormOrder({
+            order_id: "",
+            nomorator: "",
+            customer_name: "",
+            nomor: "",
+            deadline: "",
+            date: "",
+            user_id: "",
+            system: defaultSystem
+        });
+        setAddModalOpen(true);
+    };
+
+    const handleEditOrder = useCallback((row) => {
+        setFormOrder({
+            order_id: row.order_id,
+            nomorator: row.nomorator,
+            customer_name: row.customer_name,
+            nomor: row.nomor,
+            deadline: formatDateTime(row.deadline),
+            date: formatDateTime(row.date),
+            user_id: row.user_id,
+            system: row.system || "ONLINE"
+        });
+        setEditModalOpen(true);
+    }, []);
+
+    const handleAddSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = new FormData();
+            payload.append("customer_name", formOrder.customer_name);
+            payload.append("nomor", formOrder.nomor);
+            payload.append("deadline", formOrder.deadline ? formOrder.deadline.replace("T", " ") + ":00" : "");
+            payload.append("user_id", formOrder.user_id);
+            payload.append("system", formOrder.system);
+
+            await api.post("", payload, { params: { action: "create_order" } });
+            setAddModalOpen(false);
+            loadData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = new FormData();
+            payload.append("order_id", formOrder.order_id);
+            payload.append("customer_name", formOrder.customer_name);
+            payload.append("nomor", formOrder.nomor);
+            payload.append("deadline", formOrder.deadline ? formOrder.deadline.replace("T", " ") + ":00" : "");
+            payload.append("date", formOrder.date ? formOrder.date.replace("T", " ") + ":00" : "");
+            payload.append("user_id", formOrder.user_id);
+            payload.append("system", formOrder.system);
+
+            await api.post("", payload, { params: { action: "update_order" } });
+            setEditModalOpen(false);
+            loadData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     const tableColumns = useMemo(() => [
         { key: "nomorator", title: "Invoice" },
@@ -68,6 +199,22 @@ export default function Orders() {
         { key: "op_initial", title: "CS" }
     ], []);
 
+    const viewTableColumns = useMemo(() => [
+        { key: "product_name", title: "Nama" },
+        { key: "size", title: "Ukuran" },
+        { key: "finishing_names", title: "Finishing" },
+        { key: "quantity", title: "Qty" },
+        { key: "formatted_amount", title: "Jumlah" },
+        { key: "maklun_store", title: "Maklun" }
+    ], []);
+
+    const viewItemsMapped = useMemo(() => {
+        return (viewOrderData?.items || []).map(item => ({
+            ...item,
+            formatted_amount: formatRupiah(item.amount)
+        }));
+    }, [viewOrderData]);
+
     const tableActions = useCallback((row) => (
         <div style={{ display: "flex", gap: "4px" }}>
             <Button
@@ -75,19 +222,19 @@ export default function Orders() {
                 variant="success"
                 icon={<Icon name="payments" />}
                 disabled={row.is_lunas}
-                onClick={() => console.log("Pay", row.order_id)}
+                onClick={() => handlePayClick(row)}
             />
             <Button
                 size="sm"
                 variant="info"
                 icon={<Icon name="visibility" />}
-                onClick={() => console.log("View", row.order_id)}
+                onClick={() => handleViewOrder(row)}
             />
             <Button
                 size="sm"
                 variant="warning"
                 icon={<Icon name="edit" />}
-                onClick={() => console.log("Edit", row.order_id)}
+                onClick={() => handleEditOrder(row)}
             />
             <Button
                 size="sm"
@@ -109,7 +256,19 @@ export default function Orders() {
                 onClick={() => console.log("Process", row.order_id)}
             />
         </div>
-    ), []);
+    ), [handlePayClick, handleViewOrder, handleEditOrder]);
+
+    const operatorOptions = useMemo(() => {
+        return Object.entries(operators).map(([id, name]) => ({
+            value: id,
+            label: name
+        }));
+    }, [operators]);
+
+    const systemOptions = [
+        { value: "ONLINE", label: "ONLINE" },
+        { value: "OFFLINE", label: "OFFLINE" }
+    ];
 
     return (
         <>
@@ -124,7 +283,7 @@ export default function Orders() {
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
                         />
-                        <span style={{ fontWeight: "bold", color: "#666" }}>-</span>
+                        <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>-</span>
                         <Input
                             type="date"
                             name="end_date"
@@ -140,10 +299,19 @@ export default function Orders() {
                         />
                         <Button 
                             variant="primary" 
+                            size="full-lg"
                             icon={<Icon name="search" />} 
                             onClick={loadData}
                         >
                             Filter
+                        </Button>
+                        <Button 
+                            variant="success" 
+                            size="full-lg"
+                            icon={<Icon name="add" />} 
+                            onClick={handleAddOrder}
+                        >
+                            Tambah
                         </Button>
                     </div>
                 }
@@ -176,6 +344,205 @@ export default function Orders() {
                     actions={tableActions}
                 />
             </div>
+
+            <PaymentModal
+                open={paymentModalOpen}
+                onClose={() => setPaymentModalOpen(false)}
+                order={selectedOrder}
+                onSuccess={handlePaymentSuccess}
+            />
+
+            <Modal
+                open={viewModalOpen}
+                onClose={() => setViewModalOpen(false)}
+                title={`Detail Order - ${viewOrderDetails?.nomorator || ""}`}
+                size="lg"
+                headerColor="info"
+            >
+                <div style={{ marginBottom: 16 }}>
+                    <Table
+                        id="tableViewItems"
+                        showNumber
+                        size="sm"
+                        rowKey="order_item_id"
+                        rowDataKey="order_item_id"
+                        columns={viewTableColumns}
+                        rows={viewItemsMapped}
+                    />
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, padding: "16px", backgroundColor: "var(--bg-content)", borderRadius: "8px", border: "1px solid var(--border)"}}>
+                    <div>
+                        <h5 style={{ margin: "0 0 8px 0" }}>Diskon Produk:</h5>
+                        {Object.keys(viewOrderData?.diskon_per_produk || {}).length > 0 ? (
+                            <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--text)" }}>
+                                {Object.entries(viewOrderData.diskon_per_produk).map(([nama, diskon]) => (
+                                    <li key={nama}>
+                                        {nama}: {formatRupiah(diskon)}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <span style={{ color: "var(--secondary)" }}>Tidak ada diskon</span>
+                        )}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                        <h4 style={{ margin: 0 }}>Total Bayar</h4>
+                        <h2 style={{ margin: "4px 0 0 0", color: "var(--success)" }}>
+                            {formatRupiah(viewOrderData?.total || 0)}
+                        </h2>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                open={addModalOpen}
+                onClose={() => setAddModalOpen(false)}
+                title="Tambah Order"
+                size="sm"
+                headerColor="success"
+            >
+                <Form id="formAddOrder" onSubmit={handleAddSubmit}>
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="customer_name"
+                        value={formOrder.customer_name}
+                        onChange={handleFormChange}
+                        label="Nama"
+                        placeholder="Nama Pelanggan"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="nomor"
+                        value={formOrder.nomor}
+                        onChange={handleFormChange}
+                        label="Nomor"
+                        placeholder="Nomor Telepon / WA"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="deadline"
+                        type="datetime-local"
+                        value={formOrder.deadline}
+                        onChange={handleFormChange}
+                        label="Deadline"
+                        required
+                    />
+                    <Select
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="user_id"
+                        label="Operator"
+                        value={formOrder.user_id}
+                        onChange={handleFormChange}
+                        options={operatorOptions}
+                        placeholder="Pilih Operator"
+                        required
+                    />
+                    <Select
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="system"
+                        label="System"
+                        value={formOrder.system}
+                        onChange={handleFormChange}
+                        options={systemOptions}
+                        required
+                    />
+                    <Button type="submit" size="full-lg" variant="success" icon={<Icon name="add" />}>
+                        Simpan Order
+                    </Button>
+                </Form>
+            </Modal>
+
+            <Modal
+                open={editModalOpen}
+                onClose={() => setEditModalOpen(false)}
+                title="Edit Order"
+                size="sm"
+                headerColor="warning"
+            >
+                <Form id="formEditOrder" onSubmit={handleEditSubmit}>
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="nomorator"
+                        value={formOrder.nomorator}
+                        onChange={handleFormChange}
+                        label="Inv"
+                        readOnly
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="date"
+                        type="datetime-local"
+                        value={formOrder.date}
+                        onChange={handleFormChange}
+                        label="Tanggal"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="customer_name"
+                        value={formOrder.customer_name}
+                        onChange={handleFormChange}
+                        label="Nama"
+                        placeholder="Nama Pelanggan"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="nomor"
+                        value={formOrder.nomor}
+                        onChange={handleFormChange}
+                        label="Nomor"
+                        placeholder="Nomor Telepon / WA"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="deadline"
+                        type="datetime-local"
+                        value={formOrder.deadline}
+                        onChange={handleFormChange}
+                        label="Deadline"
+                        required
+                    />
+                    <Select
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="user_id"
+                        label="Operator"
+                        value={formOrder.user_id}
+                        onChange={handleFormChange}
+                        options={operatorOptions}
+                        placeholder="Pilih Operator"
+                        required
+                    />
+                    <Select
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="system"
+                        label="System"
+                        value={formOrder.system}
+                        onChange={handleFormChange}
+                        options={systemOptions}
+                        required
+                    />
+                    <Button type="submit" size="full-lg" variant="warning" icon={<Icon name="edit" />}>
+                        Update Order
+                    </Button>
+                </Form>
+            </Modal>
         </>
     );
 }

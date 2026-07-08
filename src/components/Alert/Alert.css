@@ -7,24 +7,20 @@
     align-items: center;
     margin-bottom: 12px;
     border: 1px solid transparent;
+    border-color: var(--border);
+    color: var(--text);
 }
 
 .alert-error {
-    background: #ffe5e5;
-    color: #b00020;
-    border-color: #ffb3b3;
+    background: var(--danger);
 }
 
 .alert-success {
-    background: #e6ffed;
-    color: #1b7f3a;
-    border-color: #a6f4c5;
+    background: var(--success);
 }
 
 .alert-warning {
-    background: #fff8e1;
-    color: #8a6d1e;
-    border-color: #ffe58f;
+    background: var(--warning);
 }
 
 .alert-message {

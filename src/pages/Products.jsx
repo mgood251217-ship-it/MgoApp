@@ -12,39 +12,51 @@ import Pagination from "../components/Pagination/Pagination";
 
 export default function Products() {
     const [products, setProducts] = useState([]);
-    const [open, setOpen] = useState(false);
-    const [isEdit, setIsEdit] = useState(false);
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [selectedId, setSelectedId] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [finishings, setFinishings] = useState([]);
+
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [page, setPage] = useState(1);
     const [limit] = useState(25);
     const [totalPages, setTotalPages] = useState(1);
 
-    const kategori = useMemo(() => [
-        { value: "OUTDOOR", label: "OUTDOOR" },
-        { value: "FINISHING OUTDOOR", label: "FINISHING OUTDOOR" },
-        { value: "INDOOR", label: "INDOOR" },
-        { value: "FINISHING INDOOR", label: "FINISHING INDOOR" },
-        { value: "PAKET INDOOR OUTDOOR", label: "PAKET INDOOR OUTDOOR" },
-        { value: "LASER A3", label: "LASER A3" },
-        { value: "FINISHING LASER A3", label: "FINISHING LASER A3" },
-        { value: "SUBLIM", label: "SUBLIM" },
-        { value: "FINISHING SUBLIM", label: "FINISHING SUBLIM" },
-        { value: "DTF", label: "DTF" },
-        { value: "STAMP", label: "STAMP" },
-        { value: "MERCENDISE", label: "MERCENDISE" },
-        { value: "MERCENDISE AKRILIK", label: "MERCENDISE AKRILIK" },
-        { value: "JERSEY", label: "JERSEY" },
-        { value: "FINISHING JERSEY", label: "FINISHING JERSEY" },
-        { value: "AKRILIK", label: "AKRILIK" },
-        { value: "FINISHING AKRILIK", label: "FINISHING AKRILIK" },
-        { value: "KARTU NAMA", label: "KARTU NAMA" },
-        { value: "CETAKAN", label: "CETAKAN" },
-        { value: "FINISHING CETAKAN", label: "FINISHING CETAKAN" },
-        { value: "JASA", label: "JASA" }
-    ], []);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleteConfig, setDeleteConfig] = useState({ id: null, type: "" });
+
+    const [openProduct, setOpenProduct] = useState(false);
+    const [isEditProduct, setIsEditProduct] = useState(false);
+    const [selectedProductId, setSelectedProductId] = useState(null);
+
+    const [openFinishing, setOpenFinishing] = useState(false);
+    const [isEditFinishing, setIsEditFinishing] = useState(false);
+    const [selectedFinishingId, setSelectedFinishingId] = useState(null);
+
+    const [openCategory, setOpenCategory] = useState(false);
+    const [isEditCategory, setIsEditCategory] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+
+    const [formProduct, setFormProduct] = useState({
+        name: "",
+        category_id: "",
+        unit_type: "",
+        price: "",
+        reasonable_price: "",
+        failed_price: ""
+    });
+
+    const [formFinishing, setFormFinishing] = useState({
+        name: "",
+        category_id: "",
+        unit_type: "",
+        price: "",
+        reasonable_price: "",
+        failed_price: ""
+    });
+
+    const [formCategory, setFormCategory] = useState({
+        name: ""
+    });
 
     const unit = useMemo(() => [
         { value: "M2", label: "M2" },
@@ -54,18 +66,16 @@ export default function Products() {
         { value: "~", label: "~" }
     ], []);
 
-    const [form, setForm] = useState({
-        name: "",
-        type: "",
-        unit_type: "",
-        price: "",
-        reasonable_price: "",
-        failed_price: ""
-    });
+    const categoryOptions = useMemo(() => {
+        return categories.map((c) => ({
+            value: c.category_id,
+            label: c.name
+        }));
+    }, [categories]);
 
     const loadData = useCallback(async () => {
         try {
-            const res = await api.get("", {
+            const resProd = await api.get("", {
                 params: {
                     action: "pagination_products",
                     page,
@@ -73,9 +83,18 @@ export default function Products() {
                     search: debouncedSearch
                 }
             });
+            setProducts(resProd.data?.data?.data ?? []);
+            setTotalPages(resProd.data?.data?.total_pages ?? 1);
 
-            setProducts(res.data?.data?.data ?? []);
-            setTotalPages(res.data?.data?.total_pages ?? 1);
+            const resCat = await api.get("", {
+                params: { action: "categories" }
+            });
+            setCategories(resCat.data?.data ?? []);
+
+            const resFin = await api.get("", {
+                params: { action: "finishings" }
+            });
+            setFinishings(resFin.data?.data ?? []);
         } catch (err) {
             console.error(err);
         }
@@ -94,69 +113,157 @@ export default function Products() {
         loadData();
     }, [loadData]);
 
-    const handleFormChange = useCallback((e) => {
+    const handleFormProductChange = useCallback((e) => {
         const { name, value } = e.target;
-        setForm((prev) => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormProduct((prev) => ({ ...prev, [name]: value }));
     }, []);
 
-    const handleAddClick = () => {
-        setForm({
+    const handleFormFinishingChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setFormFinishing((prev) => ({ ...prev, [name]: value }));
+    }, []);
+
+    const handleFormCategoryChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setFormCategory((prev) => ({ ...prev, [name]: value }));
+    }, []);
+
+    const handleAddProductClick = () => {
+        setFormProduct({
             name: "",
-            type: "",
+            category_id: "",
             unit_type: "",
             price: "",
             reasonable_price: "",
             failed_price: ""
         });
-        setIsEdit(false);
-        setOpen(true);
+        setIsEditProduct(false);
+        setOpenProduct(true);
     };
 
-    const handleEditClick = useCallback((row) => {
-        setForm({
+    const handleEditProductClick = useCallback((row) => {
+        setFormProduct({
             name: row.name || "",
-            type: row.type || "",
+            category_id: row.category_id || "",
             unit_type: row.unit_type || "",
             price: row.price || "",
             reasonable_price: row.reasonable_price || "",
             failed_price: row.failed_price || ""
         });
-        setSelectedId(row.product_id);
-        setIsEdit(true);
-        setOpen(true);
+        setSelectedProductId(row.product_id);
+        setIsEditProduct(true);
+        setOpenProduct(true);
     }, []);
 
-    const handleDeleteClick = useCallback((id) => {
-        setSelectedId(id);
+    const handleAddFinishingClick = () => {
+        setFormFinishing({
+            name: "",
+            category_id: "",
+            unit_type: "",
+            price: "",
+            reasonable_price: "",
+            failed_price: ""
+        });
+        setIsEditFinishing(false);
+        setOpenFinishing(true);
+    };
+
+    const handleEditFinishingClick = useCallback((row) => {
+        setFormFinishing({
+            name: row.name || "",
+            category_id: row.category_id || "",
+            unit_type: row.unit_type || "",
+            price: row.price || "",
+            reasonable_price: row.reasonable_price || "",
+            failed_price: row.failed_price || ""
+        });
+        setSelectedFinishingId(row.finishing_id);
+        setIsEditFinishing(true);
+        setOpenFinishing(true);
+    }, []);
+
+    const handleAddCategoryClick = () => {
+        setFormCategory({ name: "" });
+        setIsEditCategory(false);
+        setOpenCategory(true);
+    };
+
+    const handleEditCategoryClick = useCallback((row) => {
+        setFormCategory({ name: row.name || "" });
+        setSelectedCategoryId(row.category_id);
+        setIsEditCategory(true);
+        setOpenCategory(true);
+    }, []);
+
+    const handleDeleteClick = useCallback((id, type) => {
+        setDeleteConfig({ id, type });
         setConfirmOpen(true);
     }, []);
 
-    const handleSubmit = async (e) => {
+    const handleSubmitProduct = async (e) => {
         e.preventDefault();
-        
         try {
-            const action = isEdit ? "update_product" : "create_product";
+            const action = isEditProduct ? "update_product" : "create_product";
             const payload = new FormData();
             
-            payload.append("name", form.name);
-            payload.append("type", form.type);
-            payload.append("unit_type", form.unit_type);
-            payload.append("price", form.price);
-            payload.append("reasonable_price", form.reasonable_price);
-            payload.append("failed_price", form.failed_price);
+            payload.append("name", formProduct.name);
+            payload.append("category_id", formProduct.category_id);
+            payload.append("unit_type", formProduct.unit_type);
+            payload.append("price", formProduct.price);
+            payload.append("reasonable_price", formProduct.reasonable_price);
+            payload.append("failed_price", formProduct.failed_price);
             
-            if (isEdit) {
-                payload.append("product_id", selectedId);
+            if (isEditProduct) {
+                payload.append("product_id", selectedProductId);
             }
 
-            await api.post("", payload, {
-                params: { action }
-            });
+            await api.post("", payload, { params: { action } });
+            setOpenProduct(false);
+            loadData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleSubmitFinishing = async (e) => {
+        e.preventDefault();
+        try {
+            const action = isEditFinishing ? "update_finishing" : "create_finishing";
+            const payload = new FormData();
             
-            setOpen(false);
+            payload.append("name", formFinishing.name);
+            payload.append("category_id", formFinishing.category_id);
+            payload.append("unit_type", formFinishing.unit_type);
+            payload.append("price", formFinishing.price);
+            payload.append("reasonable_price", formFinishing.reasonable_price);
+            payload.append("failed_price", formFinishing.failed_price);
+            
+            if (isEditFinishing) {
+                payload.append("finishing_id", selectedFinishingId);
+            }
+
+            await api.post("", payload, { params: { action } });
+            setOpenFinishing(false);
+            loadData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleSubmitCategory = async (e) => {
+        e.preventDefault();
+        try {
+            const action = isEditCategory ? "update_category" : "create_category";
+            const payload = new FormData();
+            
+            payload.append("name", formCategory.name);
+            
+            if (isEditCategory) {
+                payload.append("category_id", selectedCategoryId);
+            }
+
+            await api.post("", payload, { params: { action } });
+            setOpenCategory(false);
             loadData();
         } catch (err) {
             console.error(err);
@@ -166,12 +273,20 @@ export default function Products() {
     const handleConfirmDelete = async () => {
         try {
             const payload = new FormData();
-            payload.append("product_id", selectedId);
+            let action = "";
 
-            await api.post("", payload, {
-                params: { action: "delete_product" }
-            });
-            
+            if (deleteConfig.type === "product") {
+                payload.append("product_id", deleteConfig.id);
+                action = "delete_product";
+            } else if (deleteConfig.type === "finishing") {
+                payload.append("finishing_id", deleteConfig.id);
+                action = "delete_finishing";
+            } else if (deleteConfig.type === "category") {
+                payload.append("category_id", deleteConfig.id);
+                action = "delete_category";
+            }
+
+            await api.post("", payload, { params: { action } });
             setConfirmOpen(false);
             loadData();
         } catch (err) {
@@ -179,8 +294,8 @@ export default function Products() {
         }
     };
 
-    const tableColumns = useMemo(() => [
-        { key: "type", title: "Type" },
+    const productColumns = useMemo(() => [
+        { key: "category", title: "Kategori" },
         { key: "name", title: "Nama" },
         { key: "unit_type", title: "Satuan" },
         { key: "price", title: "Harga" },
@@ -189,29 +304,67 @@ export default function Products() {
         { key: "stock", title: "Stok" }
     ], []);
 
-    const tableActions = useCallback((row) => (
+    const categoryColumns = useMemo(() => [
+        { key: "category_id", title: "ID Kategori" },
+        { key: "name", title: "Nama Kategori" }
+    ], []);
+
+    const productActions = useCallback((row) => (
         <>
             <Button
                 size="sm"
                 variant="warning"
                 icon={<Icon name="edit" />}
-                onClick={() => handleEditClick(row)}
+                onClick={() => handleEditProductClick(row)}
             />
-
             <Button
                 size="sm"
                 variant="danger"
                 icon={<Icon name="delete" />}
-                onClick={() => handleDeleteClick(row.product_id)}
+                onClick={() => handleDeleteClick(row.product_id, "product")}
             />
         </>
-    ), [handleEditClick, handleDeleteClick]);
+    ), [handleEditProductClick, handleDeleteClick]);
+
+    const finishingActions = useCallback((row) => (
+        <>
+            <Button
+                size="sm"
+                variant="warning"
+                icon={<Icon name="edit" />}
+                onClick={() => handleEditFinishingClick(row)}
+            />
+            <Button
+                size="sm"
+                variant="danger"
+                icon={<Icon name="delete" />}
+                onClick={() => handleDeleteClick(row.finishing_id, "finishing")}
+            />
+        </>
+    ), [handleEditFinishingClick, handleDeleteClick]);
+
+    const categoryActions = useCallback((row) => (
+        <>
+            <Button
+                size="sm"
+                variant="warning"
+                icon={<Icon name="edit" />}
+                onClick={() => handleEditCategoryClick(row)}
+            />
+            <Button
+                size="sm"
+                variant="danger"
+                icon={<Icon name="delete" />}
+                onClick={() => handleDeleteClick(row.category_id, "category")}
+            />
+        </>
+    ), [handleEditCategoryClick, handleDeleteClick]);
 
     return (
         <>
             <Header
-                title="Products"
-                subtitle="Kelola data produk."
+                title="Manajemen Produk"
+                subtitle="Kelola data produk, finishing, dan kategori."
                 actions={
                     <Input
                         name="search"
@@ -223,123 +376,275 @@ export default function Products() {
                 }
             />
 
-            <Table
-                id="tableProducts"
-                showNumber
-                size="sm"
-                rowKey="product_id"
-                rowDataKey="product_id"
-                columns={tableColumns}
-                rows={products}
-                actions={tableActions}
-            />
+            <div style={{ padding: "0 16px" }}>
+                <div style={{ marginBottom: "2.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                        <h3 style={{ margin: 0 }}>Daftar Produk</h3>
+                        <Button size="sm" icon={<Icon name="add" />} onClick={handleAddProductClick}>
+                            Tambah Produk
+                        </Button>
+                    </div>
+                    <Table
+                        id="tableProducts"
+                        showNumber
+                        size="sm"
+                        rowKey="product_id"
+                        rowDataKey="product_id"
+                        columns={productColumns}
+                        rows={products}
+                        actions={productActions}
+                    />
+                    <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+                        <Pagination
+                            page={page}
+                            totalPages={totalPages}
+                            onChange={setPage}
+                        />
+                    </div>
+                </div>
 
-            <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
-                <Pagination
-                    page={page}
-                    totalPages={totalPages}
-                    onChange={setPage}
-                />
-            </div>
+                <div style={{ marginBottom: "2.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                        <h3 style={{ margin: 0}}>Daftar Finishing</h3>
+                        <Button size="sm" icon={<Icon name="add" />} onClick={handleAddFinishingClick}>
+                            Tambah Finishing
+                        </Button>
+                    </div>
+                    <Table
+                        id="tableFinishings"
+                        showNumber
+                        size="sm"
+                        rowKey="finishing_id"
+                        rowDataKey="finishing_id"
+                        columns={productColumns}
+                        rows={finishings}
+                        actions={finishingActions}
+                    />
+                </div>
 
-            <div style={{ position: "fixed", bottom: 32, right: 32, zIndex: 999 }}>
-                <Button
-                    icon={<Icon name="add" />}
-                    onClick={handleAddClick}
-                >
-                    Tambah Produk
-                </Button>
+                <div style={{ marginBottom: "2.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                        <h3 style={{ margin: 0}}>Daftar Kategori</h3>
+                        <Button size="sm" icon={<Icon name="add" />} onClick={handleAddCategoryClick}>
+                            Tambah Kategori
+                        </Button>
+                    </div>
+                    <Table
+                        id="tableCategories"
+                        showNumber
+                        size="sm"
+                        rowKey="category_id"
+                        rowDataKey="category_id"
+                        columns={categoryColumns}
+                        rows={categories}
+                        actions={categoryActions}
+                    />
+                </div>
             </div>
 
             <Modal
-                open={open}
-                title={isEdit ? "Edit Produk" : "Tambah Produk"}
-                onClose={() => setOpen(false)}
+                open={openProduct}
+                title={isEditProduct ? "Edit Produk" : "Tambah Produk"}
+                onClose={() => setOpenProduct(false)}
                 size="sm"
                 headerColor="success"
             >
                 <Form
                     id="productForm"
-                    onSubmit={handleSubmit}
+                    onSubmit={handleSubmitProduct}
                 >
                     <Input
                         labelPosition="left"
                         labelWidth={130}
                         name="name"
-                        value={form.name}
-                        onChange={handleFormChange}
-                        label="Product Name"
-                        placeholder="Input product name"
+                        value={formProduct.name}
+                        onChange={handleFormProductChange}
+                        label="Nama Produk"
+                        placeholder="Input nama produk"
                         required
                     />
-
                     <Select
                         labelPosition="left"
                         labelWidth={130}
-                        name="type"
+                        name="category_id"
                         label="Kategori"
-                        value={form.type}
-                        onChange={handleFormChange}
-                        options={kategori}
+                        value={formProduct.category_id}
+                        onChange={handleFormProductChange}
+                        options={categoryOptions}
                         placeholder="Pilih kategori"
                         required
                     />
-
                     <Select
                         labelPosition="left"
                         labelWidth={130}
                         name="unit_type"
                         label="Satuan Unit"
-                        value={form.unit_type}
-                        onChange={handleFormChange}
+                        value={formProduct.unit_type}
+                        onChange={handleFormProductChange}
                         options={unit}
                         placeholder="Pilih unit"
                         required
                     />
-
                     <Input
                         labelPosition="left"
                         labelWidth={130}
                         name="price"
-                        value={form.price}
-                        onChange={handleFormChange}
-                        label="Price"
+                        value={formProduct.price}
+                        onChange={handleFormProductChange}
+                        label="Harga"
                         type="number"
-                        placeholder="Input price"
+                        placeholder="Input harga"
                         required
                     />
-
                     <Input
                         labelPosition="left"
                         labelWidth={130}
                         name="reasonable_price"
-                        value={form.reasonable_price}
-                        onChange={handleFormChange}
-                        label="Reasonable Price"
+                        value={formProduct.reasonable_price}
+                        onChange={handleFormProductChange}
+                        label="Harga Maklun"
                         type="number"
-                        placeholder="Input reasonable price"
+                        placeholder="Input harga maklun"
                         required
                     />
-
                     <Input
                         labelPosition="left"
                         labelWidth={130}
                         name="failed_price"
-                        value={form.failed_price}
-                        onChange={handleFormChange}
-                        label="Failed Price"
+                        value={formProduct.failed_price}
+                        onChange={handleFormProductChange}
+                        label="Harga Gagal"
                         type="number"
-                        placeholder="Input failed price"
+                        placeholder="Input harga gagal"
                         required
                     />
-
                     <Button
                         type="submit"
                         size="full-lg"
-                        variant="warning"
-                        icon={<Icon name="add" />}
+                        variant="success"
+                        icon={<Icon name={isEditProduct ? "edit" : "add"} />}
                     >
-                        {isEdit ? "Update Product" : "Add Product"}
+                        {isEditProduct ? "Update Produk" : "Tambah Produk"}
+                    </Button>
+                </Form>
+            </Modal>
+
+            <Modal
+                open={openFinishing}
+                title={isEditFinishing ? "Edit Finishing" : "Tambah Finishing"}
+                onClose={() => setOpenFinishing(false)}
+                size="sm"
+                headerColor="primary"
+            >
+                <Form
+                    id="finishingForm"
+                    onSubmit={handleSubmitFinishing}
+                >
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="name"
+                        value={formFinishing.name}
+                        onChange={handleFormFinishingChange}
+                        label="Nama Finishing"
+                        placeholder="Input nama finishing"
+                        required
+                    />
+                    <Select
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="category_id"
+                        label="Kategori"
+                        value={formFinishing.category_id}
+                        onChange={handleFormFinishingChange}
+                        options={categoryOptions}
+                        placeholder="Pilih kategori"
+                        required
+                    />
+                    <Select
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="unit_type"
+                        label="Satuan Unit"
+                        value={formFinishing.unit_type}
+                        onChange={handleFormFinishingChange}
+                        options={unit}
+                        placeholder="Pilih unit"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="price"
+                        value={formFinishing.price}
+                        onChange={handleFormFinishingChange}
+                        label="Harga"
+                        type="number"
+                        placeholder="Input harga"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="reasonable_price"
+                        value={formFinishing.reasonable_price}
+                        onChange={handleFormFinishingChange}
+                        label="Harga Maklun"
+                        type="number"
+                        placeholder="Input harga maklun"
+                        required
+                    />
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="failed_price"
+                        value={formFinishing.failed_price}
+                        onChange={handleFormFinishingChange}
+                        label="Harga Gagal"
+                        type="number"
+                        placeholder="Input harga gagal"
+                        required
+                    />
+                    <Button
+                        type="submit"
+                        size="full-lg"
+                        variant="primary"
+                        icon={<Icon name={isEditFinishing ? "edit" : "add"} />}
+                    >
+                        {isEditFinishing ? "Update Finishing" : "Tambah Finishing"}
+                    </Button>
+                </Form>
+            </Modal>
+
+            <Modal
+                open={openCategory}
+                title={isEditCategory ? "Edit Kategori" : "Tambah Kategori"}
+                onClose={() => setOpenCategory(false)}
+                size="sm"
+                headerColor="info"
+            >
+                <Form
+                    id="categoryForm"
+                    onSubmit={handleSubmitCategory}
+                >
+                    <Input
+                        labelPosition="left"
+                        labelWidth={130}
+                        name="name"
+                        value={formCategory.name}
+                        onChange={handleFormCategoryChange}
+                        label="Nama Kategori"
+                        placeholder="Input nama kategori"
+                        required
+                    />
+                    <Button
+                        type="submit"
+                        size="full-lg"
+                        variant="info"
+                        icon={<Icon name={isEditCategory ? "edit" : "add"} />}
+                        className="text-white"
+                    >
+                        {isEditCategory ? "Update Kategori" : "Tambah Kategori"}
                     </Button>
                 </Form>
             </Modal>
@@ -352,7 +657,7 @@ export default function Products() {
                 headerColor="danger"
             >
                 <div style={{ padding: "16px 0", textAlign: "center", fontSize: "16px" }}>
-                    Apakah Anda yakin ingin menghapus produk ini?
+                    Apakah Anda yakin ingin menghapus data ini?
                 </div>
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
                     <Button 

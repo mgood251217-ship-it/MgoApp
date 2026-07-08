@@ -19,6 +19,22 @@
     background: var(--primary);
 }
 
+.btn-secondary {
+    background: var(--secondary);
+}
+
+.btn-secondary:hover {
+    background: var(--secondary-hover);
+}
+
+.btn-info {
+    background: var(--info);
+}
+
+.btn-info:hover {
+    background: var(--info-hover);
+}
+
 .btn-primary:hover {
     background: var(--primary-hover);
 }
@@ -32,19 +48,19 @@
 }
 
 .btn-warning {
-    background: #f59e0b;
+    background: var(--warning);
 }
 
 .btn-warning:hover {
-    background: #d97706;
+    background: var(--warning-hover);
 }
 
 .btn-success {
-    background: #10b981;
+    background: var(--success);
 }
 
 .btn-success:hover {
-    background: #059669;
+    background: var(--success-hover);
 }
 
 .btn-sm {
@@ -64,6 +80,7 @@
 
 .btn-full-lg {
     padding: 7px 16px;
+    height: 100%;
     width: 100%;
     font-size: 13px;
 }
