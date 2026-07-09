@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
@@ -12,9 +13,11 @@ import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInter
 import PaymentModal from "../components/PaymentModal/PaymentModal";
 
 export default function Orders() {
+    const navigate = useNavigate();
     const [ordersOnline, setOrdersOnline] = useState([]);
     const [ordersOffline, setOrdersOffline] = useState([]);
     const [operators, setOperators] = useState([]);
+    const initialLoadRef = useRef(false);
     
     const [search, setSearch] = useState("");
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -29,6 +32,14 @@ export default function Orders() {
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [viewOrderData, setViewOrderData] = useState({ total: 0, items: [], diskon_per_produk: {} });
     const [viewOrderDetails, setViewOrderDetails] = useState(null);
+
+    const [processModalOpen, setProcessModalOpen] = useState(false);
+    const [processOrderData, setProcessOrderData] = useState({
+        order_id: "",
+        status: "",
+        customStatus: "",
+        user_id: ""
+    });
 
     const [formOrder, setFormOrder] = useState({
         order_id: "",
@@ -66,24 +77,28 @@ export default function Orders() {
             const responseData = res.data?.data || {};
             setOrdersOnline(formatTableData(responseData.online ?? []));
             setOrdersOffline(formatTableData(responseData.offline ?? []));
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) {}
     }, [search, startDate, endDate, formatTableData]);
 
     const getOperators = useCallback(async () => {
         try {
             const res = await api.get("", { params: { action: "get_initial" } });
             setOperators(res.data?.data || []);
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) {}
     }, []);
 
     useEffect(() => {
-        loadData();
-        getOperators();
-    }, []); 
+        if (initialLoadRef.current) return;
+        const timeoutId = window.setTimeout(() => {
+            loadData();
+            getOperators();
+            initialLoadRef.current = true;
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, [loadData, getOperators]); 
 
     const handlePayClick = useCallback((row) => {
         setSelectedOrder(row);
@@ -103,9 +118,17 @@ export default function Orders() {
             setViewOrderData(res.data?.data || { total: 0, items: [], diskon_per_produk: {} });
             setViewOrderDetails(row);
             setViewModalOpen(true);
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) {}
+    }, []);
+
+    const handleProcessClick = useCallback((row) => {
+        setProcessOrderData({
+            order_id: row.order_id,
+            status: "",
+            customStatus: "",
+            user_id: ""
+        });
+        setProcessModalOpen(true);
     }, []);
 
     const handleFormChange = (e) => {
@@ -118,6 +141,13 @@ export default function Orders() {
         return val.replace(" ", "T").substring(0, 16);
     };
 
+    const getOneHourAhead = () => {
+        const date = new Date();
+        date.setHours(date.getHours() + 1);
+        date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+        return date.toISOString().slice(0, 16);
+    };
+
     const handleAddOrder = () => {
         let defaultSystem = "OFFLINE";
         const sessionRole = localStorage.getItem("role") || "";
@@ -128,7 +158,7 @@ export default function Orders() {
             nomorator: "",
             customer_name: "",
             nomor: "",
-            deadline: "",
+            deadline: getOneHourAhead(),
             date: "",
             user_id: "",
             system: defaultSystem
@@ -160,12 +190,16 @@ export default function Orders() {
             payload.append("user_id", formOrder.user_id);
             payload.append("system", formOrder.system);
 
-            await api.post("", payload, { params: { action: "create_order" } });
+            const res = await api.post("", payload, { params: { action: "create_order" } });
             setAddModalOpen(false);
-            loadData();
-        } catch (err) {
-            console.error(err);
-        }
+            
+            const newOrderId = res.data?.order_id || res.data?.data?.order_id;
+            if (newOrderId) {
+                navigate(`/order/${newOrderId}`);
+            } else {
+                loadData();
+            }
+        } catch (err) {}
     };
 
     const handleEditSubmit = async (e) => {
@@ -183,9 +217,28 @@ export default function Orders() {
             await api.post("", payload, { params: { action: "update_order" } });
             setEditModalOpen(false);
             loadData();
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) {}
+    };
+
+    const handleProcessSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = new FormData();
+            payload.append("order_id", processOrderData.order_id);
+            
+            const finalStatus = processOrderData.status === "LAINYA" ? processOrderData.customStatus : processOrderData.status;
+            payload.append("status", finalStatus);
+            
+            if (processOrderData.status === "DIAMBIL") {
+                payload.append("user_id", processOrderData.user_id);
+            } else {
+                payload.append("user_id", "");
+            }
+
+            await api.post("", payload, { params: { action: "update_project" } });
+            setProcessModalOpen(false);
+            loadData();
+        } catch (err) {}
     };
 
     const tableColumns = useMemo(() => [
@@ -222,41 +275,41 @@ export default function Orders() {
                 variant="success"
                 icon={<Icon name="payments" />}
                 disabled={row.is_lunas}
-                onClick={() => handlePayClick(row)}
+                onClick={(e) => { e.stopPropagation(); handlePayClick(row); }}
             />
             <Button
                 size="sm"
                 variant="info"
                 icon={<Icon name="visibility" />}
-                onClick={() => handleViewOrder(row)}
+                onClick={(e) => { e.stopPropagation(); handleViewOrder(row); }}
             />
             <Button
                 size="sm"
                 variant="warning"
                 icon={<Icon name="edit" />}
-                onClick={() => handleEditOrder(row)}
+                onClick={(e) => { e.stopPropagation(); handleEditOrder(row); }}
             />
             <Button
                 size="sm"
                 variant="primary"
                 icon={<Icon name="print" />}
-                onClick={() => console.log("Print", row.order_id)}
+                onClick={(e) => { e.stopPropagation(); console.log("Print", row.order_id); }}
             />
             <Button
                 size="sm"
                 variant="danger"
                 icon={<Icon name="picture_as_pdf" />}
-                onClick={() => console.log("PDF", row.order_id)}
+                onClick={(e) => { e.stopPropagation(); console.log("PDF", row.order_id); }}
             />
             <Button
                 size="sm"
                 variant="secondary"
                 icon={<Icon name="engineering" />}
                 disabled={row.project_initial !== ""}
-                onClick={() => console.log("Process", row.order_id)}
+                onClick={(e) => { e.stopPropagation(); handleProcessClick(row); }}
             />
         </div>
-    ), [handlePayClick, handleViewOrder, handleEditOrder]);
+    ), [handlePayClick, handleViewOrder, handleEditOrder, handleProcessClick]);
 
     const operatorOptions = useMemo(() => {
         return Object.entries(operators).map(([id, name]) => ({
@@ -328,6 +381,7 @@ export default function Orders() {
                     columns={tableColumns}
                     rows={ordersOffline}
                     actions={tableActions}
+                    onRowDoubleClick={(row) => navigate(`/order/${row.order_id}`)}
                 />
             </div>
 
@@ -342,6 +396,7 @@ export default function Orders() {
                     columns={tableColumns}
                     rows={ordersOnline}
                     actions={tableActions}
+                    onRowDoubleClick={(row) => navigate(`/order/${row.order_id}`)}
                 />
             </div>
 
@@ -540,6 +595,71 @@ export default function Orders() {
                     />
                     <Button type="submit" size="full-lg" variant="warning" icon={<Icon name="edit" />}>
                         Update Order
+                    </Button>
+                </Form>
+            </Modal>
+
+            <Modal
+                open={processModalOpen}
+                onClose={() => setProcessModalOpen(false)}
+                title="Proses Order"
+                size="sm"
+                headerColor="secondary"
+            >
+                <Form id="formProcessOrder" onSubmit={handleProcessSubmit}>
+                    <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px", marginBottom: "16px" }}>
+                        {["BELUM DIPROSES", "DIPROSES", "DIAMBIL", "LAINYA"].map((statusItem) => (
+                            <Button
+                                key={statusItem}
+                                type="button"
+                                variant={processOrderData.status === statusItem ? "primary" : "secondary"}
+                                onClick={() => setProcessOrderData(prev => ({ ...prev, status: statusItem }))}
+                                size="md"
+                            >
+                                {statusItem}
+                            </Button>
+                        ))}
+                    </div>
+
+                    {processOrderData.status === "LAINYA" && (
+                        <div style={{ marginBottom: "16px" }}>
+                            <Input
+                                labelPosition="left"
+                                labelWidth={130}
+                                name="customStatus"
+                                value={processOrderData.customStatus}
+                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, customStatus: e.target.value }))}
+                                label="Status Lainnya"
+                                placeholder="Ketik status manual..."
+                                required
+                            />
+                        </div>
+                    )}
+
+                    {processOrderData.status === "DIAMBIL" && (
+                        <div style={{ marginBottom: "16px" }}>
+                            <Select
+                                labelPosition="left"
+                                labelWidth={130}
+                                name="user_id"
+                                label="Operator"
+                                value={processOrderData.user_id}
+                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, user_id: e.target.value }))}
+                                options={operatorOptions}
+                                placeholder="Pilih Operator"
+                                required
+                            />
+                        </div>
+                    )}
+
+                    <Button 
+                        type="submit" 
+                        size="full-lg" 
+                        variant="primary" 
+                        icon={<Icon name="save" />}
+                        disabled={!processOrderData.status}
+                    >
+                        Update Proses
                     </Button>
                 </Form>
             </Modal>

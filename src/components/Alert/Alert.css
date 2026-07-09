@@ -1,14 +1,34 @@
 .alert {
-    padding: 10px 12px;
-    border-radius: 6px;
-    font-size: 13px;
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    min-width: 300px;
+    max-width: 400px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+}
+
+.alert-enter {
+    animation: slideInRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.alert-leave {
+    animation: slideOutRight 0.3s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+}
+
+.alert-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    border: 1px solid transparent;
-    border-color: var(--border);
-    color: var(--text);
+    position: relative;
+    z-index: 2;
 }
 
 .alert-error {
@@ -25,17 +45,68 @@
 
 .alert-message {
     flex: 1;
+    font-weight: 500;
+    line-height: 1.4;
 }
 
 .alert-close {
     background: transparent;
     border: none;
-    font-size: 16px;
+    font-size: 22px;
     cursor: pointer;
     color: inherit;
-    margin-left: 10px;
+    margin-left: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    padding: 0;
 }
 
 .alert-close:hover {
     opacity: 0.7;
+    transform: scale(1.1);
+}
+
+.alert-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: var(--text);
+    opacity: 0.3;
+    width: 100%;
+    transform-origin: left;
+    animation: progressShrink 2s linear forwards;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+}
+
+@keyframes progressShrink {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
 }

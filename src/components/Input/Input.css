@@ -6,6 +6,12 @@
     margin-bottom: 12px;
 }
 
+/* allow flex items to shrink properly inside a flex row container */
+.input-wrapper,
+.input-control {
+    min-width: 0;
+}
+
 .input-wrapper.input-left {
     flex-direction: row;
     align-items: flex-start;
@@ -45,6 +51,8 @@
     outline: none;
     transition: 0.2s;
     background-color: var(--background);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .input:focus {

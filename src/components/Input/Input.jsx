@@ -1,7 +1,7 @@
-import { useId } from "react";
+import { useId, forwardRef } from "react";
 import "./Input.css";
 
-export default function Input({
+const Input = forwardRef(({
     name,
     label,
     labelPosition = "top",
@@ -14,15 +14,19 @@ export default function Input({
     disabled = false,
     autoFocus = false,
     required = false,
-    readOnly = false
-}) {
+    readOnly = false,
+    style,
+    className = "",
+    ...rest
+}, ref) => {
     const id = useId();
 
     return (
         <div
-            className={`input-wrapper input-${labelPosition}`}
+            className={`input-wrapper input-${labelPosition} ${className}`}
             style={{
-                "--label-width": `${labelWidth}px`
+                "--label-width": `${labelWidth}px`,
+                ...(style || {})
             }}
         >
             {label && (
@@ -34,6 +38,7 @@ export default function Input({
 
             <div className="input-control">
                 <input
+                    ref={ref}
                     id={id}
                     name={name}
                     type={type}
@@ -44,6 +49,7 @@ export default function Input({
                     autoFocus={autoFocus}
                     readOnly={readOnly}
                     className={`input ${error ? "input-error" : ""}`}
+                    {...rest}
                 />
 
                 {error && (
@@ -54,4 +60,6 @@ export default function Input({
             </div>
         </div>
     );
-}
+});
+
+export default Input;

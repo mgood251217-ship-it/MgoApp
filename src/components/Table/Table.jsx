@@ -8,6 +8,7 @@ export default function Table({
     rowDataKey = "id",
     size = "md",
     actions,
+    onRowDoubleClick,
     showNumber = false,
 }) {
     return (
@@ -45,6 +46,13 @@ export default function Table({
                         <tr
                             key={row[rowKey]}
                             data-id={row[rowDataKey]}
+                            onDoubleClick={() => {
+                                if (onRowDoubleClick) {
+                                    onRowDoubleClick(row);
+                                }
+                            }}
+                            style={onRowDoubleClick ? { cursor: "pointer" } : {}} 
+                    
                         >
                             {showNumber && (
                                 <td className="table-number">

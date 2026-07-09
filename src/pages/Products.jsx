@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import api from "../api/axios";
 import Table from "../components/Table/Table";
 import Form from "../components/Form/Form";
@@ -14,6 +14,7 @@ export default function Products() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [finishings, setFinishings] = useState([]);
+    const initialLoadRef = useRef(false);
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -110,7 +111,15 @@ export default function Products() {
     }, [search]);
 
     useEffect(() => {
-        loadData();
+        if (initialLoadRef.current) return;
+        const timeoutId = window.setTimeout(() => {
+            loadData();
+            initialLoadRef.current = true;
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
     }, [loadData]);
 
     const handleFormProductChange = useCallback((e) => {

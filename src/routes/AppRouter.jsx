@@ -12,6 +12,7 @@ import MainLayout from "../layouts/MainLayout";
 
 import Store from "../pages/Store";
 import Orders from "../pages/Orders";
+import Order from "../pages/Order";
 import Products from "../pages/Products";
 import GlobalStocks from "../pages/GlobalStocks";
 import Meteran from "../pages/Meteran";
@@ -37,6 +38,7 @@ export default function AppRouter() {
                     path="/orders"
                     element={<Orders />}
                 />
+                <Route path="/order/:order_id" element={<Order />} />
 
                 <Route
                     path="/products"
