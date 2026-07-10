@@ -9,6 +9,7 @@ import Select from "../components/Select/Select";
 import Form from "../components/Form/Form";
 import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
+import Alert from "../components/Alert/Alert";
 import { formatRupiah } from "../services/helpers";
 
 export default function Order() {
@@ -24,11 +25,14 @@ export default function Order() {
     
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
+    const [paketSizesMap, setPaketSizesMap] = useState({});
     const [finishings, setFinishings] = useState([]);
     const [stores, setStores] = useState([]);
 
     const [noteInput, setNoteInput] = useState("");
     const [previewPrice, setPreviewPrice] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
     const [formItem, setFormItem] = useState({
         order_item_id: "",
@@ -42,6 +46,7 @@ export default function Order() {
         kiloan: "",
         waktu: "",
         ukuranJersey: "",
+        paketSize: "",
         size: ""
     });
 
@@ -105,18 +110,49 @@ export default function Order() {
         loadStores();
     }, [loadOrderData, loadCategories, loadStores]);
 
+    const selectedCategory = categories.find(c => String(c.category_id) === String(formItem.category_id));
+    const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
+
     useEffect(() => {
         const fetchProductsAndFinishings = async () => {
             if (!formItem.category_id) {
                 setProducts([]);
                 setFinishings([]);
+                setPaketSizesMap({});
                 return;
             }
             try {
                 const resProducts = await api.get("", {
                     params: { action: "products_by_category", category_id: formItem.category_id }
                 });
-                setProducts(resProducts.data?.data || []);
+                
+                const fetchedProducts = resProducts.data?.data || [];
+                let mappedProducts = [];
+                let sizesMap = {};
+
+                if (selectedCategoryName === "PAKET INDOOR OUTDOOR") {
+                    const seen = new Set();
+                    fetchedProducts.forEach(p => {
+                        let nameOnly = p.name.replace(/\s*\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?/gi, '').trim();
+                        const ukuranMatch = p.name.match(/(\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?)/i);
+                        const ukuran = ukuranMatch ? ukuranMatch[0].replace(/×/gi, 'x') : null;
+
+                        if (!sizesMap[nameOnly]) sizesMap[nameOnly] = [];
+                        if (ukuran && !sizesMap[nameOnly].includes(ukuran)) {
+                            sizesMap[nameOnly].push(ukuran);
+                        }
+
+                        if (!seen.has(nameOnly)) {
+                            seen.add(nameOnly);
+                            mappedProducts.push({ ...p, display_name: nameOnly });
+                        }
+                    });
+                } else {
+                    mappedProducts = fetchedProducts.map(p => ({ ...p, display_name: p.name }));
+                }
+
+                setProducts(mappedProducts);
+                setPaketSizesMap(sizesMap);
 
                 const resFinishings = await api.get("", {
                     params: { action: "finishing_by_category", category_id: formItem.category_id }
@@ -125,11 +161,24 @@ export default function Order() {
             } catch (err) {}
         };
         fetchProductsAndFinishings();
-    }, [formItem.category_id]);
+    }, [formItem.category_id, selectedCategoryName]);
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
         setFormItem(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handlePaketSizeChange = (e) => {
+        const val = e.target.value;
+        setFormItem(prev => {
+            const next = { ...prev, paketSize: val };
+            if (val && val.includes('x')) {
+                const parts = val.split('x').map(s => parseFloat(s.trim()));
+                next.panjang = parts[0];
+                next.lebar = parts[1];
+            }
+            return next;
+        });
     };
 
     const handleFinishingChange = (e) => {
@@ -142,16 +191,16 @@ export default function Order() {
         });
     };
 
-    const selectedCategory = categories.find(c => String(c.category_id) === String(formItem.category_id));
-    const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
-    
     const selectedProduct = products.find(p => String(p.product_id) === String(formItem.product_id));
-    const selectedProductName = selectedProduct?.name?.toUpperCase() || "";
+    const selectedProductName = selectedProduct?.display_name?.toUpperCase() || selectedProduct?.name?.toUpperCase() || "";
+    
+    const isNoSize = selectedProduct?.unit_type?.toUpperCase() === "PCS" || selectedProduct?.unit_type === "~";
 
     const isDTF = selectedCategoryName === "DTF";
     const isAkrilik = selectedCategoryName === "AKRILIK";
     const isJersey = selectedCategoryName === "JERSEY";
     const isSublim = selectedCategoryName === "SUBLIM";
+    const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
     
     const isSetting = selectedProductName === "SETTING";
     const isBahan = selectedProductName.includes("BAHAN");
@@ -184,7 +233,7 @@ export default function Order() {
                 payload.append("waktu", formItem.waktu || 0);
                 payload.append("ukuranJersey", formItem.ukuranJersey || "");
                 payload.append("diskon", formItem.diskon || 0);
-                payload.append("size", formItem.size || formItem.ukuranJersey || "");
+                payload.append("size", formItem.size || formItem.ukuranJersey || formItem.paketSize || "");
 
                 const res = await api.post("", payload, { params: { action: "item_price" } });
                 setPreviewPrice(res.data?.total || res.data?.data?.total || 0);
@@ -202,13 +251,20 @@ export default function Order() {
 
     const handleAddItem = async (e) => {
         e.preventDefault();
+        
+        if (!formItem.category_id || !formItem.product_id || !formItem.qty) {
+            setAlertConfig({ show: true, type: "error", message: "Kategori, Produk, dan Quantity wajib diisi!" });
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
             const payload = new FormData();
             payload.append("order_id", order_id);
             if (formItem.order_item_id) payload.append("order_item_id", formItem.order_item_id);
             
             payload.append("product_id", formItem.product_id);
-            payload.append("judul", selectedProductName);
+            payload.append("judul", selectedProductName); 
             payload.append("quantity", formItem.qty || 0);
             payload.append("finishing", formItem.finishings.join(","));
             payload.append("panjang", formItem.panjang || 0);
@@ -217,30 +273,39 @@ export default function Order() {
             payload.append("waktu", formItem.waktu || 0);
             payload.append("ukuranJersey", formItem.ukuranJersey || "");
             payload.append("diskon", formItem.diskon || 0);
-            payload.append("size", formItem.size || formItem.ukuranJersey || "");
+            payload.append("size", formItem.size || formItem.ukuranJersey || formItem.paketSize || "");
 
             const endpointAction = formItem.order_item_id ? "update_item" : "create_order_item";
 
-            await api.post("", payload, { params: { action: endpointAction } });
+            const res = await api.post("", payload, { params: { action: endpointAction } });
             
-            setFormItem({
-                order_item_id: "",
-                category_id: "",
-                product_id: "",
-                panjang: "",
-                lebar: "",
-                qty: "",
-                diskon: "",
-                finishings: [],
-                kiloan: "",
-                waktu: "",
-                ukuranJersey: "",
-                size: ""
-            });
-            
-            loadOrderData();
-            focusCategoryField();
-        } catch (err) {}
+            if (res.data && res.data.success === false) {
+                setAlertConfig({ show: true, type: "error", message: res.data.message || "Gagal menyimpan item." });
+            } else {
+                setFormItem({
+                    order_item_id: "",
+                    category_id: "",
+                    product_id: "",
+                    panjang: "",
+                    lebar: "",
+                    qty: "",
+                    diskon: "",
+                    finishings: [],
+                    kiloan: "",
+                    waktu: "",
+                    ukuranJersey: "",
+                    paketSize: "",
+                    size: ""
+                });
+                loadOrderData();
+                focusCategoryField();
+            }
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || err.message || "Terjadi kesalahan sistem.";
+            setAlertConfig({ show: true, type: "error", message: errorMsg });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleDeleteItem = async (itemId) => {
@@ -311,6 +376,7 @@ export default function Order() {
             kiloan: row.kiloan || "",
             waktu: row.waktu || "",
             ukuranJersey: row.size || "",
+            paketSize: row.size || "",
             size: row.size || ""
         });
 
@@ -327,7 +393,7 @@ export default function Order() {
     }, [categories]);
 
     const productOptions = useMemo(() => {
-        return products.map(p => ({ value: p.product_id, label: p.name }));
+        return products.map(p => ({ value: p.product_id, label: p.display_name }));
     }, [products]);
 
     const storeOptions = useMemo(() => {
@@ -355,7 +421,7 @@ export default function Order() {
     ];
 
     const tableColumns = useMemo(() => [
-        { key: "product_name", title: "Product" },
+        { key: "judul", title: "Product" },
         { key: "finishing_names", title: "Finishing" },
         { key: "size", title: "Ukuran" },
         { key: "quantity", title: "Qty" },
@@ -378,7 +444,7 @@ export default function Order() {
                 icon={<Icon name="storefront" />}
                 onClick={(e) => { e.stopPropagation(); handleOpenMaklun(row); }}
             >
-                Maklun
+                {row.maklun_store && row.maklun_store.trim() !== "" ? row.maklun_store : "Maklun"}
             </Button>
             <Button
                 size="sm"
@@ -391,6 +457,14 @@ export default function Order() {
 
     return (
         <>
+            {alertConfig.show && (
+                <Alert 
+                    type={alertConfig.type} 
+                    message={alertConfig.message} 
+                    onClose={() => setAlertConfig({ ...alertConfig, show: false, message: "" })} 
+                />
+            )}
+            
             <Header
                 title={`Input Order Item #${order_id}`}
                 subtitle="Tambahkan produk ke dalam pesanan"
@@ -429,11 +503,45 @@ export default function Order() {
                             name="product_id"
                             label="Produk"
                             value={formItem.product_id}
-                            onChange={handleFormChange}
+                            onChange={(e) => {
+                                handleFormChange(e);
+                                setTimeout(() => {
+                                    const pId = e.target.value;
+                                    const prod = products.find(p => String(p.product_id) === String(pId));
+                                    const pName = (prod?.display_name || prod?.name || "").toUpperCase();
+                                    const pUnit = prod?.unit_type?.toUpperCase();
+                                    const noSizeCheck = pUnit === "PCS" || pUnit === "~";
+
+                                    if (pName === "SETTING") {
+                                        document.querySelector('input[name="waktu"]')?.focus();
+                                    } else if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN")) {
+                                        document.querySelector('input[name="kiloan"]')?.focus();
+                                    } else if (selectedCategoryName === "JERSEY") {
+                                        document.querySelector('select[name="ukuranJersey"]')?.focus();
+                                    } else if (noSizeCheck) {
+                                        document.querySelector('input[name="qty"]')?.focus();
+                                    } else {
+                                        document.querySelector('input[name="panjang"]')?.focus();
+                                    }
+                                }, 100);
+                            }}
                             options={productOptions}
                             placeholder="Pilih Produk"
                             required
                         />
+
+                        {isPaketIndoorOutdoor && paketSizesMap[selectedProductName]?.length > 0 && (
+                            <Select
+                                labelPosition="left"
+                                labelWidth={110}
+                                name="paketSize"
+                                label="Ukuran Paket"
+                                value={formItem.paketSize}
+                                onChange={handlePaketSizeChange}
+                                options={paketSizesMap[selectedProductName].map(s => ({ value: s, label: s }))}
+                                placeholder="Pilih Ukuran"
+                            />
+                        )}
                         
                         <div style={{ marginBottom: "16px" }}>
                             {isSetting ? (
@@ -471,7 +579,7 @@ export default function Order() {
                                     options={jerseySizeOptions}
                                     placeholder="Pilih Ukuran"
                                 />
-                            ) : (
+                            ) : isNoSize ? null : (
                                 <div>
                                     <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", fontSize: "14px" }}>
                                         Ukuran (P x L)
@@ -485,6 +593,12 @@ export default function Order() {
                                                 placeholder={isAkrilik ? "Panjang (cm)" : "Panjang (m)"}
                                                 value={formItem.panjang}
                                                 onChange={handleFormChange}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        document.querySelector('input[name="lebar"]')?.focus();
+                                                    }
+                                                }}
                                             />
                                         </div>
                                         <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>X</span>
@@ -506,6 +620,12 @@ export default function Order() {
                                                     value={formItem.lebar}
                                                     onChange={isDTF ? undefined : handleFormChange}
                                                     readOnly={isDTF}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            e.preventDefault();
+                                                            document.querySelector('input[name="qty"]')?.focus();
+                                                        }
+                                                    }}
                                                 />
                                             )}
                                         </div>
@@ -556,7 +676,6 @@ export default function Order() {
                             onChange={handleFormChange}
                         />
 
-                        {/* Kalkulasi Live Preview Harga */}
                         <div style={{ padding: "12px", backgroundColor: "var(--bg-body)", borderRadius: "6px", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--text)" }}>Estimasi Harga:</span>
                             <span style={{ fontWeight: "bold", color: "var(--success)", fontSize: "16px" }}>
@@ -565,8 +684,8 @@ export default function Order() {
                         </div>
 
                         <div style={{ display: "flex", gap: "8px" }}>
-                            <Button type="submit" size="full-lg" variant={formItem.order_item_id ? "warning" : "success"} icon={<Icon name={formItem.order_item_id ? "edit" : "add"} />}>
-                                {formItem.order_item_id ? "Update Item" : "Tambah Item"}
+                            <Button type="submit" size="full-lg" variant={formItem.order_item_id ? "warning" : "success"} disabled={isSubmitting} icon={<Icon name={isSubmitting ? "hourglass_empty" : (formItem.order_item_id ? "edit" : "add")} />}>
+                                {isSubmitting ? "Loading..." : (formItem.order_item_id ? "Update Item" : "Tambah Item")}
                             </Button>
                             {formItem.order_item_id && (
                                 <Button 
@@ -574,7 +693,7 @@ export default function Order() {
                                     size="full-lg" 
                                     variant="secondary" 
                                     onClick={() => setFormItem({
-                                        order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "", qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", size: ""
+                                        order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "", qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
                                     })}
                                 >
                                     Batal

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import api from "../api/axios";
 import Table from "../components/Table/Table";
 import Form from "../components/Form/Form";
@@ -14,7 +14,6 @@ export default function Products() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [finishings, setFinishings] = useState([]);
-    const initialLoadRef = useRef(false);
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -110,16 +109,9 @@ export default function Products() {
         return () => clearTimeout(timer);
     }, [search]);
 
+    // Load Data triggers when dependencies change
     useEffect(() => {
-        if (initialLoadRef.current) return;
-        const timeoutId = window.setTimeout(() => {
-            loadData();
-            initialLoadRef.current = true;
-        }, 0);
-
-        return () => {
-            window.clearTimeout(timeoutId);
-        };
+        loadData();
     }, [loadData]);
 
     const handleFormProductChange = useCallback((e) => {
@@ -303,6 +295,24 @@ export default function Products() {
         }
     };
 
+    const handleStockUpdate = useCallback(async (type, id, newStock) => {
+        try {
+            const payload = new FormData();
+            if (type === "product") {
+                payload.append("product_id", id);
+                payload.append("quantity", newStock);
+                await api.post("", payload, { params: { action: "update_stock_product" } });
+            } else if (type === "finishing") {
+                payload.append("finishing_id", id);
+                payload.append("quantity", newStock);
+                await api.post("", payload, { params: { action: "update_stock_finishing" } });
+            }
+            loadData();
+        } catch (err) {
+            console.error(err);
+        }
+    }, [loadData]);
+
     const productColumns = useMemo(() => [
         { key: "category", title: "Kategori" },
         { key: "name", title: "Nama" },
@@ -321,13 +331,13 @@ export default function Products() {
     const productActions = useCallback((row) => (
         <>
             <Button
-                size="sm"
+                size="md"
                 variant="warning"
                 icon={<Icon name="edit" />}
                 onClick={() => handleEditProductClick(row)}
             />
             <Button
-                size="sm"
+                size="md"
                 variant="danger"
                 icon={<Icon name="delete" />}
                 onClick={() => handleDeleteClick(row.product_id, "product")}
@@ -338,13 +348,13 @@ export default function Products() {
     const finishingActions = useCallback((row) => (
         <>
             <Button
-                size="sm"
+                size="md"
                 variant="warning"
                 icon={<Icon name="edit" />}
                 onClick={() => handleEditFinishingClick(row)}
             />
             <Button
-                size="sm"
+                size="md"
                 variant="danger"
                 icon={<Icon name="delete" />}
                 onClick={() => handleDeleteClick(row.finishing_id, "finishing")}
@@ -369,19 +379,80 @@ export default function Products() {
         </>
     ), [handleEditCategoryClick, handleDeleteClick]);
 
+    const mappedProducts = useMemo(() => {
+        return products.map(p => ({
+            ...p,
+            stock: (
+                <Input
+                    key={`prod-${p.product_id}-${p.stock}`}
+                    defaultValue={p.stock || 0}
+                    type="number"
+                    style={{ width: "100px", margin: 0 }}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleStockUpdate("product", p.product_id, e.target.value);
+                        }
+                    }}
+                />
+            )
+        }));
+    }, [products, handleStockUpdate]);
+
+    const mappedFinishings = useMemo(() => {
+        return finishings.map(f => ({
+            ...f,
+            stock: (
+                <Input
+                    key={`fin-${f.finishing_id}-${f.stock}`}
+                    defaultValue={f.stock || 0}
+                    type="number"
+                    style={{ width: "100px", margin: 0}}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleStockUpdate("finishing", f.finishing_id, e.target.value);
+                        }
+                    }}
+                />
+            )
+        }));
+    }, [finishings, handleStockUpdate]);
+
+    const executeSearch = () => {
+        setDebouncedSearch(search);
+        setPage(1);
+    };
+
     return (
         <>
             <Header
                 title="Manajemen Produk"
                 subtitle="Kelola data produk, finishing, dan kategori."
                 actions={
-                    <Input
-                        name="search"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Cari produk..."
-                        style={{ width: 250 }}
-                    />
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        <Input
+                            name="search"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    executeSearch();
+                                }
+                            }}
+                            placeholder="Cari produk..."
+                            style={{ width: 250 }}
+                        />
+                        <Button 
+                            size="sm"
+                            variant="primary" 
+                            icon={<Icon name="search" />}
+                            onClick={executeSearch}
+                        >
+                            Cari
+                        </Button>
+                    </div>
                 }
             />
 
@@ -400,7 +471,7 @@ export default function Products() {
                         rowKey="product_id"
                         rowDataKey="product_id"
                         columns={productColumns}
-                        rows={products}
+                        rows={mappedProducts}
                         actions={productActions}
                     />
                     <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
@@ -426,7 +497,7 @@ export default function Products() {
                         rowKey="finishing_id"
                         rowDataKey="finishing_id"
                         columns={productColumns}
-                        rows={finishings}
+                        rows={mappedFinishings}
                         actions={finishingActions}
                     />
                 </div>

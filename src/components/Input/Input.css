@@ -6,7 +6,6 @@
     margin-bottom: 12px;
 }
 
-/* allow flex items to shrink properly inside a flex row container */
 .input-wrapper,
 .input-control {
     min-width: 0;
