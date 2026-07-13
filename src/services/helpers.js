@@ -134,3 +134,19 @@ export const folder = (basePath, storeName, date) => {
     
     return `/${basePath}/${safeStoreName}/${year}/${month}/${day}/`;
 };
+
+export const formatTime = (datetimeStr) => {
+    if (!datetimeStr) return "-";
+    
+    const dateObj = new Date(datetimeStr);
+    const bulanIndo = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+    
+    const tanggal = dateObj.getDate().toString().padStart(2, '0');
+    const bulan = bulanIndo[dateObj.getMonth()];
+    const tahun = dateObj.getFullYear();
+    
+    const jam = dateObj.getHours().toString().padStart(2, '0');
+    const menit = dateObj.getMinutes().toString().padStart(2, '0');
+    
+    return `${tanggal} ${bulan} ${tahun}, ${jam}:${menit}`;
+};

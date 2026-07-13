@@ -11,6 +11,8 @@ import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
 import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInternasional, getTodayDate } from "../services/helpers";
 import PaymentModal from "../components/PaymentModal/PaymentModal";
+import PrintStruk from "../components/PrintStruk/PrintStruk";
+import PrintPdf from "../components/PrintPdf/PrintPdf";
 
 export default function Orders() {
     const navigate = useNavigate();
@@ -25,6 +27,9 @@ export default function Orders() {
 
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+
+    const [printStrukOrderId, setPrintStrukOrderId] = useState(null);
+    const [PrintPdfOrderId, setPrintPdfOrderId] = useState(null);
 
     const [addModalOpen, setAddModalOpen] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -293,13 +298,13 @@ export default function Orders() {
                 size="sm"
                 variant="primary"
                 icon={<Icon name="print" />}
-                onClick={(e) => { e.stopPropagation(); console.log("Print", row.order_id); }}
+                onClick={(e) => { e.stopPropagation(); setPrintStrukOrderId(row.order_id); }}
             />
             <Button
                 size="sm"
                 variant="danger"
                 icon={<Icon name="picture_as_pdf" />}
-                onClick={(e) => { e.stopPropagation(); console.log("PDF", row.order_id); }}
+                onClick={(e) => { e.stopPropagation(); setPrintPdfOrderId( row.order_id); }}
             />
             <Button
                 size="sm"
@@ -663,6 +668,19 @@ export default function Orders() {
                     </Button>
                 </Form>
             </Modal>
+
+            {printStrukOrderId && (
+                <PrintStruk 
+                    orderId={printStrukOrderId} 
+                    onClose={() => setPrintStrukOrderId(null)} 
+                />
+            )}
+            {PrintPdfOrderId && (
+                <PrintPdf 
+                    orderId={PrintPdfOrderId} 
+                    onClose={() => setPrintPdfOrderId(null)} 
+                />
+            )}
         </>
     );
 }
