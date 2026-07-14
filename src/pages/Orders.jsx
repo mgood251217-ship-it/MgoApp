@@ -9,6 +9,7 @@ import Select from "../components/Select/Select";
 import Form from "../components/Form/Form";
 import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
+import Alert from "../components/Alert/Alert";
 import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInternasional, getTodayDate } from "../services/helpers";
 import PaymentModal from "../components/PaymentModal/PaymentModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
@@ -37,6 +38,103 @@ export default function Orders() {
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [viewOrderData, setViewOrderData] = useState({ total: 0, items: [], diskon_per_produk: {} });
     const [viewOrderDetails, setViewOrderDetails] = useState(null);
+
+    const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
+
+    const [copyFeedbackId, setCopyFeedbackId] = useState(null);
+    const [iconModalOpen, setIconModalOpen] = useState(false);
+    const [iconModalOrder, setIconModalOrder] = useState(null);
+    const [folderIconTarget, setFolderIconTarget] = useState(null);
+    const [applyingIcon, setApplyingIcon] = useState(false);
+
+    const sanitizeFolderPart = (str) => String(str || "").replace(/[\\/:*?"<>|]/g, "").trim();
+
+    const stripVowels = (str) => str.toLowerCase().replace(/[aeiou]/g, "");
+
+    const DAY_NAMES = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+
+    const formatTimeHHMM = (date) => {
+        const hh = String(date.getHours()).padStart(2, "0");
+        const mm = String(date.getMinutes()).padStart(2, "0");
+        return `${hh}.${mm}`;
+    };
+
+    const formatDeadlineForFolder = (deadline) => {
+        if (!deadline) return "";
+        const deadlineDate = new Date(String(deadline).replace(" ", "T"));
+        if (isNaN(deadlineDate.getTime())) return "";
+
+        const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const now = new Date();
+        const diffDays = Math.round(
+            (startOfDay(deadlineDate) - startOfDay(now)) / (1000 * 60 * 60 * 24)
+        );
+
+        const timeStr = formatTimeHHMM(deadlineDate);
+
+        if (diffDays === 0) return timeStr;
+        if (diffDays === 1) return `${timeStr}bsk`;
+
+        const dayName = DAY_NAMES[deadlineDate.getDay()];
+        return `${timeStr}${stripVowels(dayName)}`;
+    };
+
+    const buildFolderName = (row) => {
+        const parts = [
+            sanitizeFolderPart(row.customer_name),
+            sanitizeFolderPart(formatDeadlineForFolder(row.deadline)),
+            sanitizeFolderPart(row.op_initial),
+            sanitizeFolderPart(row.nomorator),
+        ];
+        return parts.filter(Boolean).join("_");
+    };
+
+    const handleCopyFolderName = async (row) => {
+        const folderName = buildFolderName(row);
+        try {
+            await navigator.clipboard.writeText(folderName);
+            setCopyFeedbackId(row.order_id);
+            setTimeout(() => setCopyFeedbackId(null), 1500);
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: "Gagal menyalin nama folder ke clipboard." });
+        }
+    };
+
+    const handleOpenIconModal = async (row) => {
+        setIconModalOrder(row);
+        try {
+            const path = await window.electron.pilihFolder();
+            if (!path) return; // user membatalkan pemilihan folder
+            setFolderIconTarget(path);
+            setIconModalOpen(true);
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: "Gagal membuka dialog folder." });
+        }
+    };
+
+    const handleTerapkanIcon = async (status) => {
+        if (!folderIconTarget) return;
+        setApplyingIcon(true);
+        try {
+            const res = await window.electron.setIconFolderOrder({
+                folderPath: folderIconTarget,
+                status
+            });
+            if (!res.success) {
+                setAlertConfig({ show: true, type: "error", message: res.message || "Gagal mengubah icon folder." });
+            } else {
+                setAlertConfig({ show: true, type: "success", message: "Icon folder berhasil diubah." });
+                setIconModalOpen(false);
+                setFolderIconTarget(null);
+                setIconModalOrder(null);
+            }
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: "Terjadi kesalahan saat mengubah icon folder." });
+        } finally {
+            setApplyingIcon(false);
+        }
+    };
+    // ==== end folder name & folder icon state ====
 
     const [processModalOpen, setProcessModalOpen] = useState(false);
     const [processOrderData, setProcessOrderData] = useState({
@@ -274,7 +372,7 @@ export default function Orders() {
     }, [viewOrderData]);
 
     const tableActions = useCallback((row) => (
-        <div style={{ display: "flex", gap: "4px" }}>
+        <div style={{ display: "flex", gap: "4px", flexWrap: "no-wrap" }}>
             <Button
                 size="sm"
                 variant="success"
@@ -330,6 +428,14 @@ export default function Orders() {
 
     return (
         <>
+            {alertConfig.show && (
+                <Alert 
+                    type={alertConfig.type} 
+                    message={alertConfig.message} 
+                    onClose={() => setAlertConfig({ ...alertConfig, show: false, message: "" })} 
+                />
+            )}
+
             <Header
                 title="Orders"
                 subtitle="Data pesanan masuk."
@@ -419,6 +525,25 @@ export default function Orders() {
                 size="lg"
                 headerColor="info"
             >
+                <div style={{ display: "flex", gap: "8px", marginBottom: 16 }}>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<Icon name="content_copy" />}
+                        onClick={() => viewOrderDetails && handleCopyFolderName(viewOrderDetails)}
+                    >
+                        {viewOrderDetails && copyFeedbackId === viewOrderDetails.order_id ? "Tersalin!" : "Salin Nama Folder"}
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<Icon name="folder" />}
+                        onClick={() => viewOrderDetails && handleOpenIconModal(viewOrderDetails)}
+                    >
+                        Ganti Icon Folder
+                    </Button>
+                </div>
+
                 <div style={{ marginBottom: 16 }}>
                     <Table
                         id="tableViewItems"
@@ -667,6 +792,50 @@ export default function Orders() {
                         Update Proses
                     </Button>
                 </Form>
+            </Modal>
+
+            <Modal
+                open={iconModalOpen}
+                onClose={() => { setIconModalOpen(false); setFolderIconTarget(null); setIconModalOrder(null); }}
+                title={`Ganti Icon Folder - ${iconModalOrder?.nomorator || ""}`}
+                size="sm"
+                headerColor="secondary"
+            >
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div style={{ fontSize: "13px", color: "var(--secondary)", wordBreak: "break-all" }}>
+                        Folder terpilih: <strong style={{ color: "var(--text)" }}>{folderIconTarget}</strong>
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: "bold" }}>Pilih status order:</div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        <Button
+                            size="md"
+                            variant="success"
+                            disabled={applyingIcon}
+                            icon={<Icon name="folder" />}
+                            onClick={() => handleTerapkanIcon("selesai")}
+                        >
+                            Selesai
+                        </Button>
+                        <Button
+                            size="md"
+                            variant="warning"
+                            disabled={applyingIcon}
+                            icon={<Icon name="folder" />}
+                            onClick={() => handleTerapkanIcon("proses")}
+                        >
+                            Proses
+                        </Button>
+                        <Button
+                            size="md"
+                            variant="danger"
+                            disabled={applyingIcon}
+                            icon={<Icon name="folder" />}
+                            onClick={() => handleTerapkanIcon("belum")}
+                        >
+                            Belum
+                        </Button>
+                    </div>
+                </div>
             </Modal>
 
             {printStrukOrderId && (

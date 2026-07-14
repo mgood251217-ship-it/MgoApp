@@ -1,5 +1,5 @@
 import {
-    BrowserRouter,
+    HashRouter,
     Routes,
     Route
 } from "react-router-dom";
@@ -22,7 +22,7 @@ import Report from "../pages/Report";
 
 export default function AppRouter() {
     return (
-        <BrowserRouter>
+        <HashRouter>
             <Routes>
                 <Route path="/" element={<Boot />} />
                 <Route path="/login" element={<Login />} />
@@ -71,6 +71,6 @@ export default function AppRouter() {
                 />
                 </Route>
             </Routes>
-        </BrowserRouter>
+        </HashRouter>
     );
 }

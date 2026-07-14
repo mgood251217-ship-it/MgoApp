@@ -1,25 +1,49 @@
 {
-  "name": "mgodesktop",
+  "name": "MgoDesktop",
   "private": true,
   "version": "1.0.0",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "type": "module",
+  "icon": "assets/mgo.ico",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "build": "vite build",
+    "dist": "vite build && electron-builder",
     "start": "electron ."
+  },
+  "build": {
+  "asarUnpack": [
+      "node_modules/sharp/**",
+      "node_modules/express/**"
+  ],
+    "extraResources": [
+      {
+        "from": "src/assets/icons",
+        "to": "icons"
+      }
+    ],
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
     "axios": "^1.18.1",
+    "chart.js": "^4.5.1",
     "electron-store": "^11.0.2",
+    "express": "^5.2.1",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.14.0",
     "jspdf": "^4.2.1",
     "react": "^19.2.7",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.7",
     "react-icons": "^5.6.0",
     "react-router-dom": "^7.18.0",
+    "sharp": "^0.35.3",
     "sweetalert2": "^11.26.25",
     "tailwindcss": "^4.3.1"
   },

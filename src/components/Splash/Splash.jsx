@@ -1,11 +1,12 @@
 import "./Splash.css";
+import logo from "/logo.png";
 
 export default function Splash({ message = "Initializing application..." }) {
     return (
         <div className="splash">
             <div className="splash-container">
                 <img
-                    src="/logo.png"
+                    src={logo}
                     alt="MGO"
                     className="splash-logo"
                 />
