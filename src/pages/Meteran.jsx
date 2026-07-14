@@ -6,8 +6,14 @@ import Select from "../components/Select/Select";
 import Button from "../components/Button/Button";
 import Icon from "../components/Icon/Icon";
 import Table from "../components/Table/Table";
+import { exportMeteranExcel } from "../services/excelService";
+import { authStore } from "../store/auth.store";
 
 export default function Meteran() {
+    const session = authStore.getUser();
+    const storeName = session?.store?.name ?? "Toko";
+    const storeAddress = session?.store?.address ?? "Alamat";
+
     const getTodayDate = () => {
         const today = new Date();
         const year = today.getFullYear();
@@ -56,8 +62,17 @@ export default function Meteran() {
         loadData();
     }, [loadData]);
 
-    const handleExportExcel = () => {
-        console.log("Export Excel dijalankan untuk kategori:", category);
+    const handleExportExcel = async () => {
+        if (!dataState) return;
+        
+        await exportMeteranExcel({
+            dataState,
+            category,
+            startDate,
+            endDate,
+            storeName,
+            storeAddress
+        });
     };
 
     const renderM2Layout = () => {
@@ -68,7 +83,8 @@ export default function Meteran() {
         const totalM2Product = dataState.total_m2_product || {};
 
         const columns = [
-            { key: "ukuran", title: "P x L" },
+            { key: "p", title: "P" },
+            { key: "l", title: "L" },
             { key: "qty", title: "Qty" },
             { key: "m2", title: "Total (M²)" }
         ];
@@ -83,13 +99,14 @@ export default function Meteran() {
                     </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
                     {Array.isArray(dataState.product_data) && dataState.product_data.map((product, index) => {
                         if (!product.rows || product.rows.length === 0) return null;
 
                         const formattedRows = product.rows.map((rowItem, idx) => ({
                             id: idx,
-                            ukuran: `${rowItem.p} x ${rowItem.l}`,
+                            p: rowItem.p,
+                            l: rowItem.l,
                             qty: `${rowItem.qty}x`,
                             m2: rowItem.m2
                         }));
@@ -132,7 +149,8 @@ export default function Meteran() {
         const kiloanData = dataState.kiloan || [];
 
         const meteranColumns = [
-            { key: "ukuran", title: "P x L" },
+            { key: "p", title: "P" },
+            { key: "l", title: "L" },
             { key: "qty", title: "Qty" },
             { key: "m2", title: "Total (M²)" }
         ];
@@ -148,13 +166,14 @@ export default function Meteran() {
                 {meteranData.length > 0 && (
                     <>
                         <h3 style={{ marginTop: 24, marginBottom: 16 }}>Bahan Meteran</h3>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
                             {meteranData.map((product, index) => {
                                 if (!product.rows || product.rows.length === 0) return null;
                                 
                                 const formattedRows = product.rows.map((rowItem, idx) => ({
                                     id: idx,
-                                    ukuran: `${rowItem.p} x ${rowItem.l}`,
+                                    p: rowItem.p,
+                                    l: rowItem.l,
                                     qty: `${rowItem.qty}x`,
                                     m2: rowItem.m2
                                 }));
@@ -182,7 +201,7 @@ export default function Meteran() {
                 {kiloanData.length > 0 && (
                     <>
                         <h3 style={{ marginTop: 32, marginBottom: 16 }}>Bahan Kiloan</h3>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
                             {kiloanData.map((product, index) => {
                                 if (!product.rows || product.rows.length === 0) return null;
                                 
@@ -299,7 +318,7 @@ export default function Meteran() {
                     </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
                     {dataState.product_data.map((product, index) => {
                         if (!product.rows || product.rows.length === 0) return null;
 
