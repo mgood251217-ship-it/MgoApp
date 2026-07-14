@@ -11,6 +11,12 @@ import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInternasional, getTodayDate } from "../services/helpers";
+import {
+    FOLDER_STATUS_LABEL,
+    buildFolderName,
+    resolveOrderFolderPath,
+    checkFoldersForItems,
+} from "../services/folderHelper";
 import PaymentModal from "../components/PaymentModal/PaymentModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
@@ -38,55 +44,52 @@ export default function Orders() {
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [viewOrderData, setViewOrderData] = useState({ total: 0, items: [], diskon_per_produk: {} });
     const [viewOrderDetails, setViewOrderDetails] = useState(null);
+    const [itemFolderStatus, setItemFolderStatus] = useState({}); // { [category]: 'checking'|'ada'|'tidak-ada'|'no-path' }
 
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
+    // ==== Folder name & folder icon state ====
     const [copyFeedbackId, setCopyFeedbackId] = useState(null);
     const [iconModalOpen, setIconModalOpen] = useState(false);
     const [iconModalOrder, setIconModalOrder] = useState(null);
     const [folderIconTarget, setFolderIconTarget] = useState(null);
     const [applyingIcon, setApplyingIcon] = useState(false);
+    const [appSettings, setAppSettings] = useState({});
 
-    const sanitizeFolderPart = (str) => String(str || "").replace(/[\\/:*?"<>|]/g, "").trim();
+    useEffect(() => {
+        window.electron.getSettings()
+            .then(setAppSettings)
+            .catch(() => {});
+    }, []);
 
-    const stripVowels = (str) => str.toLowerCase().replace(/[aeiou]/g, "");
-
-    const DAY_NAMES = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
-
-    const formatTimeHHMM = (date) => {
-        const hh = String(date.getHours()).padStart(2, "0");
-        const mm = String(date.getMinutes()).padStart(2, "0");
-        return `${hh}.${mm}`;
+    const handleResolveIconPath = (row) => {
+        const path = resolveOrderFolderPath(appSettings, row);
+        if (!path) {
+            setAlertConfig({
+                show: true,
+                type: "error",
+                message: `Path untuk kategori "${row.kategori || "(kosong)"}" belum diatur. Atur dulu di halaman Pengaturan.`
+            });
+        }
+        return path;
     };
 
-    const formatDeadlineForFolder = (deadline) => {
-        if (!deadline) return "";
-        const deadlineDate = new Date(String(deadline).replace(" ", "T"));
-        if (isNaN(deadlineDate.getTime())) return "";
+    // cek keberadaan folder tiap kategori yang dipakai item-item di order ini (read-only, cuma exists check)
+    const checkFoldersForViewItems = async (orderRow, itemsList) => {
+        const categoriesInOrder = [...new Set((itemsList || []).map(i => i.category).filter(Boolean))];
+        if (categoriesInOrder.length === 0) {
+            setItemFolderStatus({});
+            return;
+        }
+        setItemFolderStatus(() => {
+            const next = {};
+            categoriesInOrder.forEach(cat => { next[cat] = "checking"; });
+            return next;
+        });
 
-        const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        const now = new Date();
-        const diffDays = Math.round(
-            (startOfDay(deadlineDate) - startOfDay(now)) / (1000 * 60 * 60 * 24)
-        );
+        const results = await checkFoldersForItems(appSettings, orderRow, itemsList);
 
-        const timeStr = formatTimeHHMM(deadlineDate);
-
-        if (diffDays === 0) return timeStr;
-        if (diffDays === 1) return `${timeStr}bsk`;
-
-        const dayName = DAY_NAMES[deadlineDate.getDay()];
-        return `${timeStr}${stripVowels(dayName)}`;
-    };
-
-    const buildFolderName = (row) => {
-        const parts = [
-            sanitizeFolderPart(row.customer_name),
-            sanitizeFolderPart(formatDeadlineForFolder(row.deadline)),
-            sanitizeFolderPart(row.op_initial),
-            sanitizeFolderPart(row.nomorator),
-        ];
-        return parts.filter(Boolean).join("_");
+        setItemFolderStatus(prev => ({ ...prev, ...results }));
     };
 
     const handleCopyFolderName = async (row) => {
@@ -100,13 +103,20 @@ export default function Orders() {
         }
     };
 
-    const handleOpenIconModal = async (row) => {
+    const handleOpenIconModal = (row) => {
         setIconModalOrder(row);
+        const resolvedPath = handleResolveIconPath(row);
+        if (!resolvedPath) return; // alert error sudah ditampilkan di handleResolveIconPath
+        setFolderIconTarget(resolvedPath);
+        setIconModalOpen(true);
+    };
+
+    // fallback manual kalau perlu override path (misal path belum diatur atau butuh lokasi khusus)
+    const handlePilihFolderManual = async () => {
         try {
             const path = await window.electron.pilihFolder();
-            if (!path) return; // user membatalkan pemilihan folder
+            if (!path) return;
             setFolderIconTarget(path);
-            setIconModalOpen(true);
         } catch (err) {
             setAlertConfig({ show: true, type: "error", message: "Gagal membuka dialog folder." });
         }
@@ -218,11 +228,13 @@ export default function Orders() {
             const res = await api.get("", { 
                 params: { action: "order_detail", order_id: row.order_id } 
             });
-            setViewOrderData(res.data?.data || { total: 0, items: [], diskon_per_produk: {} });
+            const data = res.data?.data || { total: 0, items: [], diskon_per_produk: {} };
+            setViewOrderData(data);
             setViewOrderDetails(row);
             setViewModalOpen(true);
+            checkFoldersForViewItems(row, data.items || []);
         } catch (err) {}
-    }, []);
+    }, [appSettings]);
 
     const handleProcessClick = useCallback((row) => {
         setProcessOrderData({
@@ -361,18 +373,20 @@ export default function Orders() {
         { key: "finishing_names", title: "Finishing" },
         { key: "quantity", title: "Qty" },
         { key: "formatted_amount", title: "Jumlah" },
-        { key: "maklun_store", title: "Maklun" }
+        { key: "maklun_store", title: "Maklun" },
+        { key: "folder_status", title: "Folder" }
     ], []);
 
     const viewItemsMapped = useMemo(() => {
         return (viewOrderData?.items || []).map(item => ({
             ...item,
-            formatted_amount: formatRupiah(item.amount)
+            formatted_amount: formatRupiah(item.amount),
+            folder_status: FOLDER_STATUS_LABEL[itemFolderStatus[item.category]] || "-"
         }));
-    }, [viewOrderData]);
+    }, [viewOrderData, itemFolderStatus]);
 
     const tableActions = useCallback((row) => (
-        <div style={{ display: "flex", gap: "4px", flexWrap: "no-wrap" }}>
+        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
             <Button
                 size="sm"
                 variant="success"
@@ -520,16 +534,17 @@ export default function Orders() {
 
             <Modal
                 open={viewModalOpen}
-                onClose={() => setViewModalOpen(false)}
+                onClose={() => { setViewModalOpen(false); setItemFolderStatus({}); }}
                 title={`Detail Order - ${viewOrderDetails?.nomorator || ""}`}
                 size="lg"
                 headerColor="info"
             >
-                <div style={{ display: "flex", gap: "8px", marginBottom: 16 }}>
+                <div style={{ display: "flex", gap: "8px", marginBottom: 16, flexWrap: "nowrap" }}>
                     <Button
                         size="sm"
                         variant="secondary"
                         icon={<Icon name="content_copy" />}
+                        style={{ whiteSpace: "nowrap" }}
                         onClick={() => viewOrderDetails && handleCopyFolderName(viewOrderDetails)}
                     >
                         {viewOrderDetails && copyFeedbackId === viewOrderDetails.order_id ? "Tersalin!" : "Salin Nama Folder"}
@@ -538,6 +553,7 @@ export default function Orders() {
                         size="sm"
                         variant="secondary"
                         icon={<Icon name="folder" />}
+                        style={{ whiteSpace: "nowrap" }}
                         onClick={() => viewOrderDetails && handleOpenIconModal(viewOrderDetails)}
                     >
                         Ganti Icon Folder
@@ -803,8 +819,17 @@ export default function Orders() {
             >
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     <div style={{ fontSize: "13px", color: "var(--secondary)", wordBreak: "break-all" }}>
-                        Folder terpilih: <strong style={{ color: "var(--text)" }}>{folderIconTarget}</strong>
+                        Folder: <strong style={{ color: "var(--text)" }}>{folderIconTarget}</strong>
                     </div>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<Icon name="folder_open" />}
+                        style={{ whiteSpace: "nowrap" }}
+                        onClick={handlePilihFolderManual}
+                    >
+                        Pilih Folder Manual (kalau path di atas salah)
+                    </Button>
                     <div style={{ fontSize: "14px", fontWeight: "bold" }}>Pilih status order:</div>
                     <div style={{ display: "flex", gap: "8px" }}>
                         <Button

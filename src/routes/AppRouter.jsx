@@ -19,6 +19,7 @@ import Meteran from "../pages/Meteran";
 import Failure from "../pages/Failure";
 import Maklun from "../pages/Maklun";
 import Report from "../pages/Report";
+import Settings from "../pages/Settings";
 
 export default function AppRouter() {
     return (
@@ -69,7 +70,13 @@ export default function AppRouter() {
                     path="/report"
                     element={<Report />}
                 />
+
+                <Route
+                    path="/settings"
+                    element={<Settings />}
+                />
                 </Route>
+                
             </Routes>
         </HashRouter>
     );

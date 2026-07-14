@@ -12,10 +12,10 @@
     "start": "electron ."
   },
   "build": {
-  "asarUnpack": [
+    "asarUnpack": [
       "node_modules/sharp/**",
       "node_modules/express/**"
-  ],
+    ],
     "extraResources": [
       {
         "from": "src/assets/icons",
@@ -34,7 +34,9 @@
     "axios": "^1.18.1",
     "chart.js": "^4.5.1",
     "electron-store": "^11.0.2",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
+    "file-saver": "^2.0.5",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.14.0",
     "jspdf": "^4.2.1",
@@ -45,7 +47,8 @@
     "react-router-dom": "^7.18.0",
     "sharp": "^0.35.3",
     "sweetalert2": "^11.26.25",
-    "tailwindcss": "^4.3.1"
+    "tailwindcss": "^4.3.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

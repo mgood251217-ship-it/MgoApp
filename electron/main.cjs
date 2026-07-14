@@ -78,6 +78,41 @@ ipcMain.handle("pilih-folder", async () => {
     return result.filePaths[0];
 });
 
+ipcMain.handle("cek-folder-order", async (event, folderPath) => {
+    try {
+        await fs.access(folderPath);
+        return { exists: true };
+    } catch (err) {
+        return { exists: false };
+    }
+});
+
+const SETTINGS_PATH = path.join(app.getPath("userData"), "settings.json");
+
+async function readSettings() {
+    try {
+        const raw = await fs.readFile(SETTINGS_PATH, "utf-8");
+        return JSON.parse(raw);
+    } catch (err) {
+        return {};
+    }
+}
+
+ipcMain.handle("get-settings", async () => {
+    return await readSettings();
+});
+
+ipcMain.handle("save-settings", async (event, newSettings) => {
+    try {
+        const current = await readSettings();
+        const merged = { ...current, ...newSettings };
+        await fs.writeFile(SETTINGS_PATH, JSON.stringify(merged, null, 2), "utf-8");
+        return { success: true, data: merged };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
+
 ipcMain.handle("analisis-folder-order", async (event, folderPath) => {
     try {
         const entries = await fs.readdir(folderPath, { withFileTypes: true });
@@ -112,6 +147,7 @@ ipcMain.handle("set-icon-folder-order", async (event, { folderPath, status }) =>
         `Vid=\r\n` +
         `FolderType=Generic\r\n`;
     try {
+        await fs.mkdir(folderPath, { recursive: true });
         await execAsync(`attrib -r -s -h "${folderPath}"`).catch(() => {});
         await execAsync(`attrib -r -s -h "${desktopIniPath}"`).catch(() => {});
         await fs.writeFile(desktopIniPath, content, "utf-8");

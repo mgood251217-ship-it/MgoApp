@@ -1,4 +1,5 @@
 import "./Sidebar.css";
+import { MdOutlineSettings } from "react-icons/md";
 import { RiStore2Line } from "react-icons/ri";
 import { LuPackage } from "react-icons/lu";
 import { FiShoppingBag, FiFileText } from "react-icons/fi";
@@ -18,7 +19,8 @@ const menus = [
     { title: "Meteran", path: "/meteran", icon: <TbRulerMeasure /> },
     { title: "Failure", path: "/failure", icon: <MdOutlineErrorOutline /> },
     { title: "Maklun", path: "/maklun", icon: <LiaWindowRestore /> },
-    { title: "Report", path: "/report", icon: <FiFileText /> }
+    { title: "Report", path: "/report", icon: <FiFileText /> },
+    { title: "Settings", path: "/settings", icon: <MdOutlineSettings /> }
 ];
 
 export default function Sidebar() {
