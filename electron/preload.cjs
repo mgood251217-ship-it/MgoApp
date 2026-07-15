@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("electron", {
     setIconFolderOrder: (data) => ipcRenderer.invoke('set-icon-folder-order', data),
     pilihFolder: () => ipcRenderer.invoke('pilih-folder'),
     cekFolderOrder: (folderPath) => ipcRenderer.invoke('cek-folder-order', folderPath),
+    cariFolderOrder: (data) => ipcRenderer.invoke('cari-folder-order', data),
 
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (data) => ipcRenderer.invoke('save-settings', data),

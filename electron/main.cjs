@@ -25,22 +25,49 @@ function getIconBasePath() {
 
 const ICON_BASE = getIconBasePath();
 const ICONS = {
-    selesai: path.join(ICON_BASE, "folder-hijau.ico"),
-    proses: path.join(ICON_BASE, "folder-kuning.ico"),
-    belum: path.join(ICON_BASE, "folder-merah.ico"),
+    selesai: path.join(ICON_BASE, "folder-selesai.ico"),
+    proses: path.join(ICON_BASE, "folder-proses.ico"),
+    cancel: path.join(ICON_BASE, "folder-cancel.ico"),
 };
 
-async function getColorMode(filePath) {
+async function getFileMeta(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     const rasterExt = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".psd"];
-    if (!rasterExt.includes(ext)) return "unknown";
+    const isPdf = ext === ".pdf";
+
+    const empty = { colorMode: "unknown", widthPx: null, heightPx: null, dpi: null, dpiDetected: false, panjangM: null, lebarM: null };
+
+    if (!rasterExt.includes(ext) && !isPdf) return empty;
+
     try {
         const metadata = await sharp(filePath).metadata();
-        if (metadata.space === "cmyk") return "CMYK";
-        if (metadata.space === "srgb" || metadata.space === "rgb") return "RGB";
-        return metadata.space || "unknown";
+
+        let colorMode = "unknown";
+        if (metadata.space === "cmyk") colorMode = "CMYK";
+        else if (metadata.space === "srgb" || metadata.space === "rgb") colorMode = "RGB";
+        else if (metadata.space === "b-w" || metadata.space === "grey16" || metadata.space === "grey") colorMode = "Grayscale";
+        else if (metadata.channels === 4) colorMode = "CMYK";
+        else if (metadata.channels === 3) colorMode = "RGB";
+        else if (metadata.channels === 1) colorMode = "Grayscale";
+        else if (metadata.space) colorMode = metadata.space;
+
+        const widthPx = metadata.width || null;
+        const heightPx = metadata.height || null;
+
+        const dpiDetected = !!metadata.density;
+        let dpi = metadata.density || null;
+        if (!dpi) dpi = isPdf ? 72 : 96;
+
+        let panjangM = null;
+        let lebarM = null;
+        if (widthPx && heightPx && dpi) {
+            panjangM = Math.round((widthPx / dpi) * 0.0254 * 100) / 100;
+            lebarM = Math.round((heightPx / dpi) * 0.0254 * 100) / 100;
+        }
+
+        return { colorMode, widthPx, heightPx, dpi, dpiDetected, panjangM, lebarM };
     } catch (err) {
-        return "unknown";
+        return empty;
     }
 }
 
@@ -87,6 +114,54 @@ ipcMain.handle("cek-folder-order", async (event, folderPath) => {
     }
 });
 
+function folderMatchesNomor(entryName, nomorator) {
+    const escaped = String(nomorator).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(^|[_\\-\\s])${escaped}$`, "i");
+    return re.test(entryName);
+}
+
+async function findFolderRecursive(dir, nomorator, depth = 0, maxDepth = 12) {
+    if (depth > maxDepth) return null;
+
+    let entries;
+    try {
+        entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch (err) {
+        return null;
+    }
+
+    for (const entry of entries) {
+        if (entry.isDirectory() && folderMatchesNomor(entry.name, nomorator)) {
+            return path.join(dir, entry.name);
+        }
+    }
+
+    for (const entry of entries) {
+        if (entry.isDirectory()) {
+            const found = await findFolderRecursive(path.join(dir, entry.name), nomorator, depth + 1, maxDepth);
+            if (found) return found;
+        }
+    }
+
+    return null;
+}
+
+ipcMain.handle("cari-folder-order", async (event, { basePath, dateSubPath, nomorator }) => {
+    try {
+        const rootDir = path.join(basePath, dateSubPath || "");
+        try {
+            await fs.access(rootDir);
+        } catch (err) {
+            return { found: false, searchedPath: rootDir };
+        }
+
+        const foundPath = await findFolderRecursive(rootDir, nomorator);
+        return { found: !!foundPath, path: foundPath || null, searchedPath: rootDir };
+    } catch (err) {
+        return { found: false, message: err.message };
+    }
+});
+
 const SETTINGS_PATH = path.join(app.getPath("userData"), "settings.json");
 
 async function readSettings() {
@@ -114,15 +189,18 @@ ipcMain.handle("save-settings", async (event, newSettings) => {
 });
 
 ipcMain.handle("analisis-folder-order", async (event, folderPath) => {
+    const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff"];
     try {
         const entries = await fs.readdir(folderPath, { withFileTypes: true });
         const hasil = await Promise.all(
-            entries.filter((entry) => entry.isFile()).map(async (entry) => {
-                const fullPath = path.join(folderPath, entry.name);
-                const stat = await fs.stat(fullPath);
-                const colorMode = await getColorMode(fullPath);
-                return { nama: entry.name, ukuran: stat.size, colorMode };
-            })
+            entries
+                .filter((entry) => entry.isFile() && ALLOWED_EXT.includes(path.extname(entry.name).toLowerCase()))
+                .map(async (entry) => {
+                    const fullPath = path.join(folderPath, entry.name);
+                    const stat = await fs.stat(fullPath);
+                    const meta = await getFileMeta(fullPath);
+                    return { nama: entry.name, ukuranByte: stat.size, ...meta };
+                })
         );
         return { success: true, data: hasil };
     } catch (err) {

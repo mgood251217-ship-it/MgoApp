@@ -500,14 +500,9 @@ export default function Store() {
                         </small>
                     )}
 
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                        <Button type="button" variant="secondary" onClick={() => setIsUserModalOpen(false)}>
-                            Batal
-                        </Button>
-                        <Button type="submit" variant="primary" disabled={loadingUserForm}>
-                            {loadingUserForm ? "Menyimpan..." : (isUserEditMode ? "Simpan Perubahan" : "Simpan User")}
-                        </Button>
-                    </div>
+                    <Button size='full-lg' type="submit" variant="primary" disabled={loadingUserForm}>
+                        {loadingUserForm ? "Menyimpan..." : (isUserEditMode ? "Simpan Perubahan" : "Simpan User")}
+                    </Button>
                 </form>
             </Modal>
             )}
@@ -536,15 +531,9 @@ export default function Store() {
                         onChange={handleMachineInputChange} 
                         required 
                     />
-                    
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                        <Button type="button" variant="secondary" onClick={() => setIsMachineModalOpen(false)}>
-                            Batal
-                        </Button>
-                        <Button type="submit" variant="primary" disabled={loadingMachineForm}>
-                            {loadingMachineForm ? "Menyimpan..." : (isMachineEditMode ? "Simpan Perubahan" : "Simpan Mesin")}
-                        </Button>
-                    </div>
+                    <Button type="submit" variant="primary" size='full-lg' disabled={loadingMachineForm}>
+                        {loadingMachineForm ? "Menyimpan..." : (isMachineEditMode ? "Simpan Perubahan" : "Simpan Mesin")}
+                    </Button>
                 </form>
             </Modal>
             )}

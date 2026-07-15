@@ -6,7 +6,6 @@ import Form from "../components/Form/Form";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 
-// Tambah path baru di sini kalau ada kategori baru (contoh: path_dtf, path_akrilik, dst)
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
     { key: "path_outdoor", label: "Path Outdoor" },
