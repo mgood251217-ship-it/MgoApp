@@ -80,7 +80,6 @@ export default function Meteran() {
 
         const totalKey = Object.keys(dataState).find(key => key.startsWith("total_all_m2"));
         const totalAllM2 = totalKey ? dataState[totalKey] : 0;
-        const totalM2Product = dataState.total_m2_product || {};
 
         const columns = [
             { key: "p", title: "P" },
@@ -111,6 +110,10 @@ export default function Meteran() {
                             m2: rowItem.m2
                         }));
 
+                        const totalM2Value = dataState.total_m2_product?.[product.name] !== undefined 
+                            ? dataState.total_m2_product[product.name] 
+                            : product.rows.reduce((sum, r) => sum + (r.m2 || 0), 0);
+
                         return (
                             <div key={index} style={{ background: "var(--background)", borderRadius: "8px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                                 <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
@@ -131,7 +134,7 @@ export default function Meteran() {
 
                                 <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
                                     <strong style={{ color: "var(--warning)", fontSize: "14px" }}>
-                                        Total: {totalM2Product[product.name] || 0}
+                                        Total: {totalM2Value.toFixed(3)}
                                     </strong>
                                 </div>
                             </div>
@@ -375,7 +378,8 @@ export default function Meteran() {
             return renderDtfLayout();
         }
 
-        if (dataState.product_data && Array.isArray(dataState.product_data) && dataState.product_data[0]?.rows !== undefined && dataState.total_m2_product !== undefined) {
+        const hasTotalM2 = Object.keys(dataState).some(key => key.startsWith("total_all_m2"));
+        if (dataState.product_data && Array.isArray(dataState.product_data) && dataState.product_data[0]?.rows !== undefined && hasTotalM2) {
             return renderM2Layout();
         }
 

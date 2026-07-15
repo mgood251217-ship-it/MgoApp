@@ -75,7 +75,6 @@ export const exportMeteranExcel = async ({
                 };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
             });
-            
             if (rowData[1] && isNaN(rowData[1]) && isNaN(parseFloat(rowData[1]))) {
                 row.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
             }
@@ -94,6 +93,10 @@ export const exportMeteranExcel = async ({
         totalCell.font = { bold: true };
         totalCell.alignment = { horizontal: 'center', vertical: 'middle' };
         totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        
+        if (typeof totalValue === 'number') {
+            totalCell.numFmt = '#,##0.00';
+        }
         currentRow++;
 
         sheet.addRow([]);
@@ -120,9 +123,9 @@ export const exportMeteranExcel = async ({
                 let totalKg = 0;
                 const rowsData = p.rows.map(r => {
                     totalKg += (r.kg_total || 0);
-                    return [no++, `${r.kg} Kg`, '', r.qty, r.kg_total];
+                    return [no++, `${r.kg} Kg`, '-', r.qty, r.kg_total];
                 });
-                createTable(`Kiloan - ${p.name}`, ['No', 'Berat (Kg)', '', 'Qty', 'Total (Kg)'], rowsData, 'Total Kg', totalKg);
+                createTable(`Kiloan - ${p.name}`, ['No', 'Berat (Kg)', '-', 'Qty', 'Total (Kg)'], rowsData, 'Total Kg', totalKg);
             });
         }
     } else if (dataState.total_panjang_dtf !== undefined) {
@@ -138,9 +141,9 @@ export const exportMeteranExcel = async ({
             const title = `${p.name} ${p.isUV ? '(UV)' : ''}`.trim();
             const rowsData = p.rows.map(r => {
                 total += (r.total || 0);
-                return [no++, p.isA3 || p.isUV_A3 ? "A3" : r.p, '', r.qty, r.total];
+                return [no++, p.isA3 || p.isUV_A3 ? "A3" : r.p, '-', r.qty, r.total];
             });
-            createTable(title, ['No', 'Panjang / Tipe', '', 'Qty', 'Total'], rowsData, 'Total', total);
+            createTable(title, ['No', 'Panjang / Tipe', '-', 'Qty', 'Total'], rowsData, 'Total', total);
         });
     } else if (dataState.product_data && Array.isArray(dataState.product_data) && dataState.product_data[0]?.rows !== undefined) {
         const totalKey = Object.keys(dataState).find(key => key.startsWith("total_all_m2"));
@@ -154,9 +157,13 @@ export const exportMeteranExcel = async ({
         dataState.product_data.forEach(p => {
             if (!p.rows || p.rows.length === 0) return;
             let no = 1;
-            const rowsData = p.rows.map(r => [no++, r.p, r.l, r.qty, r.m2]);
-            const totalM2 = (dataState.total_m2_product && dataState.total_m2_product[p.name]) || 0;
-            createTable(p.name, ['No', 'P', 'L', 'Qty', 'Total (M²)'], rowsData, 'Total M²', totalM2);
+            let calculatedTotal = 0;
+            const rowsData = p.rows.map(r => {
+                calculatedTotal += (r.m2 || 0);
+                return [no++, r.p, r.l, r.qty, r.m2];
+            });
+            const finalTotal = dataState.total_m2_product?.[p.name] !== undefined ? dataState.total_m2_product[p.name] : calculatedTotal;
+            createTable(p.name, ['No', 'P', 'L', 'Qty', 'Total (M²)'], rowsData, 'Total M²', finalTotal);
         });
     } else {
         let normalizedData = [];
@@ -184,35 +191,8 @@ export const exportMeteranExcel = async ({
         currentRow += 2;
 
         let no = 1;
-        const rowsData = normalizedData.map(item => [no++, item.name, '', '', item.total_qty]);
-        
-        sheet.mergeCells(`A${currentRow}:E${currentRow}`);
-        const titleCell = sheet.getCell(`A${currentRow}`);
-        titleCell.value = "Data Qty";
-        titleCell.font = { bold: true, size: 12 };
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
-        currentRow++;
-
-        const headerRow = sheet.addRow(['No', 'Nama Produk', '', '', 'Total Qty']);
-        headerRow.font = { bold: true };
-        headerRow.eachCell({ includeEmpty: false }, cell => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
-            cell.alignment = { horizontal: 'center', vertical: 'middle' };
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        });
-        sheet.mergeCells(`B${currentRow}:D${currentRow}`);
-        currentRow++;
-
-        rowsData.forEach(rowData => {
-            const row = sheet.addRow(rowData);
-            row.eachCell({ includeEmpty: false }, cell => {
-                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            });
-            row.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
-            sheet.mergeCells(`B${currentRow}:D${currentRow}`);
-            currentRow++;
-        });
+        const rowsData = normalizedData.map(item => [no++, item.name, '-', '-', item.total_qty]);
+        createTable("Data Qty", ['No', 'Nama Produk', '-', '-', 'Total Qty'], rowsData, 'Total Qty', totalQty);
     }
 
     sheet.columns = [
