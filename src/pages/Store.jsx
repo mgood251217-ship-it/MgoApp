@@ -29,11 +29,11 @@ export default function Store() {
     const [locations, setLocations] = useState([]);
     const [stats, setStats] = useState({ chart_30: {}, chart_365: {}, summary: {} });
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [loadingForm, setLoadingForm] = useState(false);
+    const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+    const [isUserEditMode, setIsUserEditMode] = useState(false);
+    const [loadingUserForm, setLoadingUserForm] = useState(false);
 
-    const initialFormState = {
+    const initialUserFormState = {
         user_id: "",
         name: "",
         username: "",
@@ -43,7 +43,18 @@ export default function Store() {
         picture: null,
         old_picture: "",
     };
-    const [formData, setFormData] = useState(initialFormState);
+    const [userFormData, setUserFormData] = useState(initialUserFormState);
+
+    const [isMachineModalOpen, setIsMachineModalOpen] = useState(false);
+    const [isMachineEditMode, setIsMachineEditMode] = useState(false);
+    const [loadingMachineForm, setLoadingMachineForm] = useState(false);
+
+    const initialMachineFormState = {
+        machine_id: "",
+        name: "",
+        type: ""
+    };
+    const [machineFormData, setMachineFormData] = useState(initialMachineFormState);
 
     const roleOptions = useMemo(() => [
         { value: "ADMIN", label: "ADMIN" },
@@ -75,23 +86,23 @@ export default function Store() {
         loadData();
     }, [loadData]);
 
-    const handleInputChange = (e) => {
+    const handleUserInputChange = (e) => {
         const { name, value, files } = e.target;
         if (name === "picture") {
-            setFormData(prev => ({ ...prev, picture: files[0] }));
+            setUserFormData(prev => ({ ...prev, picture: files[0] }));
         } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
+            setUserFormData(prev => ({ ...prev, [name]: value }));
         }
     };
 
-    const openAddModal = () => {
-        setFormData(initialFormState);
-        setIsEditMode(false);
-        setIsModalOpen(true);
+    const openAddUserModal = () => {
+        setUserFormData(initialUserFormState);
+        setIsUserEditMode(false);
+        setIsUserModalOpen(true);
     };
 
-    const openEditModal = (row) => {
-        setFormData({
+    const openEditUserModal = (row) => {
+        setUserFormData({
             user_id: row.user_id,
             name: row.name,
             username: row.username,
@@ -101,50 +112,49 @@ export default function Store() {
             picture: null,
             old_picture: row.picture || "",
         });
-        setIsEditMode(true);
-        setIsModalOpen(true);
+        setIsUserEditMode(true);
+        setIsUserModalOpen(true);
     };
 
     const handleSubmitUser = async (e) => {
         e.preventDefault();
-        setLoadingForm(true);
+        setLoadingUserForm(true);
 
         try {
             const payload = new FormData();
             
-            if (isEditMode) {
-                payload.append("user_id", formData.user_id);
-                payload.append("old_picture", formData.old_picture);
+            if (isUserEditMode) {
+                payload.append("user_id", userFormData.user_id);
+                payload.append("old_picture", userFormData.old_picture);
             }
             
-            payload.append("name", formData.name);
-            payload.append("username", formData.username);
-            payload.append("initial", formData.initial);
-            payload.append("role", formData.role);
+            payload.append("name", userFormData.name);
+            payload.append("username", userFormData.username);
+            payload.append("initial", userFormData.initial);
+            payload.append("role", userFormData.role);
 
-            if (formData.password) {
-                payload.append("password", formData.password);
+            if (userFormData.password) {
+                payload.append("password", userFormData.password);
             }
 
-            if (formData.picture) {
-                payload.append("picture", formData.picture);
+            if (userFormData.picture) {
+                payload.append("picture", userFormData.picture);
             }
 
-            const actionType = isEditMode ? "update_user" : "create_user";
+            const actionType = isUserEditMode ? "update_user" : "create_user";
 
             await api.post("", payload, {
                 params: { action: actionType },
                 headers: { "Content-Type": "multipart/form-data" }
             });
 
-            setIsModalOpen(false);
-            setFormData(initialFormState);
-            loadData(); 
+            setIsUserModalOpen(false);
+            setUserFormData(initialUserFormState);
+            loadData();
         } catch (error) {
-            console.error(`Gagal ${isEditMode ? 'mengedit' : 'menambah'} user:`, error);
-            alert(`Gagal ${isEditMode ? 'mengedit' : 'menambah'} user.`);
+            alert(`Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`);
         } finally {
-            setLoadingForm(false);
+            setLoadingUserForm(false);
         }
     };
 
@@ -161,8 +171,76 @@ export default function Store() {
 
             loadData();
         } catch (error) {
-            console.error("Gagal menghapus user:", error);
             alert("Gagal menghapus user.");
+        }
+    }, [loadData]);
+
+    const handleMachineInputChange = (e) => {
+        const { name, value } = e.target;
+        setMachineFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const openAddMachineModal = () => {
+        setMachineFormData(initialMachineFormState);
+        setIsMachineEditMode(false);
+        setIsMachineModalOpen(true);
+    };
+
+    const openEditMachineModal = (row) => {
+        setMachineFormData({
+            machine_id: row.machine_id,
+            name: row.name,
+            type: row.type
+        });
+        setIsMachineEditMode(true);
+        setIsMachineModalOpen(true);
+    };
+
+    const handleSubmitMachine = async (e) => {
+        e.preventDefault();
+        setLoadingMachineForm(true);
+
+        try {
+            const payload = new FormData();
+            
+            if (isMachineEditMode) {
+                payload.append("machine_id", machineFormData.machine_id);
+            }
+            
+            payload.append("name", machineFormData.name);
+            payload.append("type", machineFormData.type);
+
+            const actionType = isMachineEditMode ? "update_machine" : "create_machine";
+
+            await api.post("", payload, {
+                params: { action: actionType },
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+
+            setIsMachineModalOpen(false);
+            setMachineFormData(initialMachineFormState);
+            loadData();
+        } catch (error) {
+            alert(`Gagal ${isMachineEditMode ? 'mengedit' : 'menambah'} mesin.`);
+        } finally {
+            setLoadingMachineForm(false);
+        }
+    };
+
+    const handleDeleteMachine = useCallback(async (machineId) => {
+        if (!window.confirm("Apakah Anda yakin ingin menghapus mesin ini?")) return;
+
+        try {
+            const payload = new FormData();
+            payload.append("machine_id", machineId);
+
+            await api.post("", payload, {
+                params: { action: "delete_machine" }
+            });
+
+            loadData();
+        } catch (error) {
+            alert("Gagal menghapus mesin.");
         }
     }, [loadData]);
 
@@ -234,7 +312,7 @@ export default function Store() {
                 size="sm"
                 variant="warning"
                 icon={<Icon name="edit" />}
-                onClick={() => openEditModal(row)}
+                onClick={() => openEditUserModal(row)}
             />
             <Button
                 size="sm"
@@ -247,10 +325,20 @@ export default function Store() {
 
     const machineActions = useCallback((row) => (
         <div style={{ display: "flex", gap: "4px" }}>
-            <Button size="sm" variant="warning" icon={<Icon name="edit" />} onClick={() => console.log("Edit Machine", row.machine_id)} />
-            <Button size="sm" variant="danger" icon={<Icon name="delete" />} onClick={() => console.log("Delete Machine", row.machine_id)} />
+            <Button 
+                size="sm" 
+                variant="warning" 
+                icon={<Icon name="edit" />} 
+                onClick={() => openEditMachineModal(row)} 
+            />
+            <Button 
+                size="sm" 
+                variant="danger" 
+                icon={<Icon name="delete" />} 
+                onClick={() => handleDeleteMachine(row.machine_id)} 
+            />
         </div>
-    ), []);
+    ), [handleDeleteMachine]);
 
     return (
         <>
@@ -258,13 +346,22 @@ export default function Store() {
                 title="Store Dashboard" 
                 subtitle="Ringkasan data toko dan statistik." 
                 actions={
-                    <Button 
-                        variant="primary" 
-                        icon={<Icon name="plus" />} 
-                        onClick={openAddModal}
-                    >
-                        Tambah User
-                    </Button>
+                    <div style={{ display: "flex", gap: "12px" }}>
+                        <Button 
+                            variant="primary" 
+                            icon={<Icon name="plus" />} 
+                            onClick={openAddUserModal}
+                        >
+                            Tambah User
+                        </Button>
+                        <Button 
+                            variant="success" 
+                            icon={<Icon name="plus" />} 
+                            onClick={openAddMachineModal}
+                        >
+                            Tambah Mesin
+                        </Button>
+                    </div>
                 }
             />
 
@@ -335,32 +432,32 @@ export default function Store() {
                 </div>
             )}
 
-            {isModalOpen && (
+            {isUserModalOpen && (
             <Modal 
                 size='sm'
-                open={isModalOpen}
-                title={isEditMode ? "Edit User" : "Tambah User Baru"} 
-                onClose={() => setIsModalOpen(false)}
+                open={isUserModalOpen}
+                title={isUserEditMode ? "Edit User" : "Tambah User Baru"} 
+                onClose={() => setIsUserModalOpen(false)}
             >
                 <form onSubmit={handleSubmitUser}>
-                    {isEditMode && (
-                        <input type="hidden" name="old_picture" value={formData.old_picture} />
+                    {isUserEditMode && (
+                        <input type="hidden" name="old_picture" value={userFormData.old_picture} />
                     )}
 
                     <Input 
                         labelPosition="left"
                         label="Nama Lengkap" 
                         name="name" 
-                        value={formData.name} 
-                        onChange={handleInputChange} 
+                        value={userFormData.name} 
+                        onChange={handleUserInputChange} 
                         required 
                     />
                     <Input 
                         labelPosition="left"
                         label="Username" 
                         name="username" 
-                        value={formData.username} 
-                        onChange={handleInputChange} 
+                        value={userFormData.username} 
+                        onChange={handleUserInputChange} 
                         required 
                     />
                     <Input 
@@ -368,17 +465,17 @@ export default function Store() {
                         type="password" 
                         label="Password" 
                         name="password" 
-                        value={formData.password} 
-                        onChange={handleInputChange} 
-                        required={!isEditMode}
-                        placeholder={isEditMode ? "Kosongkan jika tidak diubah" : ""}
+                        value={userFormData.password} 
+                        onChange={handleUserInputChange} 
+                        required={!isUserEditMode}
+                        placeholder={isUserEditMode ? "Kosongkan jika tidak diubah" : ""}
                     />
                     <Input 
                         labelPosition="left"
                         label="Inisial" 
                         name="initial" 
-                        value={formData.initial} 
-                        onChange={handleInputChange} 
+                        value={userFormData.initial} 
+                        onChange={handleUserInputChange} 
                         required 
                         maxLength={5}
                     />
@@ -386,30 +483,66 @@ export default function Store() {
                         labelPosition="left"
                         label="Role / Jabatan"
                         name="role" 
-                        value={formData.role} 
-                        onChange={handleInputChange} 
+                        value={userFormData.role} 
+                        onChange={handleUserInputChange} 
                         options={roleOptions} 
                     />
                     <input 
-                        label="Foto"
                         type="file" 
                         name="picture" 
                         accept="image/*" 
-                        onChange={handleInputChange} 
+                        onChange={handleUserInputChange} 
                         style={{ display: "block", width: "100%", marginTop: "12px" }}
                     />
-                    {isEditMode && formData.old_picture && (
+                    {isUserEditMode && userFormData.old_picture && (
                         <small style={{ color: "var(--text-muted)", display: "block", marginTop: "4px" }}>
-                            Foto saat ini: {formData.old_picture}
+                            Foto saat ini: {userFormData.old_picture}
                         </small>
                     )}
 
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                        <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+                        <Button type="button" variant="secondary" onClick={() => setIsUserModalOpen(false)}>
                             Batal
                         </Button>
-                        <Button type="submit" variant="primary" disabled={loadingForm}>
-                            {loadingForm ? "Menyimpan..." : (isEditMode ? "Simpan Perubahan" : "Simpan User")}
+                        <Button type="submit" variant="primary" disabled={loadingUserForm}>
+                            {loadingUserForm ? "Menyimpan..." : (isUserEditMode ? "Simpan Perubahan" : "Simpan User")}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
+            )}
+
+            {isMachineModalOpen && (
+            <Modal 
+                size='sm'
+                open={isMachineModalOpen}
+                title={isMachineEditMode ? "Edit Mesin" : "Tambah Mesin Baru"} 
+                onClose={() => setIsMachineModalOpen(false)}
+            >
+                <form onSubmit={handleSubmitMachine}>
+                    <Input 
+                        labelPosition="left"
+                        label="Nama Mesin" 
+                        name="name" 
+                        value={machineFormData.name} 
+                        onChange={handleMachineInputChange} 
+                        required 
+                    />
+                    <Input 
+                        labelPosition="left"
+                        label="Tipe Mesin" 
+                        name="type" 
+                        value={machineFormData.type} 
+                        onChange={handleMachineInputChange} 
+                        required 
+                    />
+                    
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
+                        <Button type="button" variant="secondary" onClick={() => setIsMachineModalOpen(false)}>
+                            Batal
+                        </Button>
+                        <Button type="submit" variant="primary" disabled={loadingMachineForm}>
+                            {loadingMachineForm ? "Menyimpan..." : (isMachineEditMode ? "Simpan Perubahan" : "Simpan Mesin")}
                         </Button>
                     </div>
                 </form>
