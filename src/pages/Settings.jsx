@@ -11,6 +11,8 @@ const PATH_FIELDS = [
     { key: "path_outdoor", label: "Path Outdoor" },
     { key: "path_sublim", label: "Path Sublim" },
     { key: "path_laser", label: "Path Laser" },
+    { key: "path_akrilik", label: "Path Akrilik" },
+    { key: "path_dtf", label: "Path DTF" },
 ];
 
 export default function Settings() {

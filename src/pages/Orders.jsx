@@ -382,14 +382,20 @@ export default function Orders() {
     ], []);
 
     const viewItemsMapped = useMemo(() => {
-        return (viewOrderData?.items || []).map(item => ({
-            ...item,
-            formatted_amount: formatRupiah(item.amount),
-            folder_status: FOLDER_STATUS_LABEL[itemFolderStatus[item.category]?.status] || "-"
-        }));
+        return (viewOrderData?.items || []).map(item => {
+            const isMaklun = !!(item.maklun_store && String(item.maklun_store).trim() !== "");
+            return {
+                ...item,
+                formatted_amount: formatRupiah(item.amount),
+                folder_status: isMaklun ? "🤝 Maklun" : (FOLDER_STATUS_LABEL[itemFolderStatus[item.category]?.status] || "-")
+            };
+        });
     }, [viewOrderData, itemFolderStatus]);
 
     const viewTableActions = useCallback((row) => {
+        const isMaklun = !!(row.maklun_store && String(row.maklun_store).trim() !== "");
+        if (isMaklun) return null;
+
         const info = itemFolderStatus[row.category];
         if (!info || info.status !== "ada" || !info.path) return null;
 

@@ -73,26 +73,49 @@ export const joinPath = (base, name) => {
     return `${cleanBase}\\${name}`;
 };
 
+const CATEGORY_PATH_MAP = {
+    AKRILIK: ["akrilik"],
+    "MERCENDISE AKRILIK": ["akrilik"],
+    "LASER A3": ["laser"],
+    MERCENDISE: ["laser"],
+    "KARTU NAMA": ["laser"],
+    STAMP: ["laser"],
+    INDOOR: ["indoor"],
+    "PAKET INDOOR OUTDOOR": ["indoor", "outdoor"],
+    OUTDOOR: ["outdoor"],
+    DTF: ["dtf"],
+    SUBLIM: ["sublim"],
+};
+
 export const checkFoldersForItems = async (settings, orderData, itemsList) => {
-    const categoriesInOrder = [...new Set((itemsList || []).map(i => i.category).filter(Boolean))];
+    const relevantItems = (itemsList || []).filter(i => i.category && !i.maklun_store);
+    const categoriesInOrder = [...new Set(relevantItems.map(i => i.category))];
     const results = {};
 
     const dateSubPath = buildDateSubPath(orderData.date);
     const nomorator = orderData.nomorator;
 
     await Promise.all(categoriesInOrder.map(async (cat) => {
-        const basePath = resolveBasePath(settings, cat);
-        if (!basePath) {
-            results[cat] = { status: "no-path", path: null };
-            return;
+        const pathKeys = CATEGORY_PATH_MAP[String(cat).toUpperCase()];
+        if (!pathKeys) return;
+
+        for (const key of pathKeys) {
+            const basePath = settings?.[`path_${key}`];
+            if (!basePath) continue;
+            try {
+                const res = await window.electron.cariFolderOrder({ basePath, dateSubPath, nomorator });
+                if (res?.found) {
+                    results[cat] = { status: "ada", path: res.path };
+                    return;
+                }
+            } catch (err) {}
         }
-        try {
-            const res = await window.electron.cariFolderOrder({ basePath, dateSubPath, nomorator });
-            results[cat] = res?.found
-                ? { status: "ada", path: res.path }
-                : { status: "tidak-ada", path: null };
-        } catch (err) {
-            results[cat] = { status: "tidak-ada", path: null };
+
+        if (!results[cat]) {
+            const anyPathConfigured = pathKeys.some(key => settings?.[`path_${key}`]);
+            results[cat] = anyPathConfigured
+                ? { status: "tidak-ada", path: null }
+                : { status: "no-path", path: null };
         }
     }));
 
