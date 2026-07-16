@@ -5,6 +5,7 @@ export async function login(payload) {
 
 	formData.append("username", payload.username);
 	formData.append("password", payload.password);
+	formData.append("g-recaptcha-response", payload["g-recaptcha-response"] ?? "");
 
 	const { data } = await api.post(
 		"/index.php?action=login",
