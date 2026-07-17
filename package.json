@@ -4,7 +4,13 @@
   "version": "1.0.0",
   "main": "electron/main.cjs",
   "type": "module",
-  "icon": "assets/mgo.ico",
+  "author": {
+    "name": "Viki Alvian Riyadi",
+    "email": "mgood251217@gmail.com",
+    "url": "https://mgood.my.id"
+  },
+  "description": "Aplikasi POS internal Mgo Desktop untuk transaksi cepat, praktis, dan akurat.",
+  "icon": "src/assets/mgo.ico",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "build": "vite build",
@@ -27,7 +33,10 @@
       "electron/**/*",
       "package.json"
     ],
-    "asar": true
+    "asar": true,
+    "win": {
+        "icon": "src/assets/mgo.ico"
+    }
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",

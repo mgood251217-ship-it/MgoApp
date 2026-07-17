@@ -16,14 +16,37 @@ process.on("unhandledRejection", (reason) => {
     dialog.showErrorBox("Unhandled Rejection", reason instanceof Error ? (reason.stack || reason.message) : String(reason));
 });
 
-function getIconBasePath() {
+const ICON_FILES = ["folder-selesai.ico", "folder-proses.ico", "folder-cancel.ico"];
+
+function getBundledIconPath() {
     if (app.isPackaged) {
         return path.join(process.resourcesPath, "icons");
     }
     return path.join(__dirname, "../src/assets/icons");
 }
 
-const ICON_BASE = getIconBasePath();
+function getInstalledIconPath() {
+    const programData = process.env.ProgramData || "C:\\ProgramData";
+    return path.join(programData, "MgoDesktop", "icons");
+}
+
+async function ensureIconsInstalled() {
+    const sourceDir = getBundledIconPath();
+    const targetDir = getInstalledIconPath();
+
+    await fs.mkdir(targetDir, { recursive: true });
+
+    for (const file of ICON_FILES) {
+        const targetPath = path.join(targetDir, file);
+        try {
+            await fs.access(targetPath);
+        } catch (err) {
+            await fs.copyFile(path.join(sourceDir, file), targetPath);
+        }
+    }
+}
+
+const ICON_BASE = getInstalledIconPath();
 const ICONS = {
     selesai: path.join(ICON_BASE, "folder-selesai.ico"),
     proses: path.join(ICON_BASE, "folder-proses.ico"),
@@ -239,6 +262,7 @@ ipcMain.handle("set-icon-folder-order", async (event, { folderPath, status }) =>
 });
 
 app.whenReady().then(async () => {
+    await ensureIconsInstalled();
     await createWindow();
 
     globalShortcut.register("F12", () => {
