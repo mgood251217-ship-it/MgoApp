@@ -35,6 +35,19 @@ export const buildDateSubPath = (dateStr) => {
     return `${year}\\${monthNum} ${monthName}\\${day}`;
 };
 
+export const buildDateParts = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(String(dateStr).replace(" ", "T"));
+    if (isNaN(d.getTime())) return null;
+
+    return {
+        year: d.getFullYear(),
+        monthNum: d.getMonth() + 1,
+        monthName: MONTH_NAMES_ID[d.getMonth()],
+        day: d.getDate(),
+    };
+};
+
 export const formatDeadlineForFolder = (deadline) => {
     if (!deadline) return "";
     const deadlineDate = new Date(String(deadline).replace(" ", "T"));
@@ -92,6 +105,7 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
     const categoriesInOrder = [...new Set(relevantItems.map(i => i.category))];
     const results = {};
 
+    const dateParts = buildDateParts(orderData.date);
     const dateSubPath = buildDateSubPath(orderData.date);
     const nomorator = orderData.nomorator;
 
@@ -101,11 +115,11 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
 
         for (const key of pathKeys) {
             const basePath = settings?.[`path_${key}`];
-            if (!basePath) continue;
+            if (!basePath || !dateParts) continue;
             try {
-                const res = await window.electron.cariFolderOrder({ basePath, dateSubPath, nomorator });
+                const res = await window.electron.cariFolderOrder({ basePath, ...dateParts, nomorator });
                 if (res?.found) {
-                    results[cat] = { status: "ada", path: res.path, createPath: null };
+                    results[cat] = { status: "ada", path: res.path, createPath: null, createInfo: null };
                     return;
                 }
             } catch (err) {}
@@ -114,13 +128,14 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
         if (!results[cat]) {
             const configuredKey = pathKeys.find(key => settings?.[`path_${key}`]);
             if (!configuredKey) {
-                results[cat] = { status: "no-path", path: null, createPath: null };
+                results[cat] = { status: "no-path", path: null, createPath: null, createInfo: null };
                 return;
             }
             const basePath = settings[`path_${configuredKey}`];
             const folderName = buildFolderName(orderData);
             const createPath = joinPath(joinPath(basePath, dateSubPath), folderName);
-            results[cat] = { status: "tidak-ada", path: null, createPath };
+            const createInfo = dateParts ? { basePath, ...dateParts, folderName } : null;
+            results[cat] = { status: "tidak-ada", path: null, createPath, createInfo };
         }
     }));
 
@@ -129,7 +144,7 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
 
 export const extractQuantityFromFilename = (filename) => {
     const nameNoExt = String(filename).replace(/\.[^/.]+$/, "");
-    const qtyMatch = nameNoExt.match(/(\d+)\s*(PCS|KALI|SET|LBR|LEMBAR)/i);
+    const qtyMatch = nameNoExt.match(/(\d+)\s*(PCS|KALI|SET|LBR|LEMBAR|QTY|BUAH|X\s*PRINT)/i);
     return qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
 };
 

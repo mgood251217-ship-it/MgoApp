@@ -143,6 +143,92 @@ function folderMatchesNomor(entryName, nomorator) {
     return re.test(entryName);
 }
 
+function normalizeForMatch(str) {
+    return String(str).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function extractLeadingNumber(str) {
+    const m = String(str).match(/^\s*0*(\d{1,2})/);
+    return m ? parseInt(m[1], 10) : null;
+}
+
+async function findMatchingSubfolder(dir, matcher) {
+    let entries;
+    try {
+        entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch (err) {
+        return null;
+    }
+    for (const entry of entries) {
+        if (entry.isDirectory() && matcher(entry.name)) {
+            return path.join(dir, entry.name);
+        }
+    }
+    return null;
+}
+
+async function resolveDateFolder(basePath, year, monthNum, monthName, day) {
+    const yearDir = await findMatchingSubfolder(basePath, (name) => {
+        const digits = String(name).match(/\d{4}/);
+        return digits && parseInt(digits[0], 10) === year;
+    });
+    if (!yearDir) return null;
+
+    const monthNameNorm = normalizeForMatch(monthName);
+    const monthDir = await findMatchingSubfolder(yearDir, (name) => {
+        const leadingNum = extractLeadingNumber(name);
+        if (leadingNum === monthNum) return true;
+        return normalizeForMatch(name).includes(monthNameNorm);
+    });
+    if (!monthDir) return null;
+
+    const dayDir = await findMatchingSubfolder(monthDir, (name) => extractLeadingNumber(name) === day);
+    return dayDir;
+}
+
+async function resolveOrCreateSubfolder(dir, matcher, defaultName) {
+    const existing = await findMatchingSubfolder(dir, matcher);
+    if (existing) return existing;
+
+    const newPath = path.join(dir, defaultName);
+    await fs.mkdir(newPath, { recursive: true });
+    return newPath;
+}
+
+async function resolveOrCreateDateFolder(basePath, year, monthNum, monthName, day) {
+    await fs.mkdir(basePath, { recursive: true });
+
+    const yearDir = await resolveOrCreateSubfolder(
+        basePath,
+        (name) => {
+            const digits = String(name).match(/\d{4}/);
+            return digits && parseInt(digits[0], 10) === year;
+        },
+        String(year)
+    );
+
+    const monthNameNorm = normalizeForMatch(monthName);
+    const monthDefaultName = `${String(monthNum).padStart(2, "0")} ${monthName}`;
+    const monthDir = await resolveOrCreateSubfolder(
+        yearDir,
+        (name) => {
+            const leadingNum = extractLeadingNumber(name);
+            if (leadingNum === monthNum) return true;
+            return normalizeForMatch(name).includes(monthNameNorm);
+        },
+        monthDefaultName
+    );
+
+    const dayDefaultName = String(day).padStart(2, "0");
+    const dayDir = await resolveOrCreateSubfolder(
+        monthDir,
+        (name) => extractLeadingNumber(name) === day,
+        dayDefaultName
+    );
+
+    return dayDir;
+}
+
 async function findFolderRecursive(dir, nomorator, depth = 0, maxDepth = 12) {
     if (depth > maxDepth) return null;
 
@@ -169,17 +255,13 @@ async function findFolderRecursive(dir, nomorator, depth = 0, maxDepth = 12) {
     return null;
 }
 
-ipcMain.handle("cari-folder-order", async (event, { basePath, dateSubPath, nomorator }) => {
+ipcMain.handle("cari-folder-order", async (event, { basePath, year, monthNum, monthName, day, nomorator }) => {
     try {
-        const rootDir = path.join(basePath, dateSubPath || "");
-        try {
-            await fs.access(rootDir);
-        } catch (err) {
-            return { found: false, searchedPath: rootDir };
-        }
+        const dayDir = await resolveDateFolder(basePath, year, monthNum, monthName, day);
+        if (!dayDir) return { found: false };
 
-        const foundPath = await findFolderRecursive(rootDir, nomorator);
-        return { found: !!foundPath, path: foundPath || null, searchedPath: rootDir };
+        const foundPath = await findFolderRecursive(dayDir, nomorator);
+        return { found: !!foundPath, path: foundPath || null, searchedPath: dayDir };
     } catch (err) {
         return { found: false, message: err.message };
     }
@@ -231,10 +313,12 @@ ipcMain.handle("analisis-folder-order", async (event, folderPath) => {
     }
 });
 
-ipcMain.handle("buat-folder-order", async (event, folderPath) => {
+ipcMain.handle("buat-folder-order", async (event, { basePath, year, monthNum, monthName, day, folderName }) => {
     try {
-        await fs.mkdir(folderPath, { recursive: true });
-        return { success: true };
+        const dayDir = await resolveOrCreateDateFolder(basePath, year, monthNum, monthName, day);
+        const targetPath = path.join(dayDir, folderName);
+        await fs.mkdir(targetPath, { recursive: true });
+        return { success: true, path: targetPath };
     } catch (err) {
         return { success: false, message: err.message };
     }

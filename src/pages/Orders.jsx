@@ -411,10 +411,11 @@ export default function Orders() {
 
     const [creatingFolderFor, setCreatingFolderFor] = useState(null);
 
-    const handleBuatFolder = async (category, targetPath) => {
+    const handleBuatFolder = async (category, createInfo) => {
+        if (!createInfo) return;
         setCreatingFolderFor(category);
         try {
-            const res = await window.electron.buatFolderOrder(targetPath);
+            const res = await window.electron.buatFolderOrder(createInfo);
             if (!res.success) {
                 setAlertConfig({ show: true, type: "error", message: res.message || "Gagal membuat folder." });
             } else {
@@ -430,7 +431,7 @@ export default function Orders() {
 
     const [dragOverCat, setDragOverCat] = useState(null);
 
-    const handleDropFile = async (e, category, targetPath) => {
+    const handleDropFile = async (e, category, info) => {
         e.preventDefault();
         setDragOverCat(null);
 
@@ -438,6 +439,17 @@ export default function Orders() {
         if (filePaths.length === 0) return;
 
         try {
+            let targetPath = info.path;
+            if (!targetPath) {
+                if (!info.createInfo) return;
+                const createRes = await window.electron.buatFolderOrder(info.createInfo);
+                if (!createRes.success) {
+                    setAlertConfig({ show: true, type: "error", message: createRes.message || "Gagal membuat folder." });
+                    return;
+                }
+                targetPath = createRes.path;
+            }
+
             const res = await window.electron.pindahFileKeFolder({ filePaths, targetFolderPath: targetPath });
             const gagal = res?.results?.filter(r => !r.success) || [];
             if (gagal.length > 0) {
@@ -646,7 +658,7 @@ export default function Orders() {
                                         key={info.path || info.createPath}
                                         onDragOver={(e) => { e.preventDefault(); setDragOverCat(cat); }}
                                         onDragLeave={() => setDragOverCat(null)}
-                                        onDrop={(e) => handleDropFile(e, cat, info.path || info.createPath)}
+                                        onDrop={(e) => handleDropFile(e, cat, info)}
                                         style={{
                                             marginBottom: 16,
                                             padding: 12,
@@ -674,7 +686,7 @@ export default function Orders() {
                                                     icon={<Icon name="create_new_folder" />}
                                                     style={{ whiteSpace: "nowrap" }}
                                                     disabled={creatingFolderFor === cat}
-                                                    onClick={() => handleBuatFolder(cat, info.createPath)}
+                                                    onClick={() => handleBuatFolder(cat, info.createInfo)}
                                                 >
                                                     {creatingFolderFor === cat ? "Membuat..." : "Buat Folder"}
                                                 </Button>
