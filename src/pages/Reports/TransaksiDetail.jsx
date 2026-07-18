@@ -3,6 +3,7 @@ import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
+import ReportNav from "../../components/ReportNav/ReportNav";
 import { formatRupiah } from "../../services/helpers";
 
 export default function TransaksiDetail() {
@@ -71,6 +72,8 @@ export default function TransaksiDetail() {
                 title="Laporan Detail Transaksi" 
                 subtitle="Pantau rincian setiap transaksi beserta item, pembayaran, dan catatan." 
             />
+
+            <ReportNav />
 
             <div style={{ padding: "0 24px" }}>
                 <DateFilter 

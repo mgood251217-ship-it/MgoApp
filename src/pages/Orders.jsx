@@ -46,8 +46,8 @@ export default function Orders() {
     const [viewOrderData, setViewOrderData] = useState({ total: 0, items: [], diskon_per_produk: {} });
     const [viewOrderDetails, setViewOrderDetails] = useState(null);
     const [itemFolderStatus, setItemFolderStatus] = useState({}); // { [category]: { status, path } }
-    const [folderFilesByCategory, setFolderFilesByCategory] = useState({}); // { [category]: file[] }
-    const [loadingFilesByCategory, setLoadingFilesByCategory] = useState({}); // { [category]: boolean }
+    const [folderFilesByPath, setFolderFilesByPath] = useState({});
+    const [loadingFilesByPath, setLoadingFilesByPath] = useState({});
 
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
@@ -66,17 +66,17 @@ export default function Orders() {
             .catch(() => {});
     }, []);
 
-    const fetchFilesForCategory = async (category, folderPath) => {
-        setLoadingFilesByCategory(prev => ({ ...prev, [category]: true }));
+    const fetchFilesForPath = async (folderPath) => {
+        setLoadingFilesByPath(prev => ({ ...prev, [folderPath]: true }));
         const res = await listFilesForFolder(folderPath);
-        setFolderFilesByCategory(prev => ({ ...prev, [category]: res.success ? res.data : [] }));
-        setLoadingFilesByCategory(prev => ({ ...prev, [category]: false }));
+        setFolderFilesByPath(prev => ({ ...prev, [folderPath]: res.success ? res.data : [] }));
+        setLoadingFilesByPath(prev => ({ ...prev, [folderPath]: false }));
     };
 
     const checkFoldersForViewItems = async (orderRow, itemsList) => {
         const categoriesInOrder = [...new Set((itemsList || []).map(i => i.category).filter(Boolean))];
-        setFolderFilesByCategory({});
-        setLoadingFilesByCategory({});
+        setFolderFilesByPath({});
+        setLoadingFilesByPath({});
 
         if (categoriesInOrder.length === 0) {
             setItemFolderStatus({});
@@ -91,9 +91,11 @@ export default function Orders() {
         const results = await checkFoldersForItems(appSettings, orderRow, itemsList);
         setItemFolderStatus(results);
 
-        Object.entries(results).forEach(([cat, info]) => {
-            if (info.status === "ada" && info.path) {
-                fetchFilesForCategory(cat, info.path);
+        const fetchedPaths = new Set();
+        Object.values(results).forEach((info) => {
+            if (info.status === "ada" && info.path && !fetchedPaths.has(info.path)) {
+                fetchedPaths.add(info.path);
+                fetchFilesForPath(info.path);
             }
         });
     };
@@ -392,6 +394,19 @@ export default function Orders() {
         });
     }, [viewOrderData, itemFolderStatus]);
 
+    const dedupedFolderEntries = useMemo(() => {
+        const seenPaths = new Map();
+        Object.entries(itemFolderStatus)
+            .filter(([, info]) => info.status === "ada")
+            .forEach(([cat, info]) => {
+                const existing = seenPaths.get(info.path);
+                if (!existing || cat.length < existing.length) {
+                    seenPaths.set(info.path, cat);
+                }
+            });
+        return [...seenPaths.entries()].map(([path, cat]) => [cat, path]);
+    }, [itemFolderStatus]);
+
     const viewTableActions = useCallback((row) => {
         const isMaklun = !!(row.maklun_store && String(row.maklun_store).trim() !== "");
         if (isMaklun) return null;
@@ -564,7 +579,7 @@ export default function Orders() {
 
             <Modal
                 open={viewModalOpen}
-                onClose={() => { setViewModalOpen(false); setItemFolderStatus({}); setFolderFilesByCategory({}); setLoadingFilesByCategory({}); }}
+                onClose={() => { setViewModalOpen(false); setItemFolderStatus({}); setFolderFilesByPath({}); setLoadingFilesByPath({}); }}
                 title={`Detail Order - ${viewOrderDetails?.nomorator || ""}`}
                 size="lg"
                 headerColor="info"
@@ -595,18 +610,16 @@ export default function Orders() {
                 </div>
 
 
-                {Object.keys(itemFolderStatus).some(cat => itemFolderStatus[cat]?.status === "ada") && (
+                {dedupedFolderEntries.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
                         <h4 style={{ marginBottom: 12 }}>Isi Folder (untuk dibandingkan dengan nota)</h4>
-                        {Object.entries(itemFolderStatus)
-                            .filter(([, info]) => info.status === "ada")
-                            .map(([cat]) => {
-                                const files = folderFilesByCategory[cat] || [];
-                                const isLoading = loadingFilesByCategory[cat];
+                        {dedupedFolderEntries.map(([cat, folderPath]) => {
+                                const files = folderFilesByPath[folderPath] || [];
+                                const isLoading = loadingFilesByPath[folderPath];
                                 const totalSemua = files.reduce((sum, f) => sum + (f.totalLuas || 0), 0);
 
                                 return (
-                                    <div key={cat} style={{ marginBottom: 16, padding: 12, backgroundColor: "var(--bg-body)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                                    <div key={folderPath} style={{ marginBottom: 16, padding: 12, backgroundColor: "var(--bg-body)", borderRadius: 8, border: "1px solid var(--border)" }}>
                                         <div style={{ fontWeight: "bold", marginBottom: 8 }}>{cat}</div>
                                         {isLoading ? (
                                             <div style={{ color: "var(--secondary)", fontSize: 13 }}>Membaca isi folder...</div>
