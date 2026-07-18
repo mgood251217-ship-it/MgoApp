@@ -105,17 +105,22 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
             try {
                 const res = await window.electron.cariFolderOrder({ basePath, dateSubPath, nomorator });
                 if (res?.found) {
-                    results[cat] = { status: "ada", path: res.path };
+                    results[cat] = { status: "ada", path: res.path, createPath: null };
                     return;
                 }
             } catch (err) {}
         }
 
         if (!results[cat]) {
-            const anyPathConfigured = pathKeys.some(key => settings?.[`path_${key}`]);
-            results[cat] = anyPathConfigured
-                ? { status: "tidak-ada", path: null }
-                : { status: "no-path", path: null };
+            const configuredKey = pathKeys.find(key => settings?.[`path_${key}`]);
+            if (!configuredKey) {
+                results[cat] = { status: "no-path", path: null, createPath: null };
+                return;
+            }
+            const basePath = settings[`path_${configuredKey}`];
+            const folderName = buildFolderName(orderData);
+            const createPath = joinPath(joinPath(basePath, dateSubPath), folderName);
+            results[cat] = { status: "tidak-ada", path: null, createPath };
         }
     }));
 

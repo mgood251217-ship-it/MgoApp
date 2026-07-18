@@ -231,6 +231,56 @@ ipcMain.handle("analisis-folder-order", async (event, folderPath) => {
     }
 });
 
+ipcMain.handle("buat-folder-order", async (event, folderPath) => {
+    try {
+        await fs.mkdir(folderPath, { recursive: true });
+        return { success: true };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
+
+async function moveFileIntoFolder(sourcePath, targetDir) {
+    await fs.mkdir(targetDir, { recursive: true });
+    const baseName = path.basename(sourcePath);
+    const ext = path.extname(baseName);
+    const nameOnly = path.basename(baseName, ext);
+
+    let destPath = path.join(targetDir, baseName);
+    let counter = 1;
+    while (true) {
+        try {
+            await fs.access(destPath);
+            destPath = path.join(targetDir, `${nameOnly} (${counter})${ext}`);
+            counter++;
+        } catch (err) {
+            break;
+        }
+    }
+
+    try {
+        await fs.rename(sourcePath, destPath);
+    } catch (err) {
+        await fs.copyFile(sourcePath, destPath);
+        await fs.unlink(sourcePath);
+    }
+
+    return destPath;
+}
+
+ipcMain.handle("pindah-file-ke-folder", async (event, { filePaths, targetFolderPath }) => {
+    const results = [];
+    for (const filePath of filePaths) {
+        try {
+            const destPath = await moveFileIntoFolder(filePath, targetFolderPath);
+            results.push({ source: filePath, success: true, dest: destPath });
+        } catch (err) {
+            results.push({ source: filePath, success: false, message: err.message });
+        }
+    }
+    return { success: true, results };
+});
+
 ipcMain.handle("set-icon-folder-order", async (event, { folderPath, status }) => {
     if (process.platform !== "win32") {
         return { success: false, message: "Fitur ini hanya didukung di Windows." };

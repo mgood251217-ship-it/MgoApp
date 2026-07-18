@@ -395,40 +395,63 @@ export default function Orders() {
     }, [viewOrderData, itemFolderStatus]);
 
     const dedupedFolderEntries = useMemo(() => {
-        const seenPaths = new Map();
+        const seen = new Map();
         Object.entries(itemFolderStatus)
-            .filter(([, info]) => info.status === "ada")
+            .filter(([, info]) => info.status === "ada" || info.status === "tidak-ada")
             .forEach(([cat, info]) => {
-                const existing = seenPaths.get(info.path);
-                if (!existing || cat.length < existing.length) {
-                    seenPaths.set(info.path, cat);
+                const key = info.path || info.createPath;
+                if (!key) return;
+                const existing = seen.get(key);
+                if (!existing || cat.length < existing.cat.length) {
+                    seen.set(key, { cat, info });
                 }
             });
-        return [...seenPaths.entries()].map(([path, cat]) => [cat, path]);
+        return [...seen.values()];
     }, [itemFolderStatus]);
 
-    const viewTableActions = useCallback((row) => {
-        const isMaklun = !!(row.maklun_store && String(row.maklun_store).trim() !== "");
-        if (isMaklun) return null;
+    const [creatingFolderFor, setCreatingFolderFor] = useState(null);
 
-        const info = itemFolderStatus[row.category];
-        if (!info || info.status !== "ada" || !info.path) return null;
+    const handleBuatFolder = async (category, targetPath) => {
+        setCreatingFolderFor(category);
+        try {
+            const res = await window.electron.buatFolderOrder(targetPath);
+            if (!res.success) {
+                setAlertConfig({ show: true, type: "error", message: res.message || "Gagal membuat folder." });
+            } else {
+                setAlertConfig({ show: true, type: "success", message: "Folder berhasil dibuat." });
+                if (viewOrderDetails) {
+                    checkFoldersForViewItems(viewOrderDetails, viewOrderData.items || []);
+                }
+            }
+        } finally {
+            setCreatingFolderFor(null);
+        }
+    };
 
-        return (
-            <Button
-                size="sm"
-                variant="secondary"
-                icon={<Icon name="folder" />}
-                style={{ whiteSpace: "nowrap" }}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenIconModalForCategory(row.category, info.path, viewOrderDetails);
-                }}
-            >
-                Ganti Icon
-            </Button>
-        );
-    }, [itemFolderStatus, viewOrderDetails]);
+    const [dragOverCat, setDragOverCat] = useState(null);
+
+    const handleDropFile = async (e, category, targetPath) => {
+        e.preventDefault();
+        setDragOverCat(null);
+
+        const filePaths = Array.from(e.dataTransfer.files).map(f => window.electron.getPathForFile(f)).filter(Boolean);
+        if (filePaths.length === 0) return;
+
+        try {
+            const res = await window.electron.pindahFileKeFolder({ filePaths, targetFolderPath: targetPath });
+            const gagal = res?.results?.filter(r => !r.success) || [];
+            if (gagal.length > 0) {
+                setAlertConfig({ show: true, type: "error", message: `${gagal.length} file gagal dipindahkan.` });
+            } else {
+                setAlertConfig({ show: true, type: "success", message: `${filePaths.length} file berhasil dipindahkan.` });
+            }
+            if (viewOrderDetails) {
+                checkFoldersForViewItems(viewOrderDetails, viewOrderData.items || []);
+            }
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: "Gagal memindahkan file." });
+        }
+    };
 
     const tableActions = useCallback((row) => (
         <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
@@ -605,7 +628,6 @@ export default function Orders() {
                         rowDataKey="order_item_id"
                         columns={viewTableColumns}
                         rows={viewItemsMapped}
-                        actions={viewTableActions}
                     />
                 </div>
 
@@ -613,15 +635,61 @@ export default function Orders() {
                 {dedupedFolderEntries.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
                         <h4 style={{ marginBottom: 12 }}>Isi Folder (untuk dibandingkan dengan nota)</h4>
-                        {dedupedFolderEntries.map(([cat, folderPath]) => {
-                                const files = folderFilesByPath[folderPath] || [];
-                                const isLoading = loadingFilesByPath[folderPath];
+                        {dedupedFolderEntries.map(({ cat, info }) => {
+                                const folderPath = info.path;
+                                const files = folderPath ? (folderFilesByPath[folderPath] || []) : [];
+                                const isLoading = folderPath ? loadingFilesByPath[folderPath] : false;
                                 const totalSemua = files.reduce((sum, f) => sum + (f.totalLuas || 0), 0);
 
                                 return (
-                                    <div key={folderPath} style={{ marginBottom: 16, padding: 12, backgroundColor: "var(--bg-body)", borderRadius: 8, border: "1px solid var(--border)" }}>
-                                        <div style={{ fontWeight: "bold", marginBottom: 8 }}>{cat}</div>
-                                        {isLoading ? (
+                                    <div
+                                        key={info.path || info.createPath}
+                                        onDragOver={(e) => { e.preventDefault(); setDragOverCat(cat); }}
+                                        onDragLeave={() => setDragOverCat(null)}
+                                        onDrop={(e) => handleDropFile(e, cat, info.path || info.createPath)}
+                                        style={{
+                                            marginBottom: 16,
+                                            padding: 12,
+                                            backgroundColor: "var(--bg-body)",
+                                            borderRadius: 8,
+                                            border: dragOverCat === cat ? "2px dashed var(--primary)" : "1px solid var(--border)"
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                                            <div style={{ fontWeight: "bold" }}>{cat}</div>
+                                            {info.status === "ada" ? (
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    icon={<Icon name="folder" />}
+                                                    style={{ whiteSpace: "nowrap" }}
+                                                    onClick={() => handleOpenIconModalForCategory(cat, info.path, viewOrderDetails)}
+                                                >
+                                                    Ganti Icon
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    size="sm"
+                                                    variant="primary"
+                                                    icon={<Icon name="create_new_folder" />}
+                                                    style={{ whiteSpace: "nowrap" }}
+                                                    disabled={creatingFolderFor === cat}
+                                                    onClick={() => handleBuatFolder(cat, info.createPath)}
+                                                >
+                                                    {creatingFolderFor === cat ? "Membuat..." : "Buat Folder"}
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        <div style={{ fontSize: 12, color: "var(--secondary)", marginBottom: 8 }}>
+                                            Seret file JPG/PNG/PDF/TIFF ke sini untuk memindahkan ke folder ini.
+                                        </div>
+
+                                        {info.status === "tidak-ada" ? (
+                                            <div style={{ fontSize: 13, color: "var(--secondary)", wordBreak: "break-all" }}>
+                                                Folder belum dibuat. Kalau dibuat, lokasinya: <strong style={{ color: "var(--text)" }}>{info.createPath}</strong>
+                                            </div>
+                                        ) : isLoading ? (
                                             <div style={{ color: "var(--secondary)", fontSize: 13 }}>Membaca isi folder...</div>
                                         ) : files.length === 0 ? (
                                             <div style={{ color: "var(--secondary)", fontSize: 13 }}>Tidak ada file JPG/PNG/PDF/TIFF di folder ini.</div>
@@ -659,6 +727,7 @@ export default function Orders() {
                             })}
                     </div>
                 )}
+
 
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, padding: "16px", backgroundColor: "var(--bg-content)", borderRadius: "8px", border: "1px solid var(--border)"}}>
                     <div>
