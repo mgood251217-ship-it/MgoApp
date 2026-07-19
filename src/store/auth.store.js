@@ -1,6 +1,4 @@
-import { getSession, setSession, clearSession } from "../utils/session";
-
-let currentUser = getSession();
+let currentUser = null;
 
 const listeners = new Set();
 
@@ -9,13 +7,11 @@ export const authStore = {
 
     login: (userData) => {
         currentUser = userData;
-        setSession(userData);
         notify();
     },
 
     logout: () => {
         currentUser = null;
-        clearSession();
         notify();
     },
 
@@ -23,10 +19,6 @@ export const authStore = {
         listeners.add(callback);
         return () => listeners.delete(callback);
     }
-};
-
-export const productStore = {
-    getProducts: () => currentUser?.products || []
 };
 
 function notify() {

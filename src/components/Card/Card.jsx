@@ -30,8 +30,8 @@ export default function Card({ title, description1, description2, onClick, bgCol
                 position: "absolute",
                 right: "-10%",
                 bottom: "-20%",
-                width: "120px",
-                height: "120px",
+                width: "20vw",
+                height: "30vh",
                 opacity: 0.15,
                 pointerEvents: "none",
                 zIndex: 0

@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportTransaksiHarianExcel } from "../../services/excelService";
 
 export default function TransaksiHarian() {
     const today = new Date().toISOString().split("T")[0];
@@ -51,8 +52,24 @@ export default function TransaksiHarian() {
         fetchHarian();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (harianData.length === 0) {
+            alert("Tidak ada data untuk diexport.");
+            return;
+        }
+        try {
+            await exportTransaksiHarianExcel({
+                harianData,
+                summary,
+                startDate,
+                endDate,
+                storeName: "CAHEUM PRINTING SUBLIM",
+                storeAddress: "Alamat Toko Anda"
+            });
+        } catch (error) {
+            console.error("Gagal export:", error);
+            alert("Terjadi kesalahan saat export.");
+        }
     };
 
     const columns = useMemo(() => [

@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportTransaksiBulananExcel } from "../../services/excelService";
 
 export default function TransaksiBulanan() {
     const todayObj = new Date();
@@ -59,8 +60,24 @@ export default function TransaksiBulanan() {
         fetchBulanan();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (bulananData.length === 0) {
+            alert("Tidak ada data untuk diexport.");
+            return;
+        }
+        try {
+            await exportTransaksiBulananExcel({
+                bulananData,
+                summary,
+                startDate,
+                endDate,
+                storeName: "CAHEUM PRINTING SUBLIM",
+                storeAddress: "Alamat Toko Anda"
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const columns = useMemo(() => [

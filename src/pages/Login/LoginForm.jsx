@@ -7,7 +7,6 @@ import Button from "../../components/Button/Button";
 import Alert from "../../components/Alert/Alert";
 import { authStore } from "../../store/auth.store";
 import { getSession as fetchSession } from "../../services/session";
-import { setSession } from "../../utils/session";
 import { login } from "../../services/auth";
 
 function LoginFormInternal({ onSuccess }) {
@@ -52,11 +51,9 @@ function LoginFormInternal({ onSuccess }) {
 
             const sessionResp = await fetchSession();
             if (sessionResp?.success) {
-                setSession(sessionResp.data);
                 authStore.login(sessionResp.data);
                 if (onSuccess) onSuccess(sessionResp.data);
             } else {
-                setSession(response.data);
                 authStore.login(response.data);
                 if (onSuccess) onSuccess(response.data);
             }

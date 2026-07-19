@@ -6,6 +6,7 @@ import { authStore } from "../../store/auth.store";
 import { logout as apiLogout } from "../../services/auth";
 import { changeTheme } from "../../services/setting";
 import config from "../../services/config";
+import { getSession } from "../../services/session";
 
 const THEME_KEY = "theme";
 
@@ -35,8 +36,8 @@ function getInitialTheme(session) {
 
 export default function Navbar() {
     const navigate = useNavigate();
-    const session = authStore.getUser();
-    const [theme, setTheme] = useState(() => getInitialTheme(session));
+    const [session, setSession] = useState(null);
+    const [theme, setTheme] = useState(() => getInitialTheme(null));
     const [themeLoading, setThemeLoading] = useState(false);
     const storeName = session?.store?.name ?? "MGO Store";
     const userName = session?.user?.name ?? "Guest";
@@ -48,6 +49,37 @@ export default function Navbar() {
         ? session.store.logo
         : `${baseUrl}/assets/img/store/${session.store.logo}`
     : "...";
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function loadSession() {
+            try {
+                const response = await getSession();
+                const nextSession = response?.success ? response.data : response?.data ?? response;
+
+                if (mounted) {
+                    setSession(nextSession ?? null);
+                }
+            } catch (error) {
+                console.error("Gagal memuat session navbar:", error);
+
+                if (mounted) {
+                    setSession(null);
+                }
+            }
+        }
+
+        loadSession();
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        setTheme(getInitialTheme(session));
+    }, [session]);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
