@@ -11,14 +11,8 @@ import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInternasional, getTodayDate } from "../services/helpers";
-import {
-    FOLDER_STATUS_LABEL,
-    buildFolderName,
-    checkFoldersForItems,
-    listFilesForFolder,
-    formatUkuran,
-} from "../services/folderHelper";
 import PaymentModal from "../components/PaymentModal/PaymentModal";
+import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
 
@@ -45,113 +39,9 @@ export default function Orders() {
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [viewOrderData, setViewOrderData] = useState({ total: 0, items: [], diskon_per_produk: {} });
     const [viewOrderDetails, setViewOrderDetails] = useState(null);
-    const [itemFolderStatus, setItemFolderStatus] = useState({}); // { [category]: { status, path } }
-    const [folderFilesByPath, setFolderFilesByPath] = useState({});
-    const [loadingFilesByPath, setLoadingFilesByPath] = useState({});
 
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
-    const [copyFeedbackId, setCopyFeedbackId] = useState(null);
-    const [iconModalOpen, setIconModalOpen] = useState(false);
-    const [iconModalOrder, setIconModalOrder] = useState(null);
-    const [folderIconTarget, setFolderIconTarget] = useState(null);
-    const [folderIconFound, setFolderIconFound] = useState(false);
-    const [searchingFolder, setSearchingFolder] = useState(false);
-    const [applyingIcon, setApplyingIcon] = useState(false);
-    const [appSettings, setAppSettings] = useState({});
-
-    useEffect(() => {
-        window.electron.getSettings()
-            .then(setAppSettings)
-            .catch(() => {});
-    }, []);
-
-    const fetchFilesForPath = async (folderPath) => {
-        setLoadingFilesByPath(prev => ({ ...prev, [folderPath]: true }));
-        const res = await listFilesForFolder(folderPath);
-        setFolderFilesByPath(prev => ({ ...prev, [folderPath]: res.success ? res.data : [] }));
-        setLoadingFilesByPath(prev => ({ ...prev, [folderPath]: false }));
-    };
-
-    const checkFoldersForViewItems = async (orderRow, itemsList) => {
-        const categoriesInOrder = [...new Set((itemsList || []).map(i => i.category).filter(Boolean))];
-        setFolderFilesByPath({});
-        setLoadingFilesByPath({});
-
-        if (categoriesInOrder.length === 0) {
-            setItemFolderStatus({});
-            return;
-        }
-        setItemFolderStatus(() => {
-            const next = {};
-            categoriesInOrder.forEach(cat => { next[cat] = { status: "checking", path: null }; });
-            return next;
-        });
-
-        const results = await checkFoldersForItems(appSettings, orderRow, itemsList);
-        setItemFolderStatus(results);
-
-        const fetchedPaths = new Set();
-        Object.values(results).forEach((info) => {
-            if (info.status === "ada" && info.path && !fetchedPaths.has(info.path)) {
-                fetchedPaths.add(info.path);
-                fetchFilesForPath(info.path);
-            }
-        });
-    };
-
-    const handleCopyFolderName = async (row) => {
-        const folderName = buildFolderName(row);
-        try {
-            await navigator.clipboard.writeText(folderName);
-            setCopyFeedbackId(row.order_id);
-            setTimeout(() => setCopyFeedbackId(null), 1500);
-        } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Gagal menyalin nama folder ke clipboard." });
-        }
-    };
-
-    const handleOpenIconModalForCategory = (category, folderPath, orderRow) => {
-        setIconModalOrder({ ...orderRow, kategori: category });
-        setFolderIconTarget(folderPath);
-        setFolderIconFound(true);
-        setSearchingFolder(false);
-        setIconModalOpen(true);
-    };
-
-    const handlePilihFolderManual = async () => {
-        try {
-            const path = await window.electron.pilihFolder();
-            if (!path) return;
-            setFolderIconTarget(path);
-        } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Gagal membuka dialog folder." });
-        }
-    };
-
-    const handleTerapkanIcon = async (status) => {
-        if (!folderIconTarget) return;
-        setApplyingIcon(true);
-        try {
-            const res = await window.electron.setIconFolderOrder({
-                folderPath: folderIconTarget,
-                status
-            });
-            if (!res.success) {
-                setAlertConfig({ show: true, type: "error", message: res.message || "Gagal mengubah icon folder." });
-            } else {
-                setAlertConfig({ show: true, type: "success", message: "Icon folder berhasil diubah." });
-                setIconModalOpen(false);
-                setFolderIconTarget(null);
-                setFolderIconFound(false);
-                setIconModalOrder(null);
-            }
-        } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Terjadi kesalahan saat mengubah icon folder." });
-        } finally {
-            setApplyingIcon(false);
-        }
-    };
     const [processModalOpen, setProcessModalOpen] = useState(false);
     const [processOrderData, setProcessOrderData] = useState({
         order_id: "",
@@ -238,9 +128,8 @@ export default function Orders() {
             setViewOrderData(data);
             setViewOrderDetails(row);
             setViewModalOpen(true);
-            checkFoldersForViewItems(row, data.items || []);
         } catch (err) {}
-    }, [appSettings]);
+    }, []);
 
     const handleProcessClick = useCallback((row) => {
         setProcessOrderData({
@@ -372,98 +261,6 @@ export default function Orders() {
         { key: "formatted_proses", title: "Proses" },
         { key: "op_initial", title: "CS" }
     ], []);
-
-    const viewTableColumns = useMemo(() => [
-        { key: "product_name", title: "Nama" },
-        { key: "size", title: "Ukuran" },
-        { key: "finishing_names", title: "Finishing" },
-        { key: "quantity", title: "Qty" },
-        { key: "formatted_amount", title: "Jumlah" },
-        { key: "maklun_store", title: "Maklun" },
-        { key: "folder_status", title: "Folder" }
-    ], []);
-
-    const viewItemsMapped = useMemo(() => {
-        return (viewOrderData?.items || []).map(item => {
-            const isMaklun = !!(item.maklun_store && String(item.maklun_store).trim() !== "");
-            return {
-                ...item,
-                formatted_amount: formatRupiah(item.amount),
-                folder_status: isMaklun ? "🤝 Maklun" : (FOLDER_STATUS_LABEL[itemFolderStatus[item.category]?.status] || "-")
-            };
-        });
-    }, [viewOrderData, itemFolderStatus]);
-
-    const dedupedFolderEntries = useMemo(() => {
-        const seen = new Map();
-        Object.entries(itemFolderStatus)
-            .filter(([, info]) => info.status === "ada" || info.status === "tidak-ada")
-            .forEach(([cat, info]) => {
-                const key = info.path || info.createPath;
-                if (!key) return;
-                const existing = seen.get(key);
-                if (!existing || cat.length < existing.cat.length) {
-                    seen.set(key, { cat, info });
-                }
-            });
-        return [...seen.values()];
-    }, [itemFolderStatus]);
-
-    const [creatingFolderFor, setCreatingFolderFor] = useState(null);
-
-    const handleBuatFolder = async (category, createInfo) => {
-        if (!createInfo) return;
-        setCreatingFolderFor(category);
-        try {
-            const res = await window.electron.buatFolderOrder(createInfo);
-            if (!res.success) {
-                setAlertConfig({ show: true, type: "error", message: res.message || "Gagal membuat folder." });
-            } else {
-                setAlertConfig({ show: true, type: "success", message: "Folder berhasil dibuat." });
-                if (viewOrderDetails) {
-                    checkFoldersForViewItems(viewOrderDetails, viewOrderData.items || []);
-                }
-            }
-        } finally {
-            setCreatingFolderFor(null);
-        }
-    };
-
-    const [dragOverCat, setDragOverCat] = useState(null);
-
-    const handleDropFile = async (e, category, info) => {
-        e.preventDefault();
-        setDragOverCat(null);
-
-        const filePaths = Array.from(e.dataTransfer.files).map(f => window.electron.getPathForFile(f)).filter(Boolean);
-        if (filePaths.length === 0) return;
-
-        try {
-            let targetPath = info.path;
-            if (!targetPath) {
-                if (!info.createInfo) return;
-                const createRes = await window.electron.buatFolderOrder(info.createInfo);
-                if (!createRes.success) {
-                    setAlertConfig({ show: true, type: "error", message: createRes.message || "Gagal membuat folder." });
-                    return;
-                }
-                targetPath = createRes.path;
-            }
-
-            const res = await window.electron.pindahFileKeFolder({ filePaths, targetFolderPath: targetPath });
-            const gagal = res?.results?.filter(r => !r.success) || [];
-            if (gagal.length > 0) {
-                setAlertConfig({ show: true, type: "error", message: `${gagal.length} file gagal dipindahkan.` });
-            } else {
-                setAlertConfig({ show: true, type: "success", message: `${filePaths.length} file berhasil dipindahkan.` });
-            }
-            if (viewOrderDetails) {
-                checkFoldersForViewItems(viewOrderDetails, viewOrderData.items || []);
-            }
-        } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Gagal memindahkan file." });
-        }
-    };
 
     const tableActions = useCallback((row) => (
         <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
@@ -612,158 +409,13 @@ export default function Orders() {
                 onSuccess={handlePaymentSuccess}
             />
 
-            <Modal
+            <OrderDetailModal
                 open={viewModalOpen}
-                onClose={() => { setViewModalOpen(false); setItemFolderStatus({}); setFolderFilesByPath({}); setLoadingFilesByPath({}); }}
-                title={`Detail Order - ${viewOrderDetails?.nomorator || ""}`}
-                size="lg"
-                headerColor="info"
-            >
-                <div style={{ display: "flex", gap: "8px", marginBottom: 16, flexWrap: "nowrap" }}>
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        icon={<Icon name="content_copy" />}
-                        style={{ whiteSpace: "nowrap" }}
-                        onClick={() => viewOrderDetails && handleCopyFolderName(viewOrderDetails)}
-                    >
-                        {viewOrderDetails && copyFeedbackId === viewOrderDetails.order_id ? "Tersalin!" : "Salin Nama Folder"}
-                    </Button>
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                    <Table
-                        id="tableViewItems"
-                        showNumber
-                        size="sm"
-                        rowKey="order_item_id"
-                        rowDataKey="order_item_id"
-                        columns={viewTableColumns}
-                        rows={viewItemsMapped}
-                    />
-                </div>
-
-
-                {dedupedFolderEntries.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                        <h4 style={{ marginBottom: 12 }}>Isi Folder (untuk dibandingkan dengan nota)</h4>
-                        {dedupedFolderEntries.map(({ cat, info }) => {
-                                const folderPath = info.path;
-                                const files = folderPath ? (folderFilesByPath[folderPath] || []) : [];
-                                const isLoading = folderPath ? loadingFilesByPath[folderPath] : false;
-                                const totalSemua = files.reduce((sum, f) => sum + (f.totalLuas || 0), 0);
-
-                                return (
-                                    <div
-                                        key={info.path || info.createPath}
-                                        onDragOver={(e) => { e.preventDefault(); setDragOverCat(cat); }}
-                                        onDragLeave={() => setDragOverCat(null)}
-                                        onDrop={(e) => handleDropFile(e, cat, info)}
-                                        style={{
-                                            marginBottom: 16,
-                                            padding: 12,
-                                            backgroundColor: "var(--bg-body)",
-                                            borderRadius: 8,
-                                            border: dragOverCat === cat ? "2px dashed var(--primary)" : "1px solid var(--border)"
-                                        }}
-                                    >
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
-                                            <div style={{ fontWeight: "bold" }}>{cat}</div>
-                                            {info.status === "ada" ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="secondary"
-                                                    icon={<Icon name="folder" />}
-                                                    style={{ whiteSpace: "nowrap" }}
-                                                    onClick={() => handleOpenIconModalForCategory(cat, info.path, viewOrderDetails)}
-                                                >
-                                                    Ganti Icon
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    size="sm"
-                                                    variant="primary"
-                                                    icon={<Icon name="create_new_folder" />}
-                                                    style={{ whiteSpace: "nowrap" }}
-                                                    disabled={creatingFolderFor === cat}
-                                                    onClick={() => handleBuatFolder(cat, info.createInfo)}
-                                                >
-                                                    {creatingFolderFor === cat ? "Membuat..." : "Buat Folder"}
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        <div style={{ fontSize: 12, color: "var(--secondary)", marginBottom: 8 }}>
-                                            Seret file JPG/PNG/PDF/TIFF ke sini untuk memindahkan ke folder ini.
-                                        </div>
-
-                                        {info.status === "tidak-ada" ? (
-                                            <div style={{ fontSize: 13, color: "var(--secondary)", wordBreak: "break-all" }}>
-                                                Folder belum dibuat. Kalau dibuat, lokasinya: <strong style={{ color: "var(--text)" }}>{info.createPath}</strong>
-                                            </div>
-                                        ) : isLoading ? (
-                                            <div style={{ color: "var(--secondary)", fontSize: 13 }}>Membaca isi folder...</div>
-                                        ) : files.length === 0 ? (
-                                            <div style={{ color: "var(--secondary)", fontSize: 13 }}>Tidak ada file JPG/PNG/PDF/TIFF di folder ini.</div>
-                                        ) : (
-                                            <>
-                                                <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
-                                                    <thead>
-                                                        <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
-                                                            <th style={{ padding: "4px 8px" }}>Nama File</th>
-                                                            <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>Ukuran</th>
-                                                            <th style={{ padding: "4px 8px" }}>Qty</th>
-                                                            <th style={{ padding: "4px 8px" }}>Warna</th>
-                                                            <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>Total (m²)</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {files.map((f, idx) => (
-                                                            <tr key={idx} style={{ borderBottom: "1px solid var(--border)" }}>
-                                                                <td style={{ padding: "4px 8px", wordBreak: "break-all" }}>{f.nama}</td>
-                                                                <td style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>{formatUkuran(f)}</td>
-                                                                <td style={{ padding: "4px 8px" }}>{f.quantity}</td>
-                                                                <td style={{ padding: "4px 8px" }}>{f.colorMode}</td>
-                                                                <td style={{ padding: "4px 8px" }}>{f.totalLuas != null ? f.totalLuas : "-"}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                                <div style={{ textAlign: "right", marginTop: 8, fontWeight: "bold", fontSize: 13 }}>
-                                                    Total {cat}: {totalSemua.toFixed(2)} m²
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                    </div>
-                )}
-
-
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, padding: "16px", backgroundColor: "var(--bg-content)", borderRadius: "8px", border: "1px solid var(--border)"}}>
-                    <div>
-                        <h5 style={{ margin: "0 0 8px 0" }}>Diskon Produk:</h5>
-                        {Object.keys(viewOrderData?.diskon_per_produk || {}).length > 0 ? (
-                            <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--text)" }}>
-                                {Object.entries(viewOrderData.diskon_per_produk).map(([nama, diskon]) => (
-                                    <li key={nama}>
-                                        {nama}: {formatRupiah(diskon)}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <span style={{ color: "var(--secondary)" }}>Tidak ada diskon</span>
-                        )}
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                        <h4 style={{ margin: 0 }}>Total Bayar</h4>
-                        <h2 style={{ margin: "4px 0 0 0", color: "var(--success)" }}>
-                            {formatRupiah(viewOrderData?.total || 0)}
-                        </h2>
-                    </div>
-                </div>
-            </Modal>
+                onClose={() => setViewModalOpen(false)}
+                viewOrderDetails={viewOrderDetails}
+                viewOrderData={viewOrderData}
+                setAlertConfig={setAlertConfig}
+            />
 
             <Modal
                 open={addModalOpen}
@@ -977,67 +629,6 @@ export default function Orders() {
                         Update Proses
                     </Button>
                 </Form>
-            </Modal>
-
-            <Modal
-                open={iconModalOpen}
-                onClose={() => { setIconModalOpen(false); setFolderIconTarget(null); setFolderIconFound(false); setIconModalOrder(null); }}
-                title={`Ganti Icon Folder - ${iconModalOrder?.kategori || ""} - ${iconModalOrder?.nomorator || ""}`}
-                size="sm"
-                headerColor="secondary"
-            >
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    {searchingFolder ? (
-                        <div style={{ fontSize: "13px", color: "var(--secondary)" }}>
-                            🔍 Mencari folder di dalam struktur tanggal order...
-                        </div>
-                    ) : (
-                        <div style={{ fontSize: "13px", color: "var(--secondary)", wordBreak: "break-all" }}>
-                            {folderIconFound ? "✅ Folder ditemukan:" : "⚠️ Belum ditemukan, akan dibuat baru di:"}{" "}
-                            <strong style={{ color: "var(--text)" }}>{folderIconTarget}</strong>
-                        </div>
-                    )}
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        icon={<Icon name="folder_open" />}
-                        style={{ whiteSpace: "nowrap" }}
-                        disabled={searchingFolder}
-                        onClick={handlePilihFolderManual}
-                    >
-                        Pilih Folder Manual (kalau path di atas salah)
-                    </Button>
-                    <div style={{ fontSize: "14px", fontWeight: "bold" }}>Pilih status order:</div>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                        <Button
-                            size="md"
-                            variant="success"
-                            disabled={applyingIcon || searchingFolder}
-                            icon={<Icon name="folder" />}
-                            onClick={() => handleTerapkanIcon("selesai")}
-                        >
-                            Selesai
-                        </Button>
-                        <Button
-                            size="md"
-                            variant="primary"
-                            disabled={applyingIcon || searchingFolder}
-                            icon={<Icon name="folder" />}
-                            onClick={() => handleTerapkanIcon("proses")}
-                        >
-                            Proses
-                        </Button>
-                        <Button
-                            size="md"
-                            variant="danger"
-                            disabled={applyingIcon || searchingFolder}
-                            icon={<Icon name="folder" />}
-                            onClick={() => handleTerapkanIcon("cancel")}
-                        >
-                            Batal
-                        </Button>
-                    </div>
-                </div>
             </Modal>
 
             {printStrukOrderId && (
