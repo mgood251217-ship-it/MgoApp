@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportTransaksiPerKonsumenExcel } from "../../services/excelService";
 
 export default function TransaksiPerKonsumen() {
     const today = new Date().toISOString().split("T")[0];
@@ -39,8 +40,21 @@ export default function TransaksiPerKonsumen() {
         fetchTransaksiKonsumen();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (Object.keys(transaksiKonsumenData).length === 0) {
+            alert("Tidak ada data untuk diexport.");
+            return;
+        }
+        try {
+            await exportTransaksiPerKonsumenExcel({
+                transaksiKonsumenData,
+                startDate,
+                endDate
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const formatWaLink = (phone) => {

@@ -4,6 +4,7 @@ import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportPiutangExcel } from "../../services/excelService";
 
 export default function Piutang() {
     const [loading, setLoading] = useState(false);
@@ -33,8 +34,21 @@ export default function Piutang() {
         fetchPiutang();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (piutangData.length === 0) {
+            alert("Tidak ada data piutang untuk diexport.");
+            return;
+        }
+        
+        try {
+            await exportPiutangExcel({
+                piutangData,
+                totalPiutang
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const formatWaLink = (phone) => {

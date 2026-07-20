@@ -62,9 +62,7 @@ export default function TransaksiHarian() {
                 harianData,
                 summary,
                 startDate,
-                endDate,
-                storeName: "CAHEUM PRINTING SUBLIM",
-                storeAddress: "Alamat Toko Anda"
+                endDate
             });
         } catch (error) {
             console.error("Gagal export:", error);

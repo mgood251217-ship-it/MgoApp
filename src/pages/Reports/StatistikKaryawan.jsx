@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportStatistikKaryawanExcel } from "../../services/excelService";
 
 export default function StatistikKaryawan() {
     const today = new Date().toISOString().split("T")[0];
@@ -83,8 +84,22 @@ export default function StatistikKaryawan() {
         fetchStatistik();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (karyawanData.length === 0) {
+            alert("Tidak ada data untuk diexport.");
+            return;
+        }
+        try {
+            await exportStatistikKaryawanExcel({
+                karyawanData,
+                topPerformers,
+                startDate,
+                endDate
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const columns = useMemo(() => [

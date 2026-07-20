@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportPelunasanExcel } from "../../services/excelService";
 
 export default function Pelunasan() {
     const today = new Date().toISOString().split("T")[0];
@@ -55,8 +56,23 @@ export default function Pelunasan() {
         fetchPelunasan();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (pelunasanData.length === 0) {
+            alert("Tidak ada data pelunasan untuk diexport.");
+            return;
+        }
+        
+        try {
+            await exportPelunasanExcel({
+                pelunasanData,
+                summary,
+                startDate,
+                endDate
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const renderMethodBadge = (method) => {

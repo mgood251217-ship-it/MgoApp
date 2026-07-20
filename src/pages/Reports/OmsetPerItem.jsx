@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportOmsetPerItemExcel } from "../../services/excelService";
 
 export default function OmsetPerItem() {
     const today = new Date().toISOString().split("T")[0];
@@ -44,8 +45,23 @@ export default function OmsetPerItem() {
         fetchOmsetItem();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (omsetItemData.length === 0) {
+            alert("Tidak ada data omset per item untuk diexport.");
+            return;
+        }
+        
+        try {
+            await exportOmsetPerItemExcel({
+                omsetItemData,
+                totalOmsetKeseluruhan,
+                startDate,
+                endDate
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const columns = useMemo(() => [

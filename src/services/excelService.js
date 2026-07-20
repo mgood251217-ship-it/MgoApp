@@ -1,7 +1,11 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { authStore } from "./session";
 
-export const generateExcelHeader = (sheet, endColLetter, storeName, storeAddress, reportTitle, dateString) => {
+export const generateExcelHeader = (sheet, endColLetter, reportTitle, dateString) => {
+    const session = authStore.getUser();
+    const storeName = session?.store?.name ?? 'Mgo Store';
+    const storeAddress = session?.store?.address ?? 'Cicaheum';
     sheet.mergeCells(`A1:${endColLetter}1`);
     sheet.getCell("A1").value = storeName || "NAMA TOKO";
     sheet.getCell("A1").alignment = { vertical: 'middle', horizontal: 'center' };
@@ -31,9 +35,7 @@ export const exportMeteranExcel = async ({
     dataState,
     category,
     startDate,
-    endDate,
-    storeName,
-    storeAddress
+    endDate
 }) => {
     if (!dataState) return;
 
@@ -49,13 +51,9 @@ export const exportMeteranExcel = async ({
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(formattedCategory);
 
-    // Memanggil fungsi header dinamis yang baru saja kita buat.
-    // Karena tabel meteran hanya memiliki 5 kolom, kita atur endColLetter ke "E"
     let currentRow = generateExcelHeader(
         sheet, 
         "E", 
-        storeName, 
-        storeAddress, 
         `Laporan Penggunaan Bahan - ${categoryTitle.toUpperCase()}`, 
         tanggal
     );
@@ -226,9 +224,7 @@ export const exportTransaksiDetailExcel = async ({
     orders,
     itemsByOrder,
     startDate,
-    endDate,
-    storeName,
-    storeAddress
+    endDate
 }) => {
     if (!orders || orders.length === 0) return;
 
@@ -240,8 +236,6 @@ export const exportTransaksiDetailExcel = async ({
     let currentRow = generateExcelHeader(
         sheet, 
         "G", 
-        storeName, 
-        storeAddress, 
         "LAPORAN DETAIL TRANSAKSI", 
         tanggal
     );
@@ -325,9 +319,7 @@ export const exportTransaksiHarianExcel = async ({
     harianData,
     summary,
     startDate,
-    endDate,
-    storeName,
-    storeAddress
+    endDate
 }) => {
     if (!harianData || harianData.length === 0) return;
 
@@ -336,17 +328,13 @@ export const exportTransaksiHarianExcel = async ({
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Transaksi Harian");
 
-    // Menggunakan helper header yang sudah kita buat
     let currentRow = generateExcelHeader(
         sheet, 
         "F", 
-        storeName, 
-        storeAddress, 
         "LAPORAN TRANSAKSI HARIAN", 
         tanggal
     );
 
-    // Header Tabel
     const columns = ['No', 'Nomorator', 'Nama Konsumen', 'Nominal', 'Metode', 'Status'];
     const headerRow = sheet.addRow(columns);
     headerRow.font = { bold: true };
@@ -357,7 +345,6 @@ export const exportTransaksiHarianExcel = async ({
     });
     currentRow++;
 
-    // Data Rows
     harianData.forEach((row, index) => {
         const excelRow = sheet.addRow([
             index + 1,
@@ -375,7 +362,6 @@ export const exportTransaksiHarianExcel = async ({
         currentRow++;
     });
 
-    // Summary Section
     currentRow += 2;
     sheet.getCell(`E${currentRow}`).value = "Total Cash:";
     sheet.getCell(`F${currentRow}`).value = Number(summary.total_cash);
@@ -410,9 +396,7 @@ export const exportTransaksiBulananExcel = async ({
     bulananData,
     summary,
     startDate,
-    endDate,
-    storeName,
-    storeAddress
+    endDate
 }) => {
     if (!bulananData || bulananData.length === 0) return;
 
@@ -421,17 +405,13 @@ export const exportTransaksiBulananExcel = async ({
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Transaksi Bulanan");
 
-    // Menggunakan header dengan kolom sampai G (7 kolom)
     let currentRow = generateExcelHeader(
         sheet, 
         "G", 
-        storeName, 
-        storeAddress, 
         "LAPORAN TRANSAKSI BULANAN", 
         tanggal
     );
 
-    // Header Tabel
     const columns = ['No', 'Tanggal', 'Jml Order', 'Jml Transaksi', 'CASH', 'TRANSFER', 'Total Nominal'];
     const headerRow = sheet.addRow(columns);
     headerRow.font = { bold: true };
@@ -442,7 +422,6 @@ export const exportTransaksiBulananExcel = async ({
     });
     currentRow++;
 
-    // Data Rows
     bulananData.forEach((row, index) => {
         const excelRow = sheet.addRow([
             index + 1,
@@ -463,7 +442,6 @@ export const exportTransaksiBulananExcel = async ({
         currentRow++;
     });
 
-    // Summary Section
     currentRow += 2;
     sheet.getCell(`F${currentRow}`).value = "Total Cash:";
     sheet.getCell(`G${currentRow}`).value = Number(summary.total_cash);
@@ -498,9 +476,7 @@ export const exportTransaksiBulananExcel = async ({
 export const exportTransaksiPerItemExcel = async ({
     transaksiItemData,
     startDate,
-    endDate,
-    storeName,
-    storeAddress
+    endDate
 }) => {
     if (!transaksiItemData || Object.keys(transaksiItemData).length === 0) return;
 
@@ -509,19 +485,14 @@ export const exportTransaksiPerItemExcel = async ({
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Transaksi Per Item");
 
-    // Menggunakan header dengan kolom sampai I (9 kolom)
     let currentRow = generateExcelHeader(
         sheet, 
         "I", 
-        storeName, 
-        storeAddress, 
         "LAPORAN TRANSAKSI PER ITEM", 
         tanggal
     );
 
-    // Iterasi per Produk
     Object.entries(transaksiItemData).forEach(([namaProduk, daftarOrder]) => {
-        // Judul Produk (Sub-Header)
         sheet.mergeCells(`A${currentRow}:I${currentRow}`);
         const titleCell = sheet.getCell(`A${currentRow}`);
         titleCell.value = namaProduk;
@@ -529,7 +500,6 @@ export const exportTransaksiPerItemExcel = async ({
         titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
         currentRow++;
 
-        // Header Tabel
         const columns = ['No', 'Nomorator', 'Nama', 'Ukuran', 'Finishing', 'Harga Produk', 'Qty', 'Subtotal', 'Tanggal'];
         const headerRow = sheet.addRow(columns);
         headerRow.font = { bold: true };
@@ -540,7 +510,6 @@ export const exportTransaksiPerItemExcel = async ({
         });
         currentRow++;
 
-        // Data Rows
         let totalSubtotal = 0;
         daftarOrder.forEach((row, index) => {
             totalSubtotal += Number(row.amount);
@@ -559,13 +528,12 @@ export const exportTransaksiPerItemExcel = async ({
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
             });
-            excelRow.getCell(3).alignment = { horizontal: 'left' }; // Nama Konsumen
-            excelRow.getCell(6).numFmt = '#,##0'; // Harga
-            excelRow.getCell(8).numFmt = '#,##0'; // Subtotal
+            excelRow.getCell(3).alignment = { horizontal: 'left' }; 
+            excelRow.getCell(6).numFmt = '#,##0'; 
+            excelRow.getCell(8).numFmt = '#,##0'; 
             currentRow++;
         });
 
-        // Baris Total per produk
         sheet.mergeCells(`A${currentRow}:G${currentRow}`);
         const labelCell = sheet.getCell(`A${currentRow}`);
         labelCell.value = "Total Subtotal Produk";
@@ -580,7 +548,7 @@ export const exportTransaksiPerItemExcel = async ({
         totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         totalCell.numFmt = '#,##0';
         
-        currentRow += 2; // Spasi antar tabel produk
+        currentRow += 2;
     });
 
     sheet.columns = [
@@ -596,6 +564,875 @@ export const exportTransaksiPerItemExcel = async ({
     ];
 
     const fileName = `Laporan_Per_Item_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportTransaksiPerKonsumenExcel = async ({
+    transaksiKonsumenData,
+    startDate,
+    endDate
+}) => {
+    if (!transaksiKonsumenData || Object.keys(transaksiKonsumenData).length === 0) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Transaksi Per Konsumen");
+
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "I", 
+        "LAPORAN TRANSAKSI PER KONSUMEN", 
+        tanggal
+    );
+
+
+    Object.entries(transaksiKonsumenData).forEach(([namaKonsumen, daftarOrder]) => {
+
+        sheet.mergeCells(`A${currentRow}:I${currentRow}`);
+        const titleCell = sheet.getCell(`A${currentRow}`);
+        titleCell.value = `Konsumen: ${namaKonsumen}`;
+        titleCell.font = { bold: true, size: 12 };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+        currentRow++;
+
+        const columns = ['No', 'Nomorator', 'Nama Item', 'Ukuran', 'Finishing', 'Harga Produk', 'Qty', 'Subtotal', 'Tanggal'];
+        const headerRow = sheet.addRow(columns);
+        headerRow.font = { bold: true };
+        headerRow.eachCell({ includeEmpty: false }, cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+        currentRow++;
+
+        let totalSubtotal = 0;
+        daftarOrder.forEach((row, index) => {
+            totalSubtotal += Number(row.amount);
+            const excelRow = sheet.addRow([
+                index + 1,
+                row.nomorator,
+                row.judul,
+                row.size || "-",
+                row.finishing_names || "-",
+                Number(row.price),
+                row.quantity,
+                Number(row.amount),
+                row.date
+            ]);
+            
+            excelRow.eachCell({ includeEmpty: false }, cell => {
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            });
+            excelRow.getCell(3).alignment = { horizontal: 'left' };
+            excelRow.getCell(6).numFmt = '#,##0';
+            excelRow.getCell(8).numFmt = '#,##0'; 
+            currentRow++;
+        });
+
+        sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+        const labelCell = sheet.getCell(`A${currentRow}`);
+        labelCell.value = "Total Belanja Konsumen";
+        labelCell.alignment = { horizontal: 'right', vertical: 'middle' };
+        labelCell.font = { bold: true };
+        labelCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+        const totalCell = sheet.getCell(`H${currentRow}`);
+        totalCell.value = totalSubtotal;
+        totalCell.font = { bold: true };
+        totalCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        totalCell.numFmt = '#,##0';
+
+        const emptyCell = sheet.getCell(`I${currentRow}`);
+        emptyCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+        currentRow += 2; 
+    });
+
+    sheet.columns = [
+        { key: 'col1', width: 6 },
+        { key: 'col2', width: 15 },
+        { key: 'col3', width: 30 },
+        { key: 'col4', width: 12 },
+        { key: 'col5', width: 15 },
+        { key: 'col6', width: 15 },
+        { key: 'col7', width: 8 },
+        { key: 'col8', width: 15 },
+        { key: 'col9', width: 15 }
+    ];
+
+    const fileName = `Laporan_Per_Konsumen_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportStatistikKaryawanExcel = async ({
+    karyawanData,
+    topPerformers,
+    startDate,
+    endDate
+}) => {
+    if (!karyawanData || karyawanData.length === 0) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Statistik Karyawan");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "F", 
+        "LAPORAN STATISTIK KINERJA KARYAWAN", 
+        tanggal
+    );
+
+    sheet.mergeCells(`A${currentRow}:F${currentRow}`);
+    sheet.getCell(`A${currentRow}`).value = "RINGKASAN TOP PERFORMER";
+    sheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+    sheet.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+    currentRow++;
+
+    const summaryData = [
+        ["Penerima Terbanyak", topPerformers.receiver?.receiver > 0 ? topPerformers.receiver.name : "-", topPerformers.receiver?.receiver > 0 ? `${topPerformers.receiver.receiver} Konsumen` : "-"],
+        ["Setting Terbanyak", topPerformers.setting?.setting > 0 ? topPerformers.setting.name : "-", topPerformers.setting?.setting > 0 ? `${topPerformers.setting.setting} Kali` : "-"],
+        ["Pengambilan Barang", topPerformers.pickup?.pickup > 0 ? topPerformers.pickup.name : "-", topPerformers.pickup?.pickup > 0 ? `${topPerformers.pickup.pickup} Kali` : "-"],
+        ["Omset Tertinggi", topPerformers.omset?.omset > 0 ? topPerformers.omset.name : "-", topPerformers.omset?.omset > 0 ? Number(topPerformers.omset.omset) : "-"]
+    ];
+
+    summaryData.forEach(item => {
+        sheet.mergeCells(`A${currentRow}:B${currentRow}`);
+        sheet.getCell(`A${currentRow}`).value = item[0];
+        
+        sheet.mergeCells(`C${currentRow}:D${currentRow}`);
+        sheet.getCell(`C${currentRow}`).value = item[1];
+        sheet.getCell(`C${currentRow}`).font = { bold: true };
+        
+        sheet.mergeCells(`E${currentRow}:F${currentRow}`);
+        sheet.getCell(`E${currentRow}`).value = item[2];
+        if (item[0] === "Omset Tertinggi" && typeof item[2] === "number") {
+            sheet.getCell(`E${currentRow}`).numFmt = 'Rp #,##0';
+        }
+        currentRow++;
+    });
+
+    currentRow++;
+
+    const columns = ['No', 'Nama Karyawan', 'Penerima Konsumen', 'Setting', 'Pengambilan Barang', 'Total Omset'];
+    const headerRow = sheet.addRow(columns);
+    headerRow.font = { bold: true };
+    headerRow.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    karyawanData.forEach((row, index) => {
+        const excelRow = sheet.addRow([
+            index + 1,
+            row.name,
+            row.receiver,
+            row.setting,
+            row.pickup,
+            Number(row.omset)
+        ]);
+        excelRow.eachCell({ includeEmpty: false }, cell => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        excelRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' }; 
+        excelRow.getCell(6).numFmt = '#,##0'; 
+        currentRow++;
+    });
+
+    sheet.columns = [
+        { key: 'col1', width: 6 },
+        { key: 'col2', width: 30 },
+        { key: 'col3', width: 22 },
+        { key: 'col4', width: 15 },
+        { key: 'col5', width: 22 },
+        { key: 'col6', width: 20 }
+    ];
+
+    const fileName = `Laporan_Statistik_Karyawan_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportPiutangExcel = async ({
+    piutangData,
+    totalPiutang
+}) => {
+    if (!piutangData || piutangData.length === 0) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const tanggal = `Per Tanggal: ${today}`;
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Laporan Piutang");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "G", 
+        "LAPORAN PIUTANG KONSUMEN", 
+        tanggal
+    );
+
+    const columns = ['No', 'Nomorator', 'Nama Konsumen', 'Nomor HP', 'Piutang', 'Operator', 'Tanggal'];
+    const headerRow = sheet.addRow(columns);
+    headerRow.font = { bold: true };
+    headerRow.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    piutangData.forEach((row, index) => {
+        const excelRow = sheet.addRow([
+            index + 1,
+            row.nomorator,
+            row.nama,
+            row.nomor || "-",
+            Number(row.hutang),
+            row.op_initial,
+            row.date
+        ]);
+        
+        excelRow.eachCell({ includeEmpty: false }, cell => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        excelRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
+        excelRow.getCell(5).numFmt = '#,##0';
+        excelRow.getCell(5).font = { color: { argb: 'FFFF0000' }, bold: true }; 
+        currentRow++;
+    });
+
+    sheet.mergeCells(`A${currentRow}:F${currentRow}`);
+    const labelCell = sheet.getCell(`A${currentRow}`);
+    labelCell.value = "Total Keseluruhan Piutang";
+    labelCell.alignment = { horizontal: 'right', vertical: 'middle' };
+    labelCell.font = { bold: true, size: 12 };
+    labelCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+    const totalCell = sheet.getCell(`G${currentRow}`);
+    totalCell.value = Number(totalPiutang);
+    totalCell.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } };
+    totalCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    totalCell.numFmt = '#,##0';
+
+    sheet.columns = [
+        { key: 'col1', width: 6 },
+        { key: 'col2', width: 15 },
+        { key: 'col3', width: 30 },
+        { key: 'col4', width: 20 },
+        { key: 'col5', width: 20 },
+        { key: 'col6', width: 15 },
+        { key: 'col7', width: 20 }
+    ];
+
+    const fileName = `Laporan_Piutang_${today}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportPemakaianBahanExcel = async ({
+    pemakaianBahanData,
+    startDate,
+    endDate
+}) => {
+    if (!pemakaianBahanData || pemakaianBahanData.length === 0) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Pemakaian Bahan");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "D", 
+        "LAPORAN PEMAKAIAN BAHAN", 
+        tanggal
+    );
+
+    const columns = ['No', 'Nama Barang', 'Satuan', 'Total Pemakaian'];
+    const headerRow = sheet.addRow(columns);
+    headerRow.font = { bold: true };
+    headerRow.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    pemakaianBahanData.forEach((row, index) => {
+        const excelRow = sheet.addRow([
+            index + 1,
+            row.nama_barang,
+            row.satuan,
+            Number(row.total_pemakaian)
+        ]);
+        
+        excelRow.eachCell({ includeEmpty: false }, cell => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        
+        excelRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+        excelRow.getCell(4).numFmt = '#,##0.####'; 
+        currentRow++;
+    });
+
+    sheet.columns = [
+        { key: 'col1', width: 6 },
+        { key: 'col2', width: 45 },
+        { key: 'col3', width: 15 },
+        { key: 'col4', width: 20 }
+    ];
+
+    const fileName = `Laporan_Pemakaian_Bahan_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportPelunasanExcel = async ({
+    pelunasanData,
+    summary,
+    startDate,
+    endDate
+}) => {
+    if (!pelunasanData || pelunasanData.length === 0) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Laporan Pelunasan");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "I", 
+        "LAPORAN PELUNASAN", 
+        tanggal
+    );
+
+    const columns = [
+        'No', 'Nomorator', 'Nama Konsumen', 
+        'Nominal DP', 'Metode DP', 'Tanggal DP', 
+        'Nominal Lunas', 'Metode Lunas', 'Tanggal Pelunasan'
+    ];
+    
+    const headerRow = sheet.addRow(columns);
+    headerRow.font = { bold: true };
+    headerRow.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    pelunasanData.forEach((row, index) => {
+        const excelRow = sheet.addRow([
+            index + 1,
+            row.nomorator,
+            row.customer_name,
+            row.dp_nominal ? Number(row.dp_nominal) : "-",
+            row.dp_method || "-",
+            row.dp_date !== "-" ? row.dp_date : "-",
+            Number(row.nominal),
+            row.payment_method || "-",
+            row.payment_date || "-"
+        ]);
+        
+        excelRow.eachCell({ includeEmpty: false }, cell => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        excelRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
+        
+        if (row.dp_nominal) excelRow.getCell(4).numFmt = '#,##0';
+        excelRow.getCell(7).numFmt = '#,##0'; 
+        
+        currentRow++;
+    });
+
+    currentRow += 2;
+    
+    sheet.mergeCells(`G${currentRow}:H${currentRow}`);
+    const labelCash = sheet.getCell(`G${currentRow}`);
+    labelCash.value = "Total CASH (Pelunasan):";
+    labelCash.alignment = { horizontal: 'right', vertical: 'middle' };
+    sheet.getCell(`I${currentRow}`).value = Number(summary.total_cash);
+    sheet.getCell(`I${currentRow}`).numFmt = '#,##0';
+    currentRow++;
+
+    sheet.mergeCells(`G${currentRow}:H${currentRow}`);
+    const labelTf = sheet.getCell(`G${currentRow}`);
+    labelTf.value = "Total TF (Pelunasan):";
+    labelTf.alignment = { horizontal: 'right', vertical: 'middle' };
+    sheet.getCell(`I${currentRow}`).value = Number(summary.total_tf);
+    sheet.getCell(`I${currentRow}`).numFmt = '#,##0';
+    currentRow++;
+
+    sheet.mergeCells(`G${currentRow}:H${currentRow}`);
+    const labelGrand = sheet.getCell(`G${currentRow}`);
+    labelGrand.value = "Grand Total (Pelunasan):";
+    labelGrand.alignment = { horizontal: 'right', vertical: 'middle' };
+    labelGrand.font = { bold: true };
+    
+    const valGrand = sheet.getCell(`I${currentRow}`);
+    valGrand.value = Number(summary.grand_total);
+    valGrand.numFmt = '#,##0';
+    valGrand.font = { bold: true };
+
+    sheet.columns = [
+        { key: 'col1', width: 6 },
+        { key: 'col2', width: 15 },
+        { key: 'col3', width: 30 },
+        { key: 'col4', width: 18 },
+        { key: 'col5', width: 12 },
+        { key: 'col6', width: 18 },
+        { key: 'col7', width: 18 },
+        { key: 'col8', width: 15 },
+        { key: 'col9', width: 18 }
+    ];
+
+    const fileName = `Laporan_Pelunasan_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportOmsetPerItemExcel = async ({
+    omsetItemData,
+    totalOmsetKeseluruhan,
+    startDate,
+    endDate
+}) => {
+    if (!omsetItemData || omsetItemData.length === 0) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Omset Per Item");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "E", 
+        "LAPORAN OMSET PER ITEM", 
+        tanggal
+    );
+
+    const columns = ['No', 'Nama Barang', 'Satuan', 'Total Terjual', 'Total Omset'];
+    const headerRow = sheet.addRow(columns);
+    headerRow.font = { bold: true };
+    headerRow.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    omsetItemData.forEach((row, index) => {
+        const excelRow = sheet.addRow([
+            index + 1,
+            row.nama_barang,
+            row.satuan || "-",
+            Number(row.total_terjual),
+            Number(row.total_omset)
+        ]);
+        
+        excelRow.eachCell({ includeEmpty: false }, cell => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        
+        excelRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+        
+        excelRow.getCell(4).numFmt = '#,##0.##'; 
+        excelRow.getCell(5).numFmt = '#,##0'; 
+        
+        currentRow++;
+    });
+
+    sheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    const labelTotal = sheet.getCell(`A${currentRow}`);
+    labelTotal.value = "Total Keseluruhan Omset";
+    labelTotal.alignment = { horizontal: 'right', vertical: 'middle' };
+    labelTotal.font = { bold: true, size: 12 };
+    labelTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+    const valueTotal = sheet.getCell(`E${currentRow}`);
+    valueTotal.value = Number(totalOmsetKeseluruhan);
+    valueTotal.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } }; 
+    valueTotal.alignment = { horizontal: 'center', vertical: 'middle' };
+    valueTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    valueTotal.numFmt = '#,##0';
+
+    sheet.columns = [
+        { key: 'col1', width: 6 },
+        { key: 'col2', width: 45 },
+        { key: 'col3', width: 15 },
+        { key: 'col4', width: 20 },
+        { key: 'col5', width: 25 }
+    ];
+
+    const fileName = `Laporan_Omset_Per_Item_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportKeuanganExcel = async ({
+    financeData,
+    expenditureData,
+    incomeData,
+    startDate,
+    endDate
+}) => {
+    if (!financeData?.length && !expenditureData?.length && !incomeData?.length) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Laporan Keuangan");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "I", 
+        "LAPORAN KEUANGAN", 
+        tanggal
+    );
+
+    sheet.mergeCells(`A${currentRow}:I${currentRow}`);
+    const titleFinance = sheet.getCell(`A${currentRow}`);
+    titleFinance.value = "REKAP KEUANGAN";
+    titleFinance.font = { bold: true, size: 12 };
+    titleFinance.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+    currentRow++;
+
+    const financeCols = ['No', 'Tanggal', 'Omset Offline', 'Omset Online', 'Total Omset', 'Transfer Masuk', 'Cash Masuk', 'Pengeluaran', 'Saldo Cash'];
+    const headerRow1 = sheet.addRow(financeCols);
+    headerRow1.font = { bold: true };
+    headerRow1.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    (financeData || []).forEach((row, index) => {
+        const excelRow = sheet.addRow([
+            index + 1,
+            row.date,
+            Number(row.omset_offline),
+            Number(row.omset_online),
+            Number(row.total_omset),
+            Number(row.transfer),
+            Number(row.cash_masuk),
+            Number(row.expenditure),
+            Number(row.saldo)
+        ]);
+        
+        excelRow.eachCell({ includeEmpty: false }, cell => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        for(let c = 3; c <= 9; c++) {
+            excelRow.getCell(c).numFmt = '#,##0';
+        }
+        
+        excelRow.getCell(5).font = { bold: true, color: { argb: 'FF1565C0' } }; 
+        excelRow.getCell(8).font = { color: { argb: 'FFFF0000' } }; 
+        
+        const saldoCell = excelRow.getCell(9);
+        saldoCell.font = { bold: true, color: { argb: row.saldo < 0 ? 'FFFF0000' : 'FF2E7D32' } };
+
+        currentRow++;
+    });
+
+    currentRow += 2;
+
+    sheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    const titleExp = sheet.getCell(`A${currentRow}`);
+    titleExp.value = "DATA PENGELUARAN";
+    titleExp.font = { bold: true, size: 11, color: { argb: 'FFFF0000' } };
+    titleExp.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+
+    sheet.mergeCells(`F${currentRow}:I${currentRow}`);
+    const titleInc = sheet.getCell(`F${currentRow}`);
+    titleInc.value = "DATA PEMASUKAN TAMBAHAN";
+    titleInc.font = { bold: true, size: 11, color: { argb: 'FF2E7D32' } };
+    titleInc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+    currentRow++;
+
+    const bottomHeaderRow = sheet.addRow([
+        'No', 'Tanggal', 'Keterangan', 'Nominal', 
+        '', 'No', 'Tanggal', 'Keterangan', 'Nominal'
+    ]);
+    
+    bottomHeaderRow.font = { bold: true };
+    [1, 2, 3, 4, 6, 7, 8, 9].forEach(colIndex => {
+        const cell = bottomHeaderRow.getCell(colIndex);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    const expData = expenditureData || [];
+    const incData = incomeData || [];
+    const maxRows = Math.max(expData.length, incData.length);
+    
+    let totalExp = 0;
+    let totalInc = 0;
+
+    for (let i = 0; i < maxRows; i++) {
+        const exp = expData[i];
+        const inc = incData[i];
+
+        if (exp) totalExp += Number(exp.nominal);
+        if (inc) totalInc += Number(inc.nominal);
+
+        const rowData = [
+            exp ? i + 1 : "",
+            exp ? exp.date : "",
+            exp ? exp.information : "",
+            exp ? Number(exp.nominal) : "",
+            "", 
+            inc ? i + 1 : "",
+            inc ? inc.date : "",
+            inc ? inc.information : "",
+            inc ? Number(inc.nominal) : ""
+        ];
+
+        const dataRow = sheet.addRow(rowData);
+        
+        if (exp) {
+            [1, 2, 3, 4].forEach(c => {
+                const cell = dataRow.getCell(c);
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { vertical: 'middle', horizontal: c === 3 ? 'left' : 'center' };
+            });
+            dataRow.getCell(4).numFmt = '#,##0';
+            dataRow.getCell(4).font = { color: { argb: 'FFFF0000' } };
+        }
+
+        if (inc) {
+            [6, 7, 8, 9].forEach(c => {
+                const cell = dataRow.getCell(c);
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { vertical: 'middle', horizontal: c === 8 ? 'left' : 'center' };
+            });
+            dataRow.getCell(9).numFmt = '#,##0';
+            dataRow.getCell(9).font = { color: { argb: 'FF2E7D32' } };
+        }
+        currentRow++;
+    }
+
+    sheet.mergeCells(`A${currentRow}:C${currentRow}`);
+    const labelTotalExp = sheet.getCell(`A${currentRow}`);
+    labelTotalExp.value = "Total Pengeluaran";
+    labelTotalExp.alignment = { horizontal: 'right', vertical: 'middle' };
+    labelTotalExp.font = { bold: true };
+    labelTotalExp.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    
+    const valExp = sheet.getCell(`D${currentRow}`);
+    valExp.value = totalExp;
+    valExp.numFmt = '#,##0';
+    valExp.font = { bold: true, color: { argb: 'FFFF0000' } };
+    valExp.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+    sheet.mergeCells(`F${currentRow}:H${currentRow}`);
+    const labelTotalInc = sheet.getCell(`F${currentRow}`);
+    labelTotalInc.value = "Total Pemasukan Tambahan";
+    labelTotalInc.alignment = { horizontal: 'right', vertical: 'middle' };
+    labelTotalInc.font = { bold: true };
+    labelTotalInc.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    
+    const valInc = sheet.getCell(`I${currentRow}`);
+    valInc.value = totalInc;
+    valInc.numFmt = '#,##0';
+    valInc.font = { bold: true, color: { argb: 'FF2E7D32' } };
+    valInc.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+    sheet.columns = [
+        { key: 'col1', width: 6 }, 
+        { key: 'col2', width: 15 },
+        { key: 'col3', width: 25 },
+        { key: 'col4', width: 18 },
+        { key: 'col5', width: 18 },
+        { key: 'col6', width: 15 },
+        { key: 'col7', width: 15 },
+        { key: 'col8', width: 25 },
+        { key: 'col9', width: 18 }
+    ];
+
+    const fileName = `Laporan_Keuangan_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportAktivitasExcel = async ({
+    activityData,
+    archiveData,
+    startDate,
+    endDate
+}) => {
+    if ((!activityData || activityData.length === 0) && (!archiveData || archiveData.length === 0)) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Aktivitas dan Arsip");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "G", 
+        "LAPORAN AKTIVITAS & ARSIP", 
+        tanggal
+    );
+
+    sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+    const titleAct = sheet.getCell(`A${currentRow}`);
+    titleAct.value = "AKTIVITAS SISTEM";
+    titleAct.font = { bold: true, size: 12 };
+    titleAct.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+    currentRow++;
+
+    const actCols = ['No', 'Waktu', 'ID Order', 'Aktivitas', 'Pesan', 'Info Tambahan'];
+    const headerAct = sheet.addRow(actCols);
+    headerAct.font = { bold: true };
+    headerAct.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    if (activityData && activityData.length > 0) {
+        activityData.forEach((row, index) => {
+            const excelRow = sheet.addRow([
+                index + 1,
+                row.date,
+                row.order_id || "-",
+                row.title,
+                row.message,
+                row.information || "-"
+            ]);
+            
+            excelRow.eachCell({ includeEmpty: false }, cell => {
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            });
+            
+            excelRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
+            excelRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+            
+            currentRow++;
+        });
+    } else {
+        sheet.mergeCells(`A${currentRow}:F${currentRow}`);
+        sheet.getCell(`A${currentRow}`).value = "Tidak ada aktivitas.";
+        sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center' };
+        currentRow++;
+    }
+
+    currentRow += 2; 
+
+    sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+    const titleArc = sheet.getCell(`A${currentRow}`);
+    titleArc.value = "ARSIP ORDER TERHAPUS";
+    titleArc.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } };
+    titleArc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+    currentRow++;
+
+    if (archiveData && archiveData.length > 0) {
+        archiveData.forEach((order) => {
+            sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+            const orderHeader = sheet.getCell(`A${currentRow}`);
+            orderHeader.value = `Order #${order.nomorator} | Konsumen: ${order.customer_name} (${order.nomor})`;
+            orderHeader.font = { bold: true };
+            orderHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+            currentRow++;
+
+            sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+            sheet.getCell(`A${currentRow}`).value = `Dibuat: ${order.date} | Dihapus: ${order.deleted_at} | Oleh: ${order.deleted_by_name} (${order.system})`;
+            sheet.getCell(`A${currentRow}`).font = { italic: true };
+            currentRow++;
+
+            const itemCols = ['No', 'Nama Item', 'Finishing', 'Ukuran', 'Qty', 'Satuan', 'Jumlah'];
+            const headerItem = sheet.addRow(itemCols);
+            headerItem.font = { bold: true };
+            headerItem.eachCell({ includeEmpty: false }, cell => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+            currentRow++;
+
+            if (order.items && order.items.length > 0) {
+                order.items.forEach((item, idx) => {
+                    const itemRow = sheet.addRow([
+                        idx + 1,
+                        item.judul,
+                        item.finishing_names || "-",
+                        item.size || "-",
+                        item.quantity,
+                        Number(item.unit),
+                        Number(item.amount)
+                    ]);
+
+                    itemRow.eachCell({ includeEmpty: false }, cell => {
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    });
+
+                    itemRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+                    itemRow.getCell(6).numFmt = '#,##0';
+                    itemRow.getCell(7).numFmt = '#,##0';
+                    currentRow++;
+                });
+            }
+
+            sheet.mergeCells(`A${currentRow}:F${currentRow}`);
+            const labelTotal = sheet.getCell(`A${currentRow}`);
+            labelTotal.value = "Total Tagihan:";
+            labelTotal.alignment = { horizontal: 'right', vertical: 'middle' };
+            labelTotal.font = { bold: true };
+            labelTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+            const valTotal = sheet.getCell(`G${currentRow}`);
+            valTotal.value = Number(order.total);
+            valTotal.font = { bold: true };
+            valTotal.numFmt = '#,##0';
+            valTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            
+            currentRow += 2;
+        });
+    } else {
+        sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+        sheet.getCell(`A${currentRow}`).value = "Tidak ada arsip order.";
+        sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center' };
+        currentRow++;
+    }
+
+    sheet.columns = [
+        { key: 'col1', width: 6 },
+        { key: 'col2', width: 25 },
+        { key: 'col3', width: 15 },
+        { key: 'col4', width: 30 },
+        { key: 'col5', width: 45 },
+        { key: 'col6', width: 20 },
+        { key: 'col7', width: 20 }
+    ];
+
+    const fileName = `Laporan_Aktivitas_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), fileName);
 };

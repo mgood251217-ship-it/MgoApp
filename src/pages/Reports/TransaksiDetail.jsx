@@ -59,9 +59,7 @@ export default function TransaksiDetail() {
                 orders,
                 itemsByOrder,
                 startDate,
-                endDate,
-                storeName: "CAHEUM PRINTING SUBLIM",
-                storeAddress: "Alamat Toko Anda"
+                endDate
             });
         } catch (error) {
             console.error("Gagal export excel:", error);

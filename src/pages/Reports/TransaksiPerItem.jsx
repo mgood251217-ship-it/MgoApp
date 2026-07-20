@@ -49,9 +49,7 @@ export default function TransaksiPerItem() {
             await exportTransaksiPerItemExcel({
                 transaksiItemData,
                 startDate,
-                endDate,
-                storeName: "CAHEUM PRINTING SUBLIM",
-                storeAddress: "Alamat Toko Anda"
+                endDate
             });
         } catch (error) {
             console.error("Gagal export excel:", error);

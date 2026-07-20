@@ -4,6 +4,7 @@ import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
+import { exportPemakaianBahanExcel } from "../../services/excelService";
 
 export default function PemakaianBahan() {
     const today = new Date().toISOString().split("T")[0];
@@ -38,8 +39,22 @@ export default function PemakaianBahan() {
         fetchPemakaianBahan();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (pemakaianBahanData.length === 0) {
+            alert("Tidak ada data pemakaian bahan untuk diexport.");
+            return;
+        }
+        
+        try {
+            await exportPemakaianBahanExcel({
+                pemakaianBahanData,
+                startDate,
+                endDate
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const columns = useMemo(() => [

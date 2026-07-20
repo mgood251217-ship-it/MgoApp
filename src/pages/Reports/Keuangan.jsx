@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportKeuanganExcel } from "../../services/excelService";
 
 export default function Keuangan() {
     const today = new Date().toISOString().split("T")[0];
@@ -43,8 +44,24 @@ export default function Keuangan() {
         fetchFinance();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (financeData.length === 0 && expenditureData.length === 0 && incomeData.length === 0) {
+            alert("Tidak ada data keuangan untuk diexport.");
+            return;
+        }
+
+        try {
+            await exportKeuanganExcel({
+                financeData,
+                expenditureData,
+                incomeData,
+                startDate,
+                endDate
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const financeColumns = useMemo(() => [

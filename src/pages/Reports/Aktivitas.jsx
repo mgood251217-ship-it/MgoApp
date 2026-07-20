@@ -5,6 +5,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
+import { exportAktivitasExcel } from "../../services/excelService";
 
 export default function Aktivitas() {
     const today = new Date().toISOString().split("T")[0];
@@ -55,8 +56,23 @@ export default function Aktivitas() {
         fetchData();
     }, []);
 
-    const handleExportExcel = () => {
-        alert("Fitur Export Excel sedang dipersiapkan.");
+    const handleExportExcel = async () => {
+        if (activityData.length === 0 && archiveData.length === 0) {
+            alert("Tidak ada data untuk diexport.");
+            return;
+        }
+
+        try {
+            await exportAktivitasExcel({
+                activityData,
+                archiveData,
+                startDate,
+                endDate
+            });
+        } catch (error) {
+            console.error("Gagal export excel:", error);
+            alert("Terjadi kesalahan saat melakukan export.");
+        }
     };
 
     const activityColumns = useMemo(() => [
