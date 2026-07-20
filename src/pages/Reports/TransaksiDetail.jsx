@@ -246,9 +246,9 @@ export default function TransaksiDetail() {
                                                     {transfers.map((tf, idx) => (
                                                         <div key={idx} style={{ textAlign: "center" }}>
                                                             <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "6px" }}>Bukti {idx + 1}</div>
-                                                            <a href={getBaseImgUrl(tf.img)} target="_blank" rel="noreferrer">
+                                                            <a href={tf.img_link} target="_blank" rel="noreferrer">
                                                                 <img 
-                                                                    src={getBaseImgUrl(tf.img)} 
+                                                                    src={tf.img_link} 
                                                                     alt="Bukti Transfer" 
                                                                     style={{ 
                                                                         width: "60px", 
