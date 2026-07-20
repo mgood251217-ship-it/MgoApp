@@ -9,7 +9,6 @@ import { MdOutlineErrorOutline } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 import { LiaWindowRestore } from "react-icons/lia";
 import { authStore } from "../../services/session";
-import config from "../../services/config";
 
 const menus = [
     { title: "Store", path: "/store", icon: <RiStore2Line /> },
@@ -28,12 +27,7 @@ export default function Sidebar() {
     const role = session?.user?.role ?? "guest";
     const name = session?.user?.name ?? "Guest";
     const subtitle = session?.user?.initial ?? role;
-    const baseUrl = config.serverUrl;
-    const avatar = session?.user?.foto
-    ? session.user.foto.startsWith("http")
-        ? session.user.foto
-        : `${baseUrl}/assets/img/user/${session.user.foto}`
-    : "...";
+    const avatar = session?.user?.foto_link;
     return (
         <aside className="sidebar">
             <div className="sidebar-profile">

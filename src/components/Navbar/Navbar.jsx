@@ -5,7 +5,6 @@ import { FiBell, FiLogOut, FiMoon, FiSun } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { authStore } from "../../services/session";
 import { changeTheme } from "../../services/setting";
-import config from "../../services/config";
 
 const THEME_KEY = "theme";
 
@@ -50,12 +49,7 @@ export default function Navbar() {
     const userName = session?.user?.name ?? "Guest";
     const role = session?.user?.role ?? "";
     const userId = session?.user?.user_id ?? session?.user_id;
-    const baseUrl = config.serverUrl;
-    const avatar = session?.store?.logo
-    ? session.store.logo.startsWith("http")
-        ? session.store.logo
-        : `${baseUrl}/assets/img/store/${session.store.logo}`
-    : "...";
+    const avatar = session?.store?.logo_link;
 
     useEffect(() => {
         setTheme(getInitialTheme(session));

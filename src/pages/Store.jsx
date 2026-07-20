@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import api from "../api/axios";
-import config from "../services/config";
 import Header from "../components/Header/Header";
 import Table from "../components/Table/Table";
 import Button from "../components/Button/Button";
@@ -281,11 +280,11 @@ export default function Store() {
 
     const userColumns = useMemo(() => [
         {
-            key: "picture",
+            key: "picture_link",
             title: "Foto",
             render: (row) => (
                 <img 
-                    src={row.picture ? `${config.serverUrl}/assets/img/user/${row.picture}` : `${config.serverUrl}/assets/img/user/default.jpg`} 
+                    src={row.picture_link} 
                     alt={row.name} 
                     style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", backgroundColor: "#eee" }}
                     onError={(e) => { 
