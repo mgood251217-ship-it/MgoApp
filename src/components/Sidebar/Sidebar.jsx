@@ -8,7 +8,7 @@ import { TbRulerMeasure } from "react-icons/tb";
 import { MdOutlineErrorOutline } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 import { LiaWindowRestore } from "react-icons/lia";
-import { authStore } from "../../store/auth.store";
+import { authStore } from "../../services/session";
 import config from "../../services/config";
 
 const menus = [

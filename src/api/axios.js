@@ -1,8 +1,8 @@
 import axios from "axios";
+import config from "../services/config";
 
 const api = axios.create({
-	baseURL: "http://localhost/MgoAll/admin/api/",
-	// baseURL: "https://mgood.my.id/admin/api/",
+	baseURL: `${config.serverUrl}/api/`,
 	timeout: 10000,
 	withCredentials: true
 });

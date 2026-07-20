@@ -1,14 +1,81 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LoginForm from "./LoginForm";
+import { GoogleReCaptchaProvider, useGoogleReCaptcha } from "react-google-recaptcha-v3";
+
+import Input from "../../components/Input/Input";
+import PasswordInput from "../../components/PasswordInput/PasswordInput";
+import Button from "../../components/Button/Button";
+import Alert from "../../components/Alert/Alert";
+import { authStore, getSession as fetchSession } from "../../services/session";
+import api from "../../api/axios";
 import "./Login.css";
-import { authStore } from "../../store/auth.store";
 
-export default function Login() {
+async function login(payload) {
+    const formData = new FormData();
+
+    formData.append("username", payload.username);
+    formData.append("password", payload.password);
+    formData.append("g-recaptcha-response", payload["g-recaptcha-response"] ?? "");
+
+    const { data } = await api.post(
+        "/index.php?action=login",
+        formData
+    );
+
+    return data;
+}
+
+function LoginInternal() {
     const navigate = useNavigate();
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    function handleSuccess(data) {
-        authStore.login(data);
-        navigate("/store", { replace: true });
+    const { executeRecaptcha } = useGoogleReCaptcha();
+
+    async function handleLogin() {
+        setError("");
+
+        if (!username || !password) {
+            setError("Username dan password wajib diisi.");
+            return;
+        }
+
+        if (!executeRecaptcha) {
+            setError("reCAPTCHA belum siap.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+
+            const token = await executeRecaptcha("login");
+
+            const response = await login({
+                username,
+                password,
+                "g-recaptcha-response": token
+            });
+
+            if (!response.success) {
+                setError(response.message || "Login gagal.");
+                return;
+            }
+
+            const sessionResp = await fetchSession();
+            if (sessionResp?.success) {
+                authStore.login(sessionResp.data);
+            } else {
+                authStore.login(response.data);
+            }
+
+            navigate("/store", { replace: true });
+        } catch (err) {
+            setError("Server tidak dapat dihubungi.");
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
@@ -19,8 +86,45 @@ export default function Login() {
                     <div className="app-subtitle">Sign in to continue</div>
                 </div>
 
-                <LoginForm onSuccess={handleSuccess} />
+                <div className="login-form">
+                    {error && <Alert type="error" message={error} onClose={() => setError("")} />}
+
+                    <Input
+                        label="Username"
+                        placeholder="Masukkan username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        disabled={loading}
+                        required
+                    />
+
+                    <PasswordInput
+                        label="Password"
+                        placeholder="Masukkan password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={loading}
+                        required
+                    />
+
+                    <Button
+                        size="full-lg"
+                        loading={loading}
+                        disabled={loading}
+                        onClick={handleLogin}
+                    >
+                        Login
+                    </Button>
+                </div>
             </div>
         </div>
+    );
+}
+
+export default function Login() {
+    return (
+        <GoogleReCaptchaProvider reCaptchaKey="6LfKclYtAAAAAD9zWKtWXNNl-n3hahu0GmNXthVE">
+            <LoginInternal />
+        </GoogleReCaptchaProvider>
     );
 }

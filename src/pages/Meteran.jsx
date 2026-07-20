@@ -7,7 +7,7 @@ import Button from "../components/Button/Button";
 import Icon from "../components/Icon/Icon";
 import Table from "../components/Table/Table";
 import { exportMeteranExcel } from "../services/excelService";
-import { authStore } from "../store/auth.store";
+import { authStore } from "../services/session";
 
 export default function Meteran() {
     const session = authStore.getUser();

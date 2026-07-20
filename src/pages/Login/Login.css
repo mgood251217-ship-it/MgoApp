@@ -42,3 +42,10 @@
     color: #999;
     font-size: 12px;
 }
+
+.login-form {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    padding: 20px;
+}

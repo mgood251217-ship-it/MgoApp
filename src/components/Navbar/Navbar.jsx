@@ -1,12 +1,11 @@
 ﻿import "./Navbar.css";
 import { useEffect, useState } from "react";
+import api from "../../api/axios";
 import { FiBell, FiLogOut, FiMoon, FiSun } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { authStore } from "../../store/auth.store";
-import { logout as apiLogout } from "../../services/auth";
+import { authStore } from "../../services/session";
 import { changeTheme } from "../../services/setting";
 import config from "../../services/config";
-import { getSession } from "../../services/session";
 
 const THEME_KEY = "theme";
 
@@ -34,9 +33,17 @@ function getInitialTheme(session) {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+async function logout() {
+	const { data } = await api.post(
+		"/index.php?action=logout"
+	);
+
+	return data;
+}
+
 export default function Navbar() {
     const navigate = useNavigate();
-    const [session, setSession] = useState(null);
+    const session = authStore.getUser();
     const [theme, setTheme] = useState(() => getInitialTheme(null));
     const [themeLoading, setThemeLoading] = useState(false);
     const storeName = session?.store?.name ?? "MGO Store";
@@ -51,33 +58,6 @@ export default function Navbar() {
     : "...";
 
     useEffect(() => {
-        let mounted = true;
-
-        async function loadSession() {
-            try {
-                const response = await getSession();
-                const nextSession = response?.success ? response.data : response?.data ?? response;
-
-                if (mounted) {
-                    setSession(nextSession ?? null);
-                }
-            } catch (error) {
-                console.error("Gagal memuat session navbar:", error);
-
-                if (mounted) {
-                    setSession(null);
-                }
-            }
-        }
-
-        loadSession();
-
-        return () => {
-            mounted = false;
-        };
-    }, []);
-
-    useEffect(() => {
         setTheme(getInitialTheme(session));
     }, [session]);
 
@@ -87,7 +67,7 @@ export default function Navbar() {
     }, [theme]);
 
     async function handleLogout() {
-        try { await apiLogout(); } catch (e) {}
+        try { await logout(); } catch (e) {}
         authStore.logout();
         navigate("/login", { replace: true });
     }
