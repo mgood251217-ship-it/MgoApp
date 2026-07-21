@@ -1436,3 +1436,213 @@ export const exportAktivitasExcel = async ({
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), fileName);
 };
+
+export const exportMaklunExcel = async ({
+    maklunMasuk,
+    maklunKeluar,
+    startDate,
+    endDate
+}) => {
+    if (!maklunMasuk?.length && !maklunKeluar?.length) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+
+    const branches = new Set();
+    (maklunMasuk || []).forEach(item => {
+        if (item.branch_name) branches.add(item.branch_name);
+    });
+    (maklunKeluar || []).forEach(item => {
+        if (item.branch_name) branches.add(item.branch_name);
+    });
+
+    const branchList = Array.from(branches);
+
+    if (branchList.length === 0) {
+        branchList.push("Semua Cabang");
+    }
+
+    branchList.forEach(branchName => {
+        const safeSheetName = branchName.replace(/[\/\\\?\*\[\]\:]/g, "").substring(0, 31);
+        const sheet = workbook.addWorksheet(safeSheetName);
+
+        const filteredMasuk = (maklunMasuk || []).filter(item => item.branch_name === branchName || (branchName === "Semua Cabang" && !item.branch_name));
+        const filteredKeluar = (maklunKeluar || []).filter(item => item.branch_name === branchName || (branchName === "Semua Cabang" && !item.branch_name));
+
+        let currentRow = generateExcelHeader(
+            sheet, 
+            "I", 
+            `LAPORAN MAKLUN - ${branchName.toUpperCase()}`, 
+            tanggal
+        );
+
+        sheet.mergeCells(`A${currentRow}:I${currentRow}`);
+        const titleMasuk = sheet.getCell(`A${currentRow}`);
+        titleMasuk.value = "MAKLUN MASUK";
+        titleMasuk.font = { bold: true, size: 12, color: { argb: 'FF1565C0' } };
+        titleMasuk.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+        currentRow++;
+
+        const headerMasukCols = ['No', 'Nama', 'Ukuran', 'Finishing', 'Qty', 'Harga Satuan', 'Jumlah', 'Dari Cabang', 'Tanggal'];
+        const headerRowMasuk = sheet.addRow(headerMasukCols);
+        headerRowMasuk.font = { bold: true };
+        headerRowMasuk.eachCell({ includeEmpty: false }, cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+        currentRow++;
+
+        let totalMasuk = 0;
+        if (filteredMasuk.length > 0) {
+            filteredMasuk.forEach((row, index) => {
+                const jumlah = Number(row.jumlah_harga_calc) || 0;
+                totalMasuk += jumlah;
+
+                const excelRow = sheet.addRow([
+                    index + 1,
+                    row.judul || "-",
+                    row.size || "-",
+                    row.finishing_names || "-",
+                    Number(row.quantity) || 0,
+                    Number(row.harga_satuan_calc) || 0,
+                    jumlah,
+                    row.branch_name || "-",
+                    row.date || "-"
+                ]);
+                
+                excelRow.eachCell({ includeEmpty: false }, cell => {
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                excelRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+                excelRow.getCell(8).alignment = { vertical: 'middle', horizontal: 'left' };
+
+                excelRow.getCell(5).numFmt = '#,##0';
+                excelRow.getCell(6).numFmt = '#,##0';
+                excelRow.getCell(7).numFmt = '#,##0';
+                excelRow.getCell(7).font = { bold: true, color: { argb: 'FF1565C0' } };
+
+                currentRow++;
+            });
+        } else {
+            sheet.mergeCells(`A${currentRow}:I${currentRow}`);
+            const emptyCell = sheet.getCell(`A${currentRow}`);
+            emptyCell.value = "Tidak ada data Maklun Masuk untuk cabang ini.";
+            emptyCell.alignment = { horizontal: 'center' };
+            emptyCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            currentRow++;
+        }
+
+        sheet.mergeCells(`A${currentRow}:F${currentRow}`);
+        const labelTotalMasuk = sheet.getCell(`A${currentRow}`);
+        labelTotalMasuk.value = "Total Nilai Maklun Masuk";
+        labelTotalMasuk.alignment = { horizontal: 'right', vertical: 'middle' };
+        labelTotalMasuk.font = { bold: true };
+        labelTotalMasuk.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        
+        const valTotalMasuk = sheet.getCell(`G${currentRow}`);
+        valTotalMasuk.value = totalMasuk;
+        valTotalMasuk.numFmt = '#,##0';
+        valTotalMasuk.font = { bold: true, color: { argb: 'FF1565C0' } };
+        valTotalMasuk.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        
+        sheet.getCell(`H${currentRow}`).border = { top: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        sheet.getCell(`I${currentRow}`).border = { top: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+        currentRow += 3;
+
+        sheet.mergeCells(`A${currentRow}:I${currentRow}`);
+        const titleKeluar = sheet.getCell(`A${currentRow}`);
+        titleKeluar.value = "MAKLUN KELUAR";
+        titleKeluar.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } };
+        titleKeluar.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+        currentRow++;
+
+        const headerKeluarCols = ['No', 'Nama', 'Ukuran', 'Finishing', 'Qty', 'Harga Satuan', 'Jumlah', 'Ke Cabang', 'Tanggal'];
+        const headerRowKeluar = sheet.addRow(headerKeluarCols);
+        headerRowKeluar.font = { bold: true };
+        headerRowKeluar.eachCell({ includeEmpty: false }, cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+        currentRow++;
+
+        let totalKeluar = 0;
+        if (filteredKeluar.length > 0) {
+            filteredKeluar.forEach((row, index) => {
+                const jumlah = Number(row.jumlah_harga_calc) || 0;
+                totalKeluar += jumlah;
+
+                const excelRow = sheet.addRow([
+                    index + 1,
+                    row.judul || "-",
+                    row.size || "-",
+                    row.finishing_names || "-",
+                    Number(row.quantity) || 0,
+                    Number(row.harga_satuan_calc) || 0,
+                    jumlah,
+                    row.branch_name || "-",
+                    row.date || "-"
+                ]);
+                
+                excelRow.eachCell({ includeEmpty: false }, cell => {
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                excelRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+                excelRow.getCell(8).alignment = { vertical: 'middle', horizontal: 'left' };
+
+                excelRow.getCell(5).numFmt = '#,##0';
+                excelRow.getCell(6).numFmt = '#,##0';
+                excelRow.getCell(7).numFmt = '#,##0';
+                excelRow.getCell(7).font = { bold: true, color: { argb: 'FFFF0000' } };
+
+                currentRow++;
+            });
+        } else {
+            sheet.mergeCells(`A${currentRow}:I${currentRow}`);
+            const emptyCell = sheet.getCell(`A${currentRow}`);
+            emptyCell.value = "Tidak ada data Maklun Keluar untuk cabang ini.";
+            emptyCell.alignment = { horizontal: 'center' };
+            emptyCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            currentRow++;
+        }
+
+        sheet.mergeCells(`A${currentRow}:F${currentRow}`);
+        const labelTotalKeluar = sheet.getCell(`A${currentRow}`);
+        labelTotalKeluar.value = "Total Nilai Maklun Keluar";
+        labelTotalKeluar.alignment = { horizontal: 'right', vertical: 'middle' };
+        labelTotalKeluar.font = { bold: true };
+        labelTotalKeluar.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        
+        const valTotalKeluar = sheet.getCell(`G${currentRow}`);
+        valTotalKeluar.value = totalKeluar;
+        valTotalKeluar.numFmt = '#,##0';
+        valTotalKeluar.font = { bold: true, color: { argb: 'FFFF0000' } };
+        valTotalKeluar.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        
+        sheet.getCell(`H${currentRow}`).border = { top: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        sheet.getCell(`I${currentRow}`).border = { top: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+        sheet.columns = [
+            { key: 'col1', width: 6 },
+            { key: 'col2', width: 25 },
+            { key: 'col3', width: 10 },
+            { key: 'col4', width: 20 },
+            { key: 'col5', width: 10 }, 
+            { key: 'col6', width: 15 }, 
+            { key: 'col7', width: 18 },
+            { key: 'col8', width: 25 },
+            { key: 'col9', width: 20 }
+        ];
+    });
+
+    const fileName = `Laporan_Maklun_Per_Cabang_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};

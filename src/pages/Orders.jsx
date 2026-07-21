@@ -263,7 +263,7 @@ export default function Orders() {
     ], []);
 
     const tableActions = useCallback((row) => (
-        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "4px", flexWrap: "nowrap" }}>
             <Button
                 size="sm"
                 variant="success"
