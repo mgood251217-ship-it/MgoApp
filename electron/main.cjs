@@ -98,6 +98,7 @@ async function notifyShellUpdate(folderPath) {
     const tempDir = app.getPath("temp");
     const dllPath = path.join(tempDir, "mgo-shell-notify.dll");
     const scriptPath = path.join(tempDir, "mgo-shell-notify.ps1");
+    const parentPath = path.dirname(folderPath);
 
     const psScript = `
 $dllPath = "${dllPath.replace(/\\/g, "\\\\")}"
@@ -114,10 +115,15 @@ public class ShellNotify {
 "@
     Add-Type -Path $dllPath
 }
-$path = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni("${folderPath.replace(/'/g, "''")}")
-[ShellNotify]::SHChangeNotify(0x2000, 0x0005, $path, [IntPtr]::Zero)
-[System.Runtime.InteropServices.Marshal]::FreeHGlobal($path)
+$itemPath = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni("${folderPath.replace(/'/g, "''")}")
+[ShellNotify]::SHChangeNotify(0x2000, 0x0005, $itemPath, [IntPtr]::Zero)
+[System.Runtime.InteropServices.Marshal]::FreeHGlobal($itemPath)
+
+$parentPath = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni("${parentPath.replace(/'/g, "''")}")
+[ShellNotify]::SHChangeNotify(0x1000, 0x0005, $parentPath, [IntPtr]::Zero)
+[System.Runtime.InteropServices.Marshal]::FreeHGlobal($parentPath)
 `;
+
     await fs.writeFile(scriptPath, psScript, "utf-8");
     await execAsync(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`);
 }

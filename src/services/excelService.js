@@ -1646,3 +1646,125 @@ export const exportMaklunExcel = async ({
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), fileName);
 };
+
+export const exportFailureExcel = async ({
+    failures,
+    startDate,
+    endDate
+}) => {
+    if (!failures || failures.length === 0) return;
+
+    const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Laporan Kegagalan");
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        "N", 
+        "LAPORAN KEGAGALAN PRODUKSI", 
+        tanggal
+    );
+
+    sheet.mergeCells(`A${currentRow}:N${currentRow}`);
+    const titleTab = sheet.getCell(`A${currentRow}`);
+    titleTab.value = "DATA KEGAGALAN (REJECT)";
+    titleTab.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } }; // Warna Merah
+    titleTab.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+    currentRow++;
+
+    const headerCols = [
+        'No', 'Tanggal', 'Nomorator', 'Customer', 'Operator', 'Mesin', 
+        'Judul', 'Ukuran', 'Qty', 'Finishing', 'Detail Gagal', 
+        'Kerugian', 'Beban', 'Keterangan'
+    ];
+    
+    const headerRow = sheet.addRow(headerCols);
+    headerRow.font = { bold: true };
+    headerRow.eachCell({ includeEmpty: false }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    currentRow++;
+
+    let totalLoss = 0;
+    
+    failures.forEach((row, index) => {
+        const kerugian = Number(row.total_loss) || 0;
+        totalLoss += kerugian;
+
+        const detailGagalClean = (row.detail_gagal || "-").replace(/<br\s*[\/]?>/gi, "\n");
+
+        const excelRow = sheet.addRow([
+            index + 1,
+            row.formatted_date || "-",
+            row.nomorator || "-",
+            row.customer_name || "-",
+            row.operator_name || "-",
+            row.nama_mesin || "-",
+            row.judul || "-",
+            row.size || "-",
+            Number(row.quantity) || 0,
+            row.finishing_names_str || "-",
+            detailGagalClean,
+            kerugian,
+            row.loss_burden || "-",
+            row.info || "-"
+        ]);
+        
+        excelRow.eachCell({ includeEmpty: false }, cell => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        });
+
+        excelRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+        excelRow.getCell(7).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+        excelRow.getCell(11).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true }; 
+        excelRow.getCell(14).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true }; 
+
+
+        excelRow.getCell(9).numFmt = '#,##0';
+        excelRow.getCell(12).numFmt = '#,##0';
+        excelRow.getCell(12).font = { color: { argb: 'FFFF0000' } }; 
+
+        currentRow++;
+    });
+
+    sheet.mergeCells(`A${currentRow}:K${currentRow}`);
+    const labelTotal = sheet.getCell(`A${currentRow}`);
+    labelTotal.value = "Total Nominal Kerugian Produksi";
+    labelTotal.alignment = { horizontal: 'right', vertical: 'middle' };
+    labelTotal.font = { bold: true };
+    labelTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    
+    const valTotal = sheet.getCell(`L${currentRow}`);
+    valTotal.value = totalLoss;
+    valTotal.numFmt = '#,##0';
+    valTotal.font = { bold: true, color: { argb: 'FFFF0000' } };
+    valTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+    sheet.getCell(`M${currentRow}`).border = { top: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    sheet.getCell(`N${currentRow}`).border = { top: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+    sheet.columns = [
+        { key: 'col1', width: 5 },
+        { key: 'col2', width: 15 },
+        { key: 'col3', width: 12 },
+        { key: 'col4', width: 22 },
+        { key: 'col5', width: 18 },
+        { key: 'col6', width: 20 },
+        { key: 'col7', width: 25 },
+        { key: 'col8', width: 12 },
+        { key: 'col9', width: 8 },
+        { key: 'col10', width: 22 },
+        { key: 'col11', width: 45 },
+        { key: 'col12', width: 15 },
+        { key: 'col13', width: 15 },
+        { key: 'col14', width: 30 },
+    ];
+
+    const fileName = `Laporan_Kegagalan_Produksi_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};

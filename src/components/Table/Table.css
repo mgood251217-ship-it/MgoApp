@@ -5,7 +5,6 @@
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: var(--shadow);
-    table-layout: fixed;
 }
 
 .table thead {
