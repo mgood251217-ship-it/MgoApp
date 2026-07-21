@@ -19,6 +19,8 @@ export default function TransaksiDetail() {
     const [paymentsByOrder, setPaymentsByOrder] = useState({});
     const [transfersByOrder, setTransfersByOrder] = useState({});
     const [notesByOrder, setNotesByOrder] = useState({});
+    
+    const [hoveredTf, setHoveredTf] = useState(null);
 
     const fetchTransactions = async () => {
         setLoading(true);
@@ -62,13 +64,125 @@ export default function TransaksiDetail() {
                 endDate
             });
         } catch (error) {
-            console.error("Gagal export excel:", error);
+            console.error(error);
             alert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
-    const getBaseImgUrl = (imgName) => {
-        return `https://mgood.my.id/admin/assets/img/buktitf/CAHEUM_PRINTING_SUBLIM/${imgName}`;
+    const handleUploadTf = async (order_id, file) => {
+        if (!file || !file.type.startsWith("image/")) {
+            alert("File harus berupa gambar.");
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append("picture", file);
+        formData.append("order_id", order_id);
+
+        try {
+            const res = await api.post("", formData, {
+                params: {
+                    action: "create_tf"
+                }
+            });
+            if (res.data?.success) {
+                fetchTransactions();
+                alert("Bukti transfer berhasil diupload.");
+            } else {
+                alert("Gagal upload bukti transfer.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Terjadi kesalahan sistem.");
+        }
+    };
+
+    const handleDeleteTf = async (transfer_id) => {
+        if (!window.confirm("Apakah Anda yakin ingin menghapus bukti transfer ini?")) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("transfer_id", transfer_id);
+
+        try {
+            const res = await api.post("", formData, {
+                params: {
+                    action: "delete_tf"
+                }
+            });
+            if (res.data?.success) {
+                fetchTransactions();
+            } else {
+                alert("Gagal menghapus bukti transfer.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Terjadi kesalahan sistem.");
+        }
+    };
+
+    const handlePasteClick = async (order_id) => {
+        try {
+            const clipboardItems = await navigator.clipboard.read();
+            for (const clipboardItem of clipboardItems) {
+                const imageTypes = clipboardItem.types.filter(type => type.startsWith("image/"));
+                if (imageTypes.length > 0) {
+                    const blob = await clipboardItem.getType(imageTypes[0]);
+                    const file = new File([blob], "paste_image.png", { type: blob.type });
+                    handleUploadTf(order_id, file);
+                    return;
+                }
+            }
+            alert("Tidak ada gambar di clipboard.");
+        } catch (err) {
+            console.error(err);
+            alert("Gagal membaca clipboard secara otomatis. Silakan klik kotak lalu tekan CTRL+V.");
+        }
+    };
+
+    const handlePaste = (e, order_id) => {
+        const file = e.clipboardData?.files?.[0];
+        if (file && file.type.startsWith("image/")) {
+            handleUploadTf(order_id, file);
+        }
+    };
+
+    const preventDefault = (e) => e.preventDefault();
+
+    const handleDrop = (e, order_id) => {
+        e.preventDefault();
+        const file = e.dataTransfer?.files?.[0];
+        if (file) {
+            handleUploadTf(order_id, file);
+        }
+    };
+
+    const handleUpdateNote = async (e, order_id) => {
+        e.preventDefault();
+        const note = e.target.note.value;
+        
+        const formData = new FormData();
+        formData.append("note", note);
+        formData.append("order_id", order_id);
+
+        try {
+            const res = await api.post("", formData, {
+                params: {
+                    action: "update_detail_note"
+                }
+            });
+            if (res.data?.success) {
+                fetchTransactions();
+                alert("Catatan berhasil diupdate.");
+                e.target.reset();
+            } else {
+                alert("Gagal mengupdate catatan.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Terjadi kesalahan sistem.");
+        }
     };
 
     const itemColumns = useMemo(() => [
@@ -201,96 +315,241 @@ export default function TransaksiDetail() {
                                     </div>
                                 </div>
 
-                                <div style={{ padding: "16px" }}>
-                                    <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", color: "var(--text)" }}>Data Pembayaran</div>
-                                    {payments.length > 0 ? (
-                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-                                            {payments.map((payment, idx) => (
-                                                <div key={idx} style={{ 
-                                                    border: "1px solid var(--border)", 
-                                                    borderRadius: "8px", 
-                                                    padding: "12px", 
-                                                    minWidth: "220px",
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    gap: "8px",
-                                                    background: "var(--surface)"
-                                                }}>
-                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                        <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{payment.date}</span>
-                                                        <span style={{ 
-                                                            fontSize: "11px", 
-                                                            fontWeight: "bold", 
-                                                            padding: "4px 8px", 
-                                                            borderRadius: "6px",
-                                                            background: payment.status === "LUNAS" ? "rgba(76, 175, 80, 0.1)" : "rgba(255, 152, 0, 0.1)",
-                                                            color: payment.status === "LUNAS" ? "var(--success)" : "var(--warning)"
-                                                        }}>
-                                                            {payment.status}
-                                                        </span>
-                                                    </div>
-                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                                                        <div>
-                                                            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px" }}>Metode</div>
-                                                            <div style={{ fontWeight: "600", fontSize: "13px", color: "var(--text)" }}>{payment.payment_method}</div>
+                                <div style={{ padding: "16px", borderBottom: "1px dashed var(--border)" }}>
+                                    <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", color: "var(--text)" }}>Data Pembayaran & Bukti Transfer</div>
+                                    
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", justifyContent: "space-between" }}>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", flex: 1 }}>
+                                            {payments.length > 0 ? (
+                                                payments.map((payment, idx) => (
+                                                    <div key={idx} style={{ 
+                                                        border: "1px solid var(--border)", 
+                                                        borderRadius: "8px", 
+                                                        padding: "12px", 
+                                                        minWidth: "220px",
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        gap: "8px",
+                                                        background: "var(--surface)"
+                                                    }}>
+                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{payment.date}</span>
+                                                            <span style={{ 
+                                                                fontSize: "11px", 
+                                                                fontWeight: "bold", 
+                                                                padding: "4px 8px", 
+                                                                borderRadius: "6px",
+                                                                background: payment.status === "LUNAS" ? "rgba(76, 175, 80, 0.1)" : "rgba(255, 152, 0, 0.1)",
+                                                                color: payment.status === "LUNAS" ? "var(--success)" : "var(--warning)"
+                                                            }}>
+                                                                {payment.status}
+                                                            </span>
                                                         </div>
-                                                        <div style={{ textAlign: "right", fontWeight: "bold", fontSize: "15px", color: "var(--text)" }}>
-                                                            {formatRupiah(Number(payment.nominal))}
+                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                                                            <div>
+                                                                <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px" }}>Metode</div>
+                                                                <div style={{ fontWeight: "600", fontSize: "13px", color: "var(--text)" }}>{payment.payment_method}</div>
+                                                            </div>
+                                                            <div style={{ textAlign: "right", fontWeight: "bold", fontSize: "15px", color: "var(--text)" }}>
+                                                                {formatRupiah(Number(payment.nominal))}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))
+                                            ) : (
+                                                <div style={{ fontSize: "13px", color: "var(--text-muted)", display: "flex", alignItems: "center" }}>Belum ada pembayaran masuk.</div>
+                                            )}
                                             
                                             {transfers.length > 0 && (
-                                                <div style={{ display: "flex", gap: "12px", marginLeft: "12px", borderLeft: "2px dashed var(--border)", paddingLeft: "16px" }}>
+                                                <div style={{ display: "flex", gap: "12px", marginLeft: "12px", borderLeft: "2px dashed var(--border)", paddingLeft: "16px", alignItems: "center" }}>
                                                     {transfers.map((tf, idx) => (
-                                                        <div key={idx} style={{ textAlign: "center" }}>
+                                                        <div key={idx} style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                             <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "6px" }}>Bukti {idx + 1}</div>
-                                                            <a href={tf.img_link} target="_blank" rel="noreferrer">
-                                                                <img 
-                                                                    src={tf.img_link} 
-                                                                    alt="Bukti Transfer" 
-                                                                    style={{ 
-                                                                        width: "60px", 
-                                                                        height: "60px", 
-                                                                        objectFit: "cover", 
-                                                                        borderRadius: "8px", 
-                                                                        border: "2px solid var(--border)",
-                                                                        cursor: "pointer",
-                                                                        transition: "transform 0.2s"
-                                                                    }}
-                                                                    onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.1)"}
-                                                                    onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
-                                                                />
-                                                            </a>
+                                                            <div 
+                                                                style={{ position: "relative" }}
+                                                                onMouseEnter={() => setHoveredTf(tf.transfer_id)}
+                                                                onMouseLeave={() => setHoveredTf(null)}
+                                                            >
+                                                                <a href={tf.img_link} target="_blank" rel="noreferrer">
+                                                                    <img 
+                                                                        src={tf.img_link} 
+                                                                        alt="Bukti Transfer" 
+                                                                        style={{ 
+                                                                            width: "60px", 
+                                                                            height: "60px", 
+                                                                            objectFit: "cover", 
+                                                                            borderRadius: "8px", 
+                                                                            border: "2px solid var(--border)",
+                                                                            cursor: "pointer",
+                                                                            transition: "transform 0.2s"
+                                                                        }}
+                                                                        onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+                                                                        onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+                                                                    />
+                                                                </a>
+                                                                
+                                                                {hoveredTf === tf.transfer_id && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            handleDeleteTf(tf.transfer_id);
+                                                                        }}
+                                                                        style={{
+                                                                            position: "absolute",
+                                                                            top: "-6px",
+                                                                            right: "-6px",
+                                                                            background: "#ef4444",
+                                                                            color: "white",
+                                                                            border: "none",
+                                                                            borderRadius: "50%",
+                                                                            width: "20px",
+                                                                            height: "20px",
+                                                                            display: "flex",
+                                                                            alignItems: "center",
+                                                                            justifyContent: "center",
+                                                                            fontSize: "12px",
+                                                                            fontWeight: "bold",
+                                                                            cursor: "pointer",
+                                                                            zIndex: 10,
+                                                                            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                                                            padding: 0
+                                                                        }}
+                                                                        title="Hapus Bukti Transfer"
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             )}
                                         </div>
-                                    ) : (
-                                        <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Belum ada pembayaran masuk.</div>
-                                    )}
-                                </div>
 
-                                {note && (
-                                    <div style={{ 
-                                        padding: "12px 16px", 
-                                        background: "rgba(255, 152, 0, 0.1)", 
-                                        borderTop: "1px solid rgba(255, 152, 0, 0.2)",
-                                        color: "var(--warning)",
-                                        fontSize: "13px",
-                                        display: "flex",
-                                        gap: "8px",
-                                        alignItems: "flex-start"
-                                    }}>
-                                        <span style={{ fontSize: "16px" }}>📝</span>
-                                        <div>
-                                            <div style={{ fontWeight: "600", marginBottom: "2px" }}>Catatan:</div>
-                                            <div style={{ lineHeight: "1.5" }}>{note}</div>
+                                        <div style={{ display: "flex", gap: "12px" }}>
+                                            <div 
+                                                tabIndex={0}
+                                                onClick={() => handlePasteClick(order.order_id)}
+                                                onPaste={(e) => handlePaste(e, order.order_id)}
+                                                style={{
+                                                    height: "76px",
+                                                    padding: "0 16px",
+                                                    borderRadius: "8px",
+                                                    border: "2px dashed var(--border)",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    background: "var(--background)",
+                                                    color: "var(--text-muted)",
+                                                    fontSize: "12px",
+                                                    fontWeight: "600",
+                                                    cursor: "pointer",
+                                                    outline: "none",
+                                                    transition: "border 0.2s, background 0.2s"
+                                                }}
+                                                onMouseOver={(e) => e.currentTarget.style.background = "var(--border)"}
+                                                onMouseOut={(e) => e.currentTarget.style.background = "var(--background)"}
+                                                onFocus={(e) => e.currentTarget.style.border = "2px dashed var(--primary)"}
+                                                onBlur={(e) => e.currentTarget.style.border = "2px dashed var(--border)"}
+                                            >
+                                                📋 Paste Foto (CTRL+V)
+                                            </div>
+                                            
+                                            <label 
+                                                onDragOver={preventDefault}
+                                                onDragEnter={preventDefault}
+                                                onDrop={(e) => handleDrop(e, order.order_id)}
+                                                style={{
+                                                    height: "76px",
+                                                    padding: "0 16px",
+                                                    borderRadius: "8px",
+                                                    border: "2px dashed var(--border)",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    background: "var(--background)",
+                                                    color: "var(--text-muted)",
+                                                    fontSize: "12px",
+                                                    fontWeight: "600",
+                                                    cursor: "pointer",
+                                                    transition: "background 0.2s"
+                                                }}
+                                                onMouseOver={(e) => e.currentTarget.style.background = "var(--border)"}
+                                                onMouseOut={(e) => e.currentTarget.style.background = "var(--background)"}
+                                            >
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    style={{ display: "none" }} 
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleUploadTf(order.order_id, file);
+                                                        e.target.value = null;
+                                                    }} 
+                                                />
+                                                📁 Upload / Drop
+                                            </label>
                                         </div>
                                     </div>
-                                )}
+                                </div>
+
+                                <div style={{ padding: "16px", background: "var(--surface)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                                    <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text)" }}>Catatan Transaksi</div>
+                                    
+                                    {note && (
+                                        <div style={{ 
+                                            padding: "12px 16px", 
+                                            background: "rgba(255, 152, 0, 0.1)", 
+                                            borderLeft: "4px solid var(--warning)",
+                                            color: "var(--warning)",
+                                            borderRadius: "0 8px 8px 0",
+                                            fontSize: "13px",
+                                            lineHeight: "1.5"
+                                        }}>
+                                            <div style={{ fontWeight: "600", marginBottom: "4px", color: "var(--text)" }}>Catatan Saat Ini:</div>
+                                            {note}
+                                        </div>
+                                    )}
+
+                                    <form 
+                                        onSubmit={(e) => handleUpdateNote(e, order.order_id)}
+                                        style={{ display: "flex", gap: "12px", alignItems: "center" }}
+                                    >
+                                        <input 
+                                            type="text"
+                                            name="note" 
+                                            placeholder="Ketik catatan baru di sini..."
+                                            style={{
+                                                flex: 1,
+                                                padding: "10px 16px",
+                                                borderRadius: "8px",
+                                                border: "1px solid var(--border)",
+                                                background: "var(--background)",
+                                                color: "var(--text)",
+                                                fontFamily: "inherit",
+                                                fontSize: "13px"
+                                            }}
+                                        />
+                                        <button 
+                                            type="submit"
+                                            style={{
+                                                padding: "10px 20px",
+                                                background: "var(--primary)",
+                                                color: "#fff",
+                                                border: "none",
+                                                borderRadius: "8px",
+                                                fontWeight: "600",
+                                                cursor: "pointer",
+                                                whiteSpace: "nowrap",
+                                                fontSize: "13px"
+                                            }}
+                                        >
+                                            Simpan Catatan
+                                        </button>
+                                    </form>
+                                </div>
+
                             </div>
                         );
                     })
