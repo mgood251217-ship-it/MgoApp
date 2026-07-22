@@ -1,8 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import api from "../../api/axios";
 import Modal from "../Modal/Modal";
 import Table from "../Table/Table";
 import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
+import Select from "../Select/Select";
+import Form from "../Form/Form";
 import { formatRupiah } from "../../services/helpers";
 import { FOLDER_STATUS_LABEL, formatUkuran } from "../../services/folderHelper";
 import useOrderFolderStatus from "../../hooks/useOrderFolderStatus";
@@ -10,6 +13,13 @@ import ChangeFolderIconModal from "../ChangeFolderIconModal/ChangeFolderIconModa
 
 export default function OrderDetailModal({ open, onClose, viewOrderDetails, viewOrderData, setAlertConfig }) {
     const folder = useOrderFolderStatus(setAlertConfig);
+    const [stores, setStores] = useState([]);
+
+    const [maklunModalOpen, setMaklunModalOpen] = useState(false);
+    const [maklunData, setMaklunData] = useState({
+        order_item_id: "",
+        store_id: ""
+    });
 
     useEffect(() => {
         if (!open) return;
@@ -17,6 +27,21 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         if (!viewOrderDetails || !viewOrderData?.items) return;
         folder.checkFolders(viewOrderDetails, viewOrderData.items);
     }, [open, folder.settingsLoaded, viewOrderDetails, viewOrderData]);
+
+    const loadStores = useCallback(async () => {
+        try {
+            const res = await api.get("", { params: { action: "store_names" } });
+            setStores(res.data?.data || []);
+        } catch (err) {
+            setAlertConfig({ type: "error", message: "Gagal memuat data store" });
+        }
+    }, [setAlertConfig]);
+
+    useEffect(() => {
+        if (maklunModalOpen) {
+            loadStores();
+        }
+    }, [maklunModalOpen, loadStores]);
 
     const viewTableColumns = useMemo(() => [
         { key: "product_name", title: "Nama" },
@@ -28,20 +53,50 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         { key: "folder_status", title: "Folder" }
     ], []);
 
-    const viewItemsMapped = useMemo(() => {
-        return (viewOrderData?.items || []).map(item => {
-            const isMaklun = !!(item.maklun_store && String(item.maklun_store).trim() !== "");
-            return {
-                ...item,
-                formatted_amount: formatRupiah(item.amount),
-                folder_status: isMaklun ? "🤝 Maklun" : (FOLDER_STATUS_LABEL[folder.itemFolderStatus[item.category]?.status] || "-")
-            };
+    const handleOpenMaklun = (row) => {
+        setMaklunData({
+            order_item_id: row.order_item_id,
+            store_id: row.store_id || ""
         });
-    }, [viewOrderData, folder.itemFolderStatus]);
+        setMaklunModalOpen(true);
+    };
+
+    const viewItemsMapped = (viewOrderData?.items || []).map(item => {
+        const isMaklun = !!(item.maklun_store && String(item.maklun_store).trim() !== "");
+        return {
+            ...item,
+            formatted_amount: formatRupiah(item.amount),
+            folder_status: isMaklun ? "🤝 Maklun" : (FOLDER_STATUS_LABEL[folder.itemFolderStatus[item.category]?.status] || "-"),
+            maklun_store: (
+                <Button 
+                    size="sm" 
+                    variant={isMaklun ? "secondary" : "primary"} 
+                    onClick={() => handleOpenMaklun(item)}
+                >
+                    {isMaklun ? item.maklun_store : "Set Maklun"}
+                </Button>
+            )
+        };
+    });
 
     const handleClose = () => {
         folder.resetFolders();
         onClose();
+    };
+
+    const handleMaklunSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = new FormData();
+            payload.append("order_item_id", maklunData.order_item_id);
+            payload.append("store_id", maklunData.store_id);
+            await api.post("", payload, { params: { action: "update_maklun" } });
+            setMaklunModalOpen(false);
+            setAlertConfig({ type: "success", message: "Maklun berhasil diperbarui" });
+            loadStores();
+        } catch (err) {
+            setAlertConfig({ type: "error", message: "Gagal memperbarui maklun" });
+        }
     };
 
     return (
@@ -195,6 +250,33 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                         </h2>
                     </div>
                 </div>
+            </Modal>
+
+            <Modal
+                open={maklunModalOpen}
+                onClose={() => setMaklunModalOpen(false)}
+                title="Pilih Maklun Store"
+                size="sm"
+                headerColor="info"
+            >
+                <Form id="formMaklun" onSubmit={handleMaklunSubmit}>
+                    <Select
+                        labelPosition="top"
+                        name="store_id"
+                        label="Store Maklun"
+                        value={maklunData.store_id}
+                        onChange={(e) => setMaklunData(prev => ({ ...prev, store_id: e.target.value }))}
+                        options={stores.map(store => ({
+                            value: store.id || store.store_id,
+                            label: store.name || store.store_name
+                        }))} 
+                        placeholder="Pilih Store"
+                        required
+                    />
+                    <Button type="submit" size="full-lg" variant="info" icon={<Icon name="save" />}>
+                        Simpan Maklun
+                    </Button>
+                </Form>
             </Modal>
 
             <ChangeFolderIconModal

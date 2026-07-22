@@ -11,6 +11,7 @@ import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { formatRupiah } from "../services/helpers";
+import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
 
 export default function Order() {
     const { order_id } = useParams();
@@ -23,10 +24,6 @@ export default function Order() {
         note: ""
     });
     
-    const [categories, setCategories] = useState([]);
-    const [products, setProducts] = useState([]);
-    const [paketSizesMap, setPaketSizesMap] = useState({});
-    const [finishings, setFinishings] = useState([]);
     const [stores, setStores] = useState([]);
 
     const [noteInput, setNoteInput] = useState("");
@@ -34,20 +31,11 @@ export default function Order() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
-    const [formItem, setFormItem] = useState({
-        order_item_id: "",
-        category_id: "",
-        product_id: "",
-        panjang: "",
-        lebar: "",
-        qty: "",
-        diskon: "",
-        finishings: [],
-        kiloan: "",
-        waktu: "",
-        ukuranJersey: "",
-        paketSize: "",
-        size: ""
+    const [activeFormItem, setActiveFormItem] = useState({});
+    
+    const [initialFormItem, setInitialFormItem] = useState({
+        order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
+        qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
     });
 
     const [maklunModalOpen, setMaklunModalOpen] = useState(false);
@@ -90,13 +78,6 @@ export default function Order() {
         } catch (err) {}
     }, [order_id]);
 
-    const loadCategories = useCallback(async () => {
-        try {
-            const res = await api.get("", { params: { action: "categories" } });
-            setCategories(res.data?.data || []);
-        } catch (err) {}
-    }, []);
-
     const loadStores = useCallback(async () => {
         try {
             const res = await api.get("", { params: { action: "store_names" } });
@@ -106,134 +87,28 @@ export default function Order() {
 
     useEffect(() => {
         loadOrderData();
-        loadCategories();
         loadStores();
-    }, [loadOrderData, loadCategories, loadStores]);
-
-    const selectedCategory = categories.find(c => String(c.category_id) === String(formItem.category_id));
-    const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
-
-    useEffect(() => {
-        const fetchProductsAndFinishings = async () => {
-            if (!formItem.category_id) {
-                setProducts([]);
-                setFinishings([]);
-                setPaketSizesMap({});
-                return;
-            }
-            try {
-                const resProducts = await api.get("", {
-                    params: { action: "products_by_category", category_id: formItem.category_id }
-                });
-                
-                const fetchedProducts = resProducts.data?.data || [];
-                let mappedProducts = [];
-                let sizesMap = {};
-
-                if (selectedCategoryName === "PAKET INDOOR OUTDOOR") {
-                    const seen = new Set();
-                    fetchedProducts.forEach(p => {
-                        let nameOnly = p.name.replace(/\s*\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?/gi, '').trim();
-                        const ukuranMatch = p.name.match(/(\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?)/i);
-                        const ukuran = ukuranMatch ? ukuranMatch[0].replace(/×/gi, 'x') : null;
-
-                        if (!sizesMap[nameOnly]) sizesMap[nameOnly] = [];
-                        if (ukuran && !sizesMap[nameOnly].includes(ukuran)) {
-                            sizesMap[nameOnly].push(ukuran);
-                        }
-
-                        if (!seen.has(nameOnly)) {
-                            seen.add(nameOnly);
-                            mappedProducts.push({ ...p, display_name: nameOnly });
-                        }
-                    });
-                } else {
-                    mappedProducts = fetchedProducts.map(p => ({ ...p, display_name: p.name }));
-                }
-
-                setProducts(mappedProducts);
-                setPaketSizesMap(sizesMap);
-
-                const resFinishings = await api.get("", {
-                    params: { action: "finishing_by_category", category_id: formItem.category_id }
-                });
-                setFinishings(resFinishings.data?.data || []);
-            } catch (err) {}
-        };
-        fetchProductsAndFinishings();
-    }, [formItem.category_id, selectedCategoryName]);
-
-    const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        setFormItem(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handlePaketSizeChange = (e) => {
-        const val = e.target.value;
-        setFormItem(prev => {
-            const next = { ...prev, paketSize: val };
-            if (val && val.includes('x')) {
-                const parts = val.split('x').map(s => parseFloat(s.trim()));
-                next.panjang = parts[0];
-                next.lebar = parts[1];
-            }
-            return next;
-        });
-    };
-
-    const handleFinishingChange = (e) => {
-        const { value, checked } = e.target;
-        setFormItem(prev => {
-            const newFinishings = checked
-                ? [...prev.finishings, value]
-                : prev.finishings.filter(f => f !== value);
-            return { ...prev, finishings: newFinishings };
-        });
-    };
-
-    const selectedProduct = products.find(p => String(p.product_id) === String(formItem.product_id));
-    const selectedProductName = selectedProduct?.display_name?.toUpperCase() || selectedProduct?.name?.toUpperCase() || "";
-    
-    const isNoSize = selectedProduct?.unit_type?.toUpperCase() === "PCS" || selectedProduct?.unit_type === "~";
-
-    const isDTF = selectedCategoryName === "DTF";
-    const isAkrilik = selectedCategoryName === "AKRILIK";
-    const isJersey = selectedCategoryName === "JERSEY";
-    const isSublim = selectedCategoryName === "SUBLIM";
-    const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
-    
-    const isSetting = selectedProductName === "SETTING";
-    const isBahan = selectedProductName.includes("BAHAN");
-    const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
-
-    const hideFinishing = ["PAKET INDOOR OUTDOOR", "STAMP", "MERCENDISE", "MERCENDISE AKRILIK"].includes(selectedCategoryName);
-
-    useEffect(() => {
-        if (isDTF && formItem.lebar !== "0.58") {
-            setFormItem(prev => ({ ...prev, lebar: "0.58" }));
-        }
-    }, [isDTF, formItem.lebar]);
+    }, [loadOrderData, loadStores]);
 
     useEffect(() => {
         const getPrice = async () => {
-            if (!formItem.product_id || !formItem.qty) {
+            if (!activeFormItem.product_id || !activeFormItem.qty) {
                 setPreviewPrice(0);
                 return;
             }
             try {
                 const payload = new FormData();
                 payload.append("order_id", order_id);
-                payload.append("product_id", formItem.product_id);
-                payload.append("judul", selectedProductName);
-                payload.append("quantity", formItem.qty || 0);
-                payload.append("finishing", formItem.finishings.join(","));
-                payload.append("panjang", formItem.panjang || 0);
-                payload.append("lebar", formItem.lebar || 0);
-                payload.append("kiloan", formItem.kiloan || 0);
-                payload.append("waktu", formItem.waktu || 0);
-                payload.append("ukuranJersey", formItem.ukuranJersey || "");
-                payload.append("diskon", formItem.diskon || 0);
-                payload.append("size", formItem.size || formItem.ukuranJersey || formItem.paketSize || "");
+                payload.append("product_id", activeFormItem.product_id);
+                payload.append("quantity", activeFormItem.qty || 0);
+                payload.append("finishing", (activeFormItem.finishings || []).join(","));
+                payload.append("panjang", activeFormItem.panjang || 0);
+                payload.append("lebar", activeFormItem.lebar || 0);
+                payload.append("kiloan", activeFormItem.kiloan || 0);
+                payload.append("waktu", activeFormItem.waktu || 0);
+                payload.append("ukuranJersey", activeFormItem.ukuranJersey || "");
+                payload.append("diskon", activeFormItem.diskon || 0);
+                payload.append("size", activeFormItem.size || activeFormItem.ukuranJersey || activeFormItem.paketSize || "");
 
                 const res = await api.post("", payload, { params: { action: "item_price" } });
                 setPreviewPrice(res.data?.total || res.data?.data?.total || 0);
@@ -247,12 +122,10 @@ export default function Order() {
         }, 300);
 
         return () => clearTimeout(timeoutId);
-    }, [formItem, order_id, selectedProductName]);
+    }, [activeFormItem, order_id]);
 
-    const handleAddItem = async (e) => {
-        e.preventDefault();
-        
-        if (!formItem.category_id || !formItem.product_id || !formItem.qty) {
+    const handleAddItem = async (submittedForm) => {
+        if (!submittedForm.category_id || !submittedForm.product_id || !submittedForm.qty) {
             setAlertConfig({ show: true, type: "error", message: "Kategori, Produk, dan Quantity wajib diisi!" });
             return;
         }
@@ -261,41 +134,30 @@ export default function Order() {
         try {
             const payload = new FormData();
             payload.append("order_id", order_id);
-            if (formItem.order_item_id) payload.append("order_item_id", formItem.order_item_id);
+            if (submittedForm.order_item_id) payload.append("order_item_id", submittedForm.order_item_id);
             
-            payload.append("product_id", formItem.product_id);
-            payload.append("judul", selectedProductName); 
-            payload.append("quantity", formItem.qty || 0);
-            payload.append("finishing", formItem.finishings.join(","));
-            payload.append("panjang", formItem.panjang || 0);
-            payload.append("lebar", formItem.lebar || 0);
-            payload.append("kiloan", formItem.kiloan || 0);
-            payload.append("waktu", formItem.waktu || 0);
-            payload.append("ukuranJersey", formItem.ukuranJersey || "");
-            payload.append("diskon", formItem.diskon || 0);
-            payload.append("size", formItem.size || formItem.ukuranJersey || formItem.paketSize || "");
+            payload.append("product_id", submittedForm.product_id);
+            payload.append("judul", submittedForm.selectedProductName || ""); 
+            payload.append("quantity", submittedForm.qty || 0);
+            payload.append("finishing", submittedForm.finishings.join(","));
+            payload.append("panjang", submittedForm.panjang || 0);
+            payload.append("lebar", submittedForm.lebar || 0);
+            payload.append("kiloan", submittedForm.kiloan || 0);
+            payload.append("waktu", submittedForm.waktu || 0);
+            payload.append("ukuranJersey", submittedForm.ukuranJersey || "");
+            payload.append("diskon", submittedForm.diskon || 0);
+            payload.append("size", submittedForm.size || submittedForm.ukuranJersey || submittedForm.paketSize || "");
 
-            const endpointAction = formItem.order_item_id ? "update_item" : "create_order_item";
+            const endpointAction = submittedForm.order_item_id ? "update_item" : "create_order_item";
 
             const res = await api.post("", payload, { params: { action: endpointAction } });
             
             if (res.data && res.data.success === false) {
                 setAlertConfig({ show: true, type: "error", message: res.data.message || "Gagal menyimpan item." });
             } else {
-                setFormItem({
-                    order_item_id: "",
-                    category_id: "",
-                    product_id: "",
-                    panjang: "",
-                    lebar: "",
-                    qty: "",
-                    diskon: "",
-                    finishings: [],
-                    kiloan: "",
-                    waktu: "",
-                    ukuranJersey: "",
-                    paketSize: "",
-                    size: ""
+                setInitialFormItem({
+                    order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
+                    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
                 });
                 loadOrderData();
                 focusCategoryField();
@@ -349,8 +211,6 @@ export default function Order() {
     };
 
     const handleRowDoubleClick = (row) => {
-        const formEl = document.getElementById("formAddItem");
-        
         const currentFinishings = row.finishing 
             ? String(row.finishing).split(",").map(f => f.trim()) 
             : [];
@@ -364,9 +224,9 @@ export default function Order() {
             w = parts[1] || w;
         }
 
-        setFormItem({
+        setInitialFormItem({
             order_item_id: row.order_item_id,
-            category_id: row.category_id || formItem.category_id, 
+            category_id: row.category_id || "", 
             product_id: row.product_id || "",
             panjang: p,
             lebar: w,
@@ -380,45 +240,10 @@ export default function Order() {
             size: row.size || ""
         });
 
-        if (formEl) {
-            window.scrollTo({
-                top: formEl.offsetTop - 100,
-                behavior: 'smooth'
-            });
-        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const categoryOptions = useMemo(() => {
-        return categories.map(c => ({ value: c.category_id, label: c.name }));
-    }, [categories]);
-
-    const productOptions = useMemo(() => {
-        return products.map(p => ({ value: p.product_id, label: p.display_name }));
-    }, [products]);
-
-    const storeOptions = useMemo(() => {
-        return stores.map(s => ({ value: s.store_id, label: s.name }));
-    }, [stores]);
-
-    const jerseySizeOptions = [
-        { value: 'XS', label: 'XS' },
-        { value: 'S', label: 'S' },
-        { value: 'M', label: 'M' },
-        { value: 'L', label: 'L' },
-        { value: 'XL', label: 'XL' },
-        { value: '2XL', label: '2XL' },
-        { value: '3XL', label: '3XL' },
-        { value: '4XL', label: '4XL' },
-        { value: '5XL', label: '5XL' }
-    ];
-
-    const sublimLebarOptions = [
-        { value: "1.1", label: "1.1" },
-        { value: "1.2", label: "1.2" },
-        { value: "1.5", label: "1.5" },
-        { value: "1.6", label: "1.6" },
-        { value: "1.8", label: "1.8" }
-    ];
+    const storeOptions = useMemo(() => stores.map(s => ({ value: s.store_id, label: s.name })), [stores]);
 
     const tableColumns = useMemo(() => [
         { key: "judul", title: "Product" },
@@ -482,225 +307,31 @@ export default function Order() {
 
             <div style={{ display: "flex", gap: "24px", marginTop: "24px", alignItems: "flex-start" }}>
                 <div style={{ width: "40%", backgroundColor: "var(--bg-content)", padding: "16px", borderRadius: "8px", border: "1px solid var(--border)" }}>
-                    <h3 style={{ marginBottom: "16px" }}>{formItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
-                    <Form id="formAddItem" onSubmit={handleAddItem}>
-                        <div id="categorySelectField" tabIndex={-1} style={{ outline: "none" }}>
-                            <Select
-                                labelPosition="left"
-                                labelWidth={110}
-                                name="category_id"
-                                label="Kategori"
-                                value={formItem.category_id}
-                                onChange={handleFormChange}
-                                options={categoryOptions}
-                                placeholder="Pilih Kategori"
-                                required
-                            />
-                        </div>
-                        <Select
-                            labelPosition="left"
-                            labelWidth={110}
-                            name="product_id"
-                            label="Produk"
-                            value={formItem.product_id}
-                            onChange={(e) => {
-                                handleFormChange(e);
-                                setTimeout(() => {
-                                    const pId = e.target.value;
-                                    const prod = products.find(p => String(p.product_id) === String(pId));
-                                    const pName = (prod?.display_name || prod?.name || "").toUpperCase();
-                                    const pUnit = prod?.unit_type?.toUpperCase();
-                                    const noSizeCheck = pUnit === "PCS" || pUnit === "~";
-
-                                    if (pName === "SETTING") {
-                                        document.querySelector('input[name="waktu"]')?.focus();
-                                    } else if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN")) {
-                                        document.querySelector('input[name="kiloan"]')?.focus();
-                                    } else if (selectedCategoryName === "JERSEY") {
-                                        document.querySelector('select[name="ukuranJersey"]')?.focus();
-                                    } else if (noSizeCheck) {
-                                        document.querySelector('input[name="qty"]')?.focus();
-                                    } else {
-                                        document.querySelector('input[name="panjang"]')?.focus();
-                                    }
-                                }, 100);
-                            }}
-                            options={productOptions}
-                            placeholder="Pilih Produk"
-                            required
-                        />
-
-                        {isPaketIndoorOutdoor && paketSizesMap[selectedProductName]?.length > 0 && (
-                            <Select
-                                labelPosition="left"
-                                labelWidth={110}
-                                name="paketSize"
-                                label="Ukuran Paket"
-                                value={formItem.paketSize}
-                                onChange={handlePaketSizeChange}
-                                options={paketSizesMap[selectedProductName].map(s => ({ value: s, label: s }))}
-                                placeholder="Pilih Ukuran"
-                            />
-                        )}
-                        
-                        <div style={{ marginBottom: "16px" }}>
-                            {isSetting ? (
-                                <Input
-                                    labelPosition="left"
-                                    labelWidth={110}
-                                    name="waktu"
-                                    type="number"
-                                    step="any"
-                                    label="Waktu"
-                                    placeholder="Waktu pengerjaan..."
-                                    value={formItem.waktu}
-                                    onChange={handleFormChange}
-                                />
-                            ) : (isSublim && isBahan) ? (
-                                <Input
-                                    labelPosition="left"
-                                    labelWidth={110}
-                                    name="kiloan"
-                                    type="number"
-                                    step="any"
-                                    label="Kiloan"
-                                    placeholder="Berat (kg)..."
-                                    value={formItem.kiloan}
-                                    onChange={handleFormChange}
-                                />
-                            ) : isJersey ? (
-                                <Select
-                                    labelPosition="left"
-                                    labelWidth={110}
-                                    name="ukuranJersey"
-                                    label="Ukuran"
-                                    value={formItem.ukuranJersey}
-                                    onChange={handleFormChange}
-                                    options={jerseySizeOptions}
-                                    placeholder="Pilih Ukuran"
-                                />
-                            ) : isNoSize ? null : (
-                                <div>
-                                    <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", fontSize: "14px" }}>
-                                        Ukuran (P x L)
-                                    </label>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <div style={{ flex: 1 }}>
-                                            <Input
-                                                name="panjang"
-                                                type="number"
-                                                step="any"
-                                                placeholder={isAkrilik ? "Panjang (cm)" : "Panjang (m)"}
-                                                value={formItem.panjang}
-                                                onChange={handleFormChange}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter") {
-                                                        e.preventDefault();
-                                                        document.querySelector('input[name="lebar"]')?.focus();
-                                                    }
-                                                }}
-                                            />
-                                        </div>
-                                        <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>X</span>
-                                        <div style={{ flex: 1 }}>
-                                            {(isSublim && isTransferPaperOrPrintPres) ? (
-                                                <Select
-                                                    name="lebar"
-                                                    value={formItem.lebar}
-                                                    onChange={handleFormChange}
-                                                    options={sublimLebarOptions}
-                                                    placeholder="Pilih Lebar"
-                                                />
-                                            ) : (
-                                                <Input
-                                                    name="lebar"
-                                                    type="number"
-                                                    step="any"
-                                                    placeholder={isAkrilik ? "Lebar (cm)" : "Lebar (m)"}
-                                                    value={formItem.lebar}
-                                                    onChange={isDTF ? undefined : handleFormChange}
-                                                    readOnly={isDTF}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter") {
-                                                            e.preventDefault();
-                                                            document.querySelector('input[name="qty"]')?.focus();
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <Input
-                            labelPosition="left"
-                            labelWidth={110}
-                            name="qty"
-                            type="number"
-                            label="Quantity"
-                            value={formItem.qty}
-                            onChange={handleFormChange}
-                            required
-                        />
-
-                        {!hideFinishing && finishings.length > 0 && (
-                            <div style={{ marginBottom: "16px" }}>
-                                <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", fontSize: "14px" }}>
-                                    Finishing
-                                </label>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "6px", backgroundColor: "var(--bg-body)" }}>
-                                    {finishings.map((f) => (
-                                        <label key={f.finishing_id} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px" }}>
-                                            <input
-                                                type="checkbox"
-                                                value={f.finishing_id}
-                                                checked={formItem.finishings.includes(String(f.finishing_id))}
-                                                onChange={handleFinishingChange}
-                                            />
-                                            {f.name}
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <Input
-                            labelPosition="left"
-                            labelWidth={110}
-                            name="diskon"
-                            type="number"
-                            label="Diskon"
-                            value={formItem.diskon}
-                            onChange={handleFormChange}
-                        />
-
+                    <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
+                    
+                    {/* Memanggil Komponen yang sudah di pisah */}
+                    <OrderItemForm 
+                        initialData={initialFormItem}
+                        isSubmitting={isSubmitting}
+                        onSubmit={handleAddItem}
+                        onChange={(currentFormItem) => setActiveFormItem(currentFormItem)}
+                        submitText={initialFormItem.order_item_id ? "Update Item" : "Tambah Item"}
+                        submitIcon={initialFormItem.order_item_id ? "edit" : "add"}
+                        submitVariant={initialFormItem.order_item_id ? "warning" : "success"}
+                        showCancel={!!initialFormItem.order_item_id}
+                        onCancel={() => setInitialFormItem({
+                            order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
+                            qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
+                        })}
+                    >
+                        {/* Anak elemen (children) dimasukkan ke dalam form jika diperlukan */}
                         <div style={{ padding: "12px", backgroundColor: "var(--bg-body)", borderRadius: "6px", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--text)" }}>Estimasi Harga:</span>
                             <span style={{ fontWeight: "bold", color: "var(--success)", fontSize: "16px" }}>
                                 {formatRupiah(previewPrice)}
                             </span>
                         </div>
-
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <Button type="submit" size="full-lg" variant={formItem.order_item_id ? "warning" : "success"} disabled={isSubmitting} icon={<Icon name={isSubmitting ? "hourglass_empty" : (formItem.order_item_id ? "edit" : "add")} />}>
-                                {isSubmitting ? "Loading..." : (formItem.order_item_id ? "Update Item" : "Tambah Item")}
-                            </Button>
-                            {formItem.order_item_id && (
-                                <Button 
-                                    type="button" 
-                                    size="full-lg" 
-                                    variant="secondary" 
-                                    onClick={() => setFormItem({
-                                        order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "", qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
-                                    })}
-                                >
-                                    Batal
-                                </Button>
-                            )}
-                        </div>
-                    </Form>
+                    </OrderItemForm>
                 </div>
 
                 <div style={{ width: "60%" }}>

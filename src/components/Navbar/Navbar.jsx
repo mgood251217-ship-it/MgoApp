@@ -67,7 +67,7 @@ export default function Navbar() {
     }
 
     async function handleTheme() {
-        if (!userId || themeLoading) return;
+        if ( themeLoading) return;
 
         const currentTheme = theme;
         const nextTheme = currentTheme === "dark" ? "light" : "dark";
@@ -104,7 +104,7 @@ export default function Navbar() {
                 <button
                     className="navbar-button"
                     onClick={handleTheme}
-                    disabled={themeLoading || !userId}
+                    disabled={themeLoading}
                     aria-label={theme === "dark" ? "Aktifkan light mode" : "Aktifkan dark mode"}
                     title={theme === "dark" ? "Light mode" : "Dark mode"}
                 >
