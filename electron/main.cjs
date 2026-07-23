@@ -1,4 +1,4 @@
-const { app, globalShortcut, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, globalShortcut, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const createWindow = require("./window.cjs");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -98,7 +98,6 @@ async function notifyShellUpdate(folderPath) {
     const tempDir = app.getPath("temp");
     const dllPath = path.join(tempDir, "mgo-shell-notify.dll");
     const scriptPath = path.join(tempDir, "mgo-shell-notify.ps1");
-    const parentPath = path.dirname(folderPath);
 
     const psScript = `
 $dllPath = "${dllPath.replace(/\\/g, "\\\\")}"
@@ -115,18 +114,22 @@ public class ShellNotify {
 "@
     Add-Type -Path $dllPath
 }
-$itemPath = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni("${folderPath.replace(/'/g, "''")}")
-[ShellNotify]::SHChangeNotify(0x2000, 0x0005, $itemPath, [IntPtr]::Zero)
-[System.Runtime.InteropServices.Marshal]::FreeHGlobal($itemPath)
-
-$parentPath = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni("${parentPath.replace(/'/g, "''")}")
-[ShellNotify]::SHChangeNotify(0x1000, 0x0005, $parentPath, [IntPtr]::Zero)
-[System.Runtime.InteropServices.Marshal]::FreeHGlobal($parentPath)
+$path = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni("${folderPath.replace(/'/g, "''")}")
+[ShellNotify]::SHChangeNotify(0x2000, 0x0005, $path, [IntPtr]::Zero)
+[System.Runtime.InteropServices.Marshal]::FreeHGlobal($path)
 `;
-
     await fs.writeFile(scriptPath, psScript, "utf-8");
     await execAsync(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`);
 }
+
+ipcMain.handle("buka-link-eksternal", async (event, url) => {
+    try {
+        await shell.openExternal(url);
+        return { success: true };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
 
 ipcMain.handle("pilih-folder", async () => {
     const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });

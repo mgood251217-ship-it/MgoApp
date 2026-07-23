@@ -19,22 +19,20 @@ export async function checkUpdate() {
     try {
         const { data } = await api.get("", { params: { action: "app_version" } });
 
-        if (!data?.success || !data?.data?.version) {
-            return { hasUpdate: false, latestVersion: config.version };
-        }
+        if (!data?.success || !data?.data?.version) return true;
 
         const latestVersion = data.data.version;
         const downloadUrl = data.data.download_url;
-        const hasUpdate = compareVersions(config.version, latestVersion) < 0;
+        const isOutdated = compareVersions(config.version, latestVersion) < 0;
 
-        if (hasUpdate && downloadUrl) {
+        if (isOutdated && downloadUrl) {
             try {
                 await window.electron.bukaLinkEksternal(downloadUrl);
             } catch (err) {}
         }
 
-        return { hasUpdate, latestVersion };
+        return true;
     } catch (err) {
-        return { hasUpdate: false, latestVersion: config.version };
+        return true;
     }
 }

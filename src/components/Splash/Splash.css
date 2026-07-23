@@ -54,16 +54,6 @@
     color: var(--text-secondary);
 }
 
-@keyframes splashLoading {
-    0% {
-        transform: translateX(-120%);
-    }
-
-    100% {
-        transform: translateX(380%);
-    }
-}
-
 .splash-message-error {
     color: #ef4444;
 }
@@ -81,4 +71,14 @@
 
 .splash-retry-button:hover {
     opacity: 0.9;
+}
+
+@keyframes splashLoading {
+    0% {
+        transform: translateX(-120%);
+    }
+
+    100% {
+        transform: translateX(380%);
+    }
 }
