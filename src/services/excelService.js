@@ -1669,7 +1669,7 @@ export const exportFailureExcel = async ({
     sheet.mergeCells(`A${currentRow}:N${currentRow}`);
     const titleTab = sheet.getCell(`A${currentRow}`);
     titleTab.value = "DATA KEGAGALAN (REJECT)";
-    titleTab.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } }; // Warna Merah
+    titleTab.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } };
     titleTab.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
     currentRow++;
 
@@ -1765,6 +1765,158 @@ export const exportFailureExcel = async ({
     ];
 
     const fileName = `Laporan_Kegagalan_Produksi_${startDate}_sd_${endDate}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), fileName);
+};
+
+export const exportGlobalStocksToExcel = async ({
+    groupedStocks,
+    month
+}) => {
+    if (!groupedStocks || Object.keys(groupedStocks).length === 0) return;
+
+    const tanggal = month ? `Periode Bulan: ${month}` : 'Periode -';
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Laporan Global Stock");
+
+    const endColLetter = "BL";
+
+    let currentRow = generateExcelHeader(
+        sheet, 
+        endColLetter, 
+        "LAPORAN GLOBAL STOCK BULANAN", 
+        tanggal
+    );
+
+    sheet.mergeCells(`A${currentRow}:${endColLetter}${currentRow}`);
+    const titleTab = sheet.getCell(`A${currentRow}`);
+    titleTab.value = "REKAPITULASI PERGERAKAN STOK GLOBAL (MASUK & KELUAR)";
+    titleTab.font = { bold: true, size: 12, color: { argb: 'FF002060' } };
+    titleTab.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+    titleTab.alignment = { vertical: 'middle', horizontal: 'center' };
+    currentRow++;
+
+    const headerRow1 = ['No', 'Item & Ukuran', 'Stok Awal'];
+    const headerRow2 = ['', '', ''];
+
+    const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+    daysInMonth.forEach(day => {
+        headerRow1.push(`Tgl ${day}`, ''); 
+        headerRow2.push('M', 'K');
+    });
+    headerRow1.push('Stok Akhir');
+    headerRow2.push('');
+
+    const r1 = sheet.addRow(headerRow1);
+    r1.font = { bold: true };
+    r1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    const r2 = sheet.addRow(headerRow2);
+    r2.font = { bold: true };
+    r2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    sheet.mergeCells(`A${currentRow}:A${currentRow + 1}`);
+    sheet.mergeCells(`B${currentRow}:B${currentRow + 1}`);
+    sheet.mergeCells(`C${currentRow}:C${currentRow + 1}`);
+    
+    let colIndex = 4; 
+    daysInMonth.forEach(() => {
+        const startColLet = sheet.getColumn(colIndex).letter;
+        const endColLet = sheet.getColumn(colIndex + 1).letter;
+        sheet.mergeCells(`${startColLet}${currentRow}:${endColLet}${currentRow}`);
+        colIndex += 2;
+    });
+
+    const lastColLet = sheet.getColumn(colIndex).letter;
+    sheet.mergeCells(`${lastColLet}${currentRow}:${lastColLet}${currentRow + 1}`);
+
+    [r1, r2].forEach(row => {
+        row.eachCell({ includeEmpty: true }, cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        });
+    });
+
+    currentRow += 2;
+
+    let globalIndex = 1;
+
+    Object.keys(groupedStocks).forEach((categoryName) => {
+        sheet.mergeCells(`A${currentRow}:${endColLetter}${currentRow}`);
+        const catRow = sheet.getCell(`A${currentRow}`);
+        catRow.value = `KATEGORI: ${categoryName.toUpperCase()}`;
+        catRow.font = { bold: true, size: 11, color: { argb: 'FF000000' } };
+        catRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+        catRow.alignment = { vertical: 'middle', horizontal: 'left' };
+        
+        for (let i = 1; i <= 64; i++) {
+            sheet.getCell(currentRow, i).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        }
+        currentRow++;
+
+        const categoryProducts = groupedStocks[categoryName];
+        
+        Object.keys(categoryProducts).forEach((productName) => {
+            const variations = categoryProducts[productName];
+            
+            Object.keys(variations).forEach((idKey) => {
+                const item = variations[idKey];
+                const itemNameSize = `${item.name}${item.size && item.size !== "-" ? ` (${item.size})` : ""}`;
+                
+                const rowData = [
+                    globalIndex++,
+                    itemNameSize,
+                    Number(item.sa_awal) || 0
+                ];
+
+                daysInMonth.forEach(day => {
+                    const daily = item.daily?.[day] || {};
+                    rowData.push(Number(daily.sm) || 0);
+                    rowData.push(Number(daily.sk) || 0);
+                });
+
+                rowData.push(Number(item.sa_akhir) || 0);
+
+                const excelRow = sheet.addRow(rowData);
+
+                excelRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    cell.alignment = { vertical: 'middle', horizontal: colNumber === 2 ? 'left' : 'center', wrapText: true };
+                });
+
+                excelRow.getCell(3).numFmt = '#,##0';
+                excelRow.getCell(3).font = { bold: true, color: { argb: 'FF002060' } };
+
+                let currC = 4;
+                daysInMonth.forEach(() => {
+                    excelRow.getCell(currC).numFmt = '#,##0';     
+                    excelRow.getCell(currC).font = { color: { argb: 'FF375623' } }; 
+                    
+                    excelRow.getCell(currC + 1).numFmt = '#,##0'; 
+                    excelRow.getCell(currC + 1).font = { color: { argb: 'FFC00000' } }; 
+                    currC += 2;
+                });
+
+                excelRow.getCell(currC).numFmt = '#,##0';
+                excelRow.getCell(currC).font = { bold: true, color: { argb: 'FF703AD0' } };
+
+                currentRow++;
+            });
+        });
+    });
+
+    sheet.getColumn(1).width = 5;  
+    sheet.getColumn(2).width = 30; 
+    sheet.getColumn(3).width = 12; 
+
+    for (let i = 4; i <= 63; i++) {
+        sheet.getColumn(i).width = 5;
+    }
+    sheet.getColumn(64).width = 12; 
+
+    const fileName = `Laporan_Global_Stock_${month}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), fileName);
 };
