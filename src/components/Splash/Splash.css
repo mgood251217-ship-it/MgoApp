@@ -63,3 +63,22 @@
         transform: translateX(380%);
     }
 }
+
+.splash-message-error {
+    color: #ef4444;
+}
+
+.splash-retry-button {
+    margin-top: 12px;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #111827;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.splash-retry-button:hover {
+    opacity: 0.9;
+}

@@ -1,7 +1,7 @@
 import "./Splash.css";
 import logo from "/logo.png";
 
-export default function Splash({ message = "Initializing application..." }) {
+export default function Splash({ message = "Initializing application...", error = false, onRetry }) {
     return (
         <div className="splash">
             <div className="splash-container">
@@ -15,13 +15,19 @@ export default function Splash({ message = "Initializing application..." }) {
                     MGO Desktop
                 </h1>
 
-                <p className="splash-message">
+                <p className={error ? "splash-message splash-message-error" : "splash-message"}>
                     {message}
                 </p>
 
-                <div className="splash-loading">
-                    <div className="splash-loading-bar"></div>
-                </div>
+                {error ? (
+                    <button className="splash-retry-button" onClick={onRetry}>
+                        Coba Lagi
+                    </button>
+                ) : (
+                    <div className="splash-loading">
+                        <div className="splash-loading-bar"></div>
+                    </div>
+                )}
 
                 <span className="splash-version">
                     Version 1.0.0
