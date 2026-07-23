@@ -337,6 +337,7 @@ export default function Orders() {
                             name="start_date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
+                            margin="0"
                         />
                         <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>-</span>
                         <Input
@@ -344,17 +345,19 @@ export default function Orders() {
                             name="end_date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
+                            margin="0"
                         />
                         <Input
                             name="search"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Cari pesanan..."
-                            style={{ width: 250 }}
+                            margin="0"
+                            style={{ width: 500}}
                         />
                         <Button 
                             variant="primary" 
-                            size="full-lg"
+                            size="lg"
                             icon={<Icon name="search" />} 
                             onClick={loadData}
                         >
@@ -362,7 +365,7 @@ export default function Orders() {
                         </Button>
                         <Button 
                             variant="success" 
-                            size="full-lg"
+                            size="lg"
                             icon={<Icon name="add" />} 
                             onClick={handleAddOrder}
                         >

@@ -348,14 +348,14 @@ export default function Store() {
                     <div style={{ display: "flex", gap: "12px" }}>
                         <Button 
                             variant="primary" 
-                            icon={<Icon name="plus" />} 
+                            icon={<Icon name="add" />}
                             onClick={openAddUserModal}
                         >
                             Tambah User
                         </Button>
                         <Button 
                             variant="success" 
-                            icon={<Icon name="plus" />} 
+                            icon={<Icon name="add" />} 
                             onClick={openAddMachineModal}
                         >
                             Tambah Mesin
@@ -499,7 +499,12 @@ export default function Store() {
                         </small>
                     )}
 
-                    <Button size='full-lg' type="submit" variant="primary" disabled={loadingUserForm}>
+                    <Button
+                        size='full-lg'
+                        type="submit"
+                        variant="primary"
+                        disabled={loadingUserForm}
+                        icon={<Icon name="save" />} >
                         {loadingUserForm ? "Menyimpan..." : (isUserEditMode ? "Simpan Perubahan" : "Simpan User")}
                     </Button>
                 </form>
@@ -530,7 +535,12 @@ export default function Store() {
                         onChange={handleMachineInputChange} 
                         required 
                     />
-                    <Button type="submit" variant="primary" size='full-lg' disabled={loadingMachineForm}>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        size='full-lg'
+                        disabled={loadingMachineForm}
+                        icon={<Icon name="save" />}>
                         {loadingMachineForm ? "Menyimpan..." : (isMachineEditMode ? "Simpan Perubahan" : "Simpan Mesin")}
                     </Button>
                 </form>

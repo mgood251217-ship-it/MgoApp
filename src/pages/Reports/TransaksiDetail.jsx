@@ -4,8 +4,12 @@ import Header from "../../components/Header/Header";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import ReportNav from "../../components/ReportNav/ReportNav";
+import Icon from "../../components/Icon/Icon";
+import Button from "../../components/Button/Button";
+import Input from "../../components/Input/Input";
 import { formatRupiah } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
+
 
 export default function TransaksiDetail() {
     const today = new Date().toISOString().split("T")[0];
@@ -389,7 +393,7 @@ export default function TransaksiDetail() {
                                                                 </a>
                                                                 
                                                                 {hoveredTf === tf.transfer_id && (
-                                                                    <button
+                                                                    <Button
                                                                         onClick={(e) => {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
@@ -418,7 +422,7 @@ export default function TransaksiDetail() {
                                                                         title="Hapus Bukti Transfer"
                                                                     >
                                                                         ✕
-                                                                    </button>
+                                                                    </Button>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -515,38 +519,20 @@ export default function TransaksiDetail() {
                                     <form 
                                         onSubmit={(e) => handleUpdateNote(e, order.order_id)}
                                         style={{ display: "flex", gap: "12px", alignItems: "center" }}
-                                    >
-                                        <input 
+                                    >   
+                                        <Input 
                                             type="text"
                                             name="note" 
                                             placeholder="Ketik catatan baru di sini..."
-                                            style={{
-                                                flex: 1,
-                                                padding: "10px 16px",
-                                                borderRadius: "8px",
-                                                border: "1px solid var(--border)",
-                                                background: "var(--background)",
-                                                color: "var(--text)",
-                                                fontFamily: "inherit",
-                                                fontSize: "13px"
-                                            }}
+                                            style={{marginBottom : "0"}}
                                         />
-                                        <button 
+                                        <Button 
                                             type="submit"
-                                            style={{
-                                                padding: "10px 20px",
-                                                background: "var(--primary)",
-                                                color: "#fff",
-                                                border: "none",
-                                                borderRadius: "8px",
-                                                fontWeight: "600",
-                                                cursor: "pointer",
-                                                whiteSpace: "nowrap",
-                                                fontSize: "13px"
-                                            }}
+                                            size="lg"
+                                            icon={<Icon name="save" />}
                                         >
                                             Simpan Catatan
-                                        </button>
+                                        </Button>
                                     </form>
                                 </div>
 

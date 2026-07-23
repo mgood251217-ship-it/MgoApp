@@ -299,8 +299,18 @@ export default function GlobalStocks() {
                 </td>
                 <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
                     <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                        <button onClick={() => handleOpenEditProduct(productDetails)} style={{ padding: "4px", background: "var(--warning)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center" }} title="Edit Produk"><span style={{ fontSize: "14px" }} className="material-symbols-rounded">edit</span></button>
-                        <button onClick={() => handleDeleteProduct(productDetails)} style={{ padding: "4px", background: "var(--danger)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center" }} title="Hapus Produk"><span style={{ fontSize: "14px" }} className="material-symbols-rounded">delete</span></button>
+                        <Button
+                            icon={<Icon name="edit" />}
+                            onClick={() => handleOpenEditProduct(productDetails)}
+                            title="Edit Produk"
+                            variant="warning">
+                        </Button>
+                        <Button
+                            icon={<Icon name="delete" />}
+                            onClick={() => handleDeleteProduct(productDetails)}
+                            title="Hapus Produk"
+                            variant="danger">
+                        </Button>
                     </div>
                 </td>
                 <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>{productDetails.sa_awal || 0}</td>
@@ -335,13 +345,13 @@ export default function GlobalStocks() {
                         <Button variant="secondary" icon={<Icon name="upload" />} onClick={handleTriggerImport}>
                             Import CSV
                         </Button>
-                        <Button variant="success" icon={<Icon name="table_view" />} onClick={handleExportExcel}>
+                        <Button variant="success" icon={<Icon name="excel" />} onClick={handleExportExcel}>
                             Export Excel
                         </Button>
                         <Button variant="secondary" icon={<Icon name="history" />} onClick={handleOpenHistory}>
                             Riwayat
                         </Button>
-                        <Button variant="info" icon={<Icon name="local_shipping" />} onClick={handleOpenSendStock}>
+                        <Button variant="info" icon={<Icon name="send" />} onClick={handleOpenSendStock}>
                             Kirim Stok
                         </Button>
                         <Button variant="primary" icon={<Icon name="add" />} onClick={handleOpenAddCategory}>

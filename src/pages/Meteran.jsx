@@ -398,13 +398,15 @@ export default function Meteran() {
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                             options={categoryOptions}
-                            style={{ width: 180 }}
+                            margin="0"
+                            style={{ width: "180px"}}
                         />
                         <Input
                             type="date"
                             name="start_date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
+                            margin="0"
                         />
                         <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>-</span>
                         <Input
@@ -412,8 +414,10 @@ export default function Meteran() {
                             name="end_date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
+                            margin="0"
                         />
                         <Button 
+                            size="lg"
                             variant="primary" 
                             icon={<Icon name="search" />} 
                             onClick={loadData}
@@ -421,7 +425,8 @@ export default function Meteran() {
                             Filter
                         </Button>
                         <Button 
-                            variant="success" 
+                            size="lg"
+                            variant="success"
                             icon={<Icon name="download" />} 
                             onClick={handleExportExcel}
                         >

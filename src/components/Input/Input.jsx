@@ -17,6 +17,7 @@ const Input = forwardRef(({
     readOnly = false,
     style,
     className = "",
+    margin,
     ...rest
 }, ref) => {
     const id = useId();
@@ -26,6 +27,7 @@ const Input = forwardRef(({
             className={`input-wrapper input-${labelPosition} ${className}`}
             style={{
                 "--label-width": `${labelWidth}px`,
+                margin: margin,
                 ...(style || {})
             }}
         >

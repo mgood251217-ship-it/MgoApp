@@ -442,10 +442,11 @@ export default function Products() {
                                 }
                             }}
                             placeholder="Cari produk..."
+                            margin="0"
                             style={{ width: 250 }}
                         />
                         <Button 
-                            size="sm"
+                            size="lg"
                             variant="primary" 
                             icon={<Icon name="search" />}
                             onClick={executeSearch}
@@ -460,7 +461,7 @@ export default function Products() {
                 <div style={{ marginBottom: "2.5rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                         <h3 style={{ margin: 0 }}>Daftar Produk</h3>
-                        <Button size="sm" icon={<Icon name="add" />} onClick={handleAddProductClick}>
+                        <Button size="md" icon={<Icon name="add" />} onClick={handleAddProductClick}>
                             Tambah Produk
                         </Button>
                     </div>

@@ -6,6 +6,8 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import Modal from "../../components/Modal/Modal";
 import Input from "../../components/Input/Input";
+import Button from "../../components/Button/Button";
+import Icon from "../../components/Icon/Icon";
 import { formatRupiah } from "../../services/helpers";
 import { exportKeuanganExcel } from "../../services/excelService";
 
@@ -254,19 +256,16 @@ export default function Keuangan() {
             key: "action",
             title: "Aksi",
             render: (row) => (
-                <button 
+                <Button 
                     onClick={() => {
                         setEditExpData(row);
                         setExpForm({ information: row.information, nominal: row.nominal, picture: null });
                         setShowExpModal(true);
                     }}
-                    style={{
-                        padding: "4px 8px", background: "var(--primary)", color: "#fff",
-                        border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px"
-                    }}
+                    icon={<Icon name="edit" />} 
+                    variant="warning"
                 >
-                    Edit
-                </button>
+                </Button>
             )
         }
     ], []);
@@ -291,19 +290,16 @@ export default function Keuangan() {
             key: "action",
             title: "Aksi",
             render: (row) => (
-                <button 
+                <Button 
                     onClick={() => {
                         setEditIncData(row);
                         setIncForm({ information: row.information, nominal: row.nominal });
                         setShowIncModal(true);
                     }}
-                    style={{
-                        padding: "4px 8px", background: "var(--primary)", color: "#fff",
-                        border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px"
-                    }}
+                    icon={<Icon name="edit" />} 
+                    variant="warning"
                 >
-                    Edit
-                </button>
+                </Button>
             )
         }
     ], []);
@@ -337,21 +333,13 @@ export default function Keuangan() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <h3 style={{ margin: 0, fontSize: "16px", color: "var(--text)", fontWeight: "600" }}>Rekap Keuangan</h3>
-                        <button 
+                        <Button 
                             onClick={handleSyncFinance}
-                            style={{
-                                padding: "6px 12px",
-                                background: "var(--surface)",
-                                border: "1px solid var(--border)",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                fontWeight: "600",
-                                fontSize: "12px",
-                                color: "var(--text)"
-                            }}
+                            variant="info"
+                            icon={<Icon name="refresh" />}
                         >
-                            🔄 Sync Data
-                        </button>
+                            Sync Data
+                        </Button>
                     </div>
                     <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
                         <Table 
@@ -374,25 +362,16 @@ export default function Keuangan() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <h3 style={{ margin: 0, fontSize: "16px", color: "var(--text)", fontWeight: "600" }}>Data Pengeluaran</h3>
-                            <button 
+                            <Button 
                                 onClick={() => {
                                     setEditExpData(null);
                                     setExpForm({ information: "", nominal: "", picture: null });
                                     setShowExpModal(true);
                                 }}
-                                style={{
-                                    padding: "6px 12px",
-                                    background: "#ef4444",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    fontWeight: "600",
-                                    fontSize: "12px",
-                                    color: "#fff"
-                                }}
+                                icon={<Icon name="add" />} 
                             >
-                                ＋ Tambah
-                            </button>
+                                Tambah
+                            </Button>
                         </div>
                         <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
                             <Table 
@@ -409,25 +388,16 @@ export default function Keuangan() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <h3 style={{ margin: 0, fontSize: "16px", color: "var(--text)", fontWeight: "600" }}>Data Pemasukan Tambahan</h3>
-                            <button 
+                            <Button 
                                 onClick={() => {
                                     setEditIncData(null);
                                     setIncForm({ information: "", nominal: "" });
                                     setShowIncModal(true);
                                 }}
-                                style={{
-                                    padding: "6px 12px",
-                                    background: "var(--success)",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    fontWeight: "600",
-                                    fontSize: "12px",
-                                    color: "#fff"
-                                }}
+                                icon={<Icon name="add" />} 
                             >
-                                ＋ Tambah
-                            </button>
+                                Tambah
+                            </Button>
                         </div>
                         <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
                             <Table 

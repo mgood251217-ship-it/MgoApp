@@ -13,15 +13,21 @@ export default function Select({
     error,
     disabled = false,
     autoFocus = false,
-    required = false
+    required = false,
+    margin,
+    style,
+    className = "",
+    ...rest
 }) {
     const id = useId();
 
     return (
         <div
-            className={`select-wrapper select-${labelPosition}`}
+            className={`select-wrapper select-${labelPosition} ${className}`}
             style={{
-                "--label-width": `${labelWidth}px`
+                "--label-width": `${labelWidth}px`,
+                margin: margin,
+                ...(style || {})
             }}
         >
             {label && (
@@ -40,6 +46,7 @@ export default function Select({
                     disabled={disabled}
                     autoFocus={autoFocus}
                     className={`select ${error ? "select-error" : ""}`}
+                    {...rest}
                 >
                     <option value="">{placeholder}</option>
 
