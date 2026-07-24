@@ -12,16 +12,11 @@ import "./Login.css";
 
 async function login(payload) {
     const formData = new FormData();
-
     formData.append("username", payload.username);
     formData.append("password", payload.password);
     formData.append("g-recaptcha-response", payload["g-recaptcha-response"] ?? "");
 
-    const { data } = await api.post(
-        "/index.php?action=login",
-        formData
-    );
-
+    const { data } = await api.post("/index.php?action=login", formData);
     return data;
 }
 
@@ -34,16 +29,31 @@ function LoginInternal() {
 
     const { executeRecaptcha } = useGoogleReCaptcha();
 
-    async function handleLogin() {
-        setError("");
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
 
-        if (!username || !password) {
-            setError("Username dan password wajib diisi.");
+        if (loading) return; 
+
+        if (!username) {
+            const userInput = document.querySelector('.login-form input[type="text"]');
+            if (userInput) userInput.focus();
             return;
         }
 
+        if (!password) {
+            const passInput = document.querySelector('.login-form input[type="password"]');
+            if (passInput) passInput.focus();
+            return;
+        }
+
+        handleLogin();
+    };
+
+    async function handleLogin() {
+        setError("");
+
         if (!executeRecaptcha) {
-            setError("reCAPTCHA belum siap.");
+            setError("reCAPTCHA sedang disiapkan. Tunggu sebentar.");
             return;
         }
 
@@ -60,6 +70,13 @@ function LoginInternal() {
 
             if (!response.success) {
                 setError(response.message || "Login gagal.");
+                setPassword(""); 
+                
+                setTimeout(() => {
+                    const passInput = document.querySelector('.login-form input[type="password"]');
+                    if (passInput) passInput.focus();
+                }, 100);
+                
                 return;
             }
 
@@ -86,7 +103,7 @@ function LoginInternal() {
                     <div className="app-subtitle">Sign in to continue</div>
                 </div>
 
-                <div className="login-form">
+                <form className="login-form" onSubmit={handleFormSubmit}>
                     {error && <Alert type="error" message={error} onClose={() => setError("")} />}
 
                     <Input
@@ -95,7 +112,6 @@ function LoginInternal() {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         disabled={loading}
-                        required
                     />
 
                     <PasswordInput
@@ -104,18 +120,17 @@ function LoginInternal() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={loading}
-                        required
                     />
 
                     <Button
+                        type="submit"
                         size="full-lg"
                         loading={loading}
                         disabled={loading}
-                        onClick={handleLogin}
                     >
                         Login
                     </Button>
-                </div>
+                </form>
             </div>
         </div>
     );

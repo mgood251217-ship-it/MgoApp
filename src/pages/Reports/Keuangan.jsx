@@ -285,22 +285,6 @@ export default function Keuangan() {
             key: "nominal", 
             title: "Nominal",
             render: (row) => <span style={{ fontWeight: "600", color: "var(--success)" }}>{formatRupiah(row.nominal)}</span>
-        },
-        {
-            key: "action",
-            title: "Aksi",
-            render: (row) => (
-                <Button 
-                    onClick={() => {
-                        setEditIncData(row);
-                        setIncForm({ information: row.information, nominal: row.nominal });
-                        setShowIncModal(true);
-                    }}
-                    icon={<Icon name="edit" />} 
-                    variant="warning"
-                >
-                </Button>
-            )
         }
     ], []);
 

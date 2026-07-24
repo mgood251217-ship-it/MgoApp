@@ -386,7 +386,17 @@ export default function Orders() {
                     columns={tableColumns}
                     rows={ordersOffline}
                     actions={tableActions}
-                    onRowDoubleClick={(row) => navigate(`/order/${row.order_id}`)}
+                    onRowDoubleClick={(row) => {
+                        if (row.total > 0) {
+                            setAlertConfig({
+                                            show: true,
+                                            type: "warning",
+                                            message: "Tidak dapat membuka nota" 
+                                        });
+                        }else{
+                            navigate(`/order/${row.order_id}`)
+                        } 
+                    }}
                 />
             </div>
 
@@ -401,7 +411,17 @@ export default function Orders() {
                     columns={tableColumns}
                     rows={ordersOnline}
                     actions={tableActions}
-                    onRowDoubleClick={(row) => navigate(`/order/${row.order_id}`)}
+                    onRowDoubleClick={(row) => {    
+                        if (row.total > 0) {
+                            setAlertConfig({
+                                            show: true,
+                                            type: "warning",
+                                            message: "Tidak dapat membuka nota" 
+                                        });
+                        }else{
+                            navigate(`/order/${row.order_id}`)
+                        } 
+                    }}
                 />
             </div>
 
