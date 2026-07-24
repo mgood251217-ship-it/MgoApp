@@ -10,6 +10,13 @@ contextBridge.exposeInMainWorld("electron", {
     pindahFileKeFolder: (data) => ipcRenderer.invoke('pindah-file-ke-folder', data),
     setIconFolderOrder: (data) => ipcRenderer.invoke('set-icon-folder-order', data),
     bukaLinkEksternal: (url) => ipcRenderer.invoke('buka-link-eksternal', url),
+    downloadUpdate: (url) => ipcRenderer.invoke('download-update', url),
+    jalankanInstaller: (filePath) => ipcRenderer.invoke('jalankan-installer', filePath),
+    onDownloadProgress: (callback) => {
+        const listener = (event, percent) => callback(percent);
+        ipcRenderer.on('download-update-progress', listener);
+        return () => ipcRenderer.removeListener('download-update-progress', listener);
+    },
     pilihFolder: () => ipcRenderer.invoke('pilih-folder'),
     cekFolderOrder: (folderPath) => ipcRenderer.invoke('cek-folder-order', folderPath),
     cariFolderOrder: (data) => ipcRenderer.invoke('cari-folder-order', data),

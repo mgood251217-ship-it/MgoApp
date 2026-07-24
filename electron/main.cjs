@@ -1,8 +1,10 @@
 const { app, globalShortcut, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const createWindow = require("./window.cjs");
 const fs = require("node:fs/promises");
+const fsSync = require("node:fs");
 const path = require("node:path");
-const { exec } = require("node:child_process");
+const https = require("node:https");
+const { exec, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
 const sharp = require("sharp");
 
@@ -121,6 +123,67 @@ $path = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni("${folderPa
     await fs.writeFile(scriptPath, psScript, "utf-8");
     await execAsync(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`);
 }
+
+function downloadFile(url, destPath, onProgress) {
+    return new Promise((resolve, reject) => {
+        const request = https.get(url, (response) => {
+            if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                downloadFile(response.headers.location, destPath, onProgress).then(resolve).catch(reject);
+                return;
+            }
+            if (response.statusCode !== 200) {
+                reject(new Error(`Gagal download, status ${response.statusCode}`));
+                return;
+            }
+
+            const total = parseInt(response.headers["content-length"] || "0", 10);
+            let downloaded = 0;
+            const file = fsSync.createWriteStream(destPath);
+
+            response.on("data", (chunk) => {
+                downloaded += chunk.length;
+                if (total > 0 && onProgress) {
+                    onProgress(Math.round((downloaded / total) * 100));
+                }
+            });
+
+            response.pipe(file);
+
+            file.on("finish", () => {
+                file.close(() => resolve(destPath));
+            });
+
+            file.on("error", (err) => reject(err));
+        });
+
+        request.on("error", (err) => reject(err));
+    });
+}
+
+ipcMain.handle("download-update", async (event, url) => {
+    try {
+        const fileName = path.basename(new URL(url).pathname) || "MgoDesktopUpdate.exe";
+        const destPath = path.join(app.getPath("downloads"), fileName);
+
+        await downloadFile(url, destPath, (percent) => {
+            event.sender.send("download-update-progress", percent);
+        });
+
+        return { success: true, filePath: destPath };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
+
+ipcMain.handle("jalankan-installer", async (event, filePath) => {
+    try {
+        spawn(filePath, [], { detached: true, stdio: "ignore" }).unref();
+        setTimeout(() => app.quit(), 500);
+        return { success: true };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
 
 ipcMain.handle("buka-link-eksternal", async (event, url) => {
     try {

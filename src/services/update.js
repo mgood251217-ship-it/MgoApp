@@ -27,13 +27,7 @@ export async function checkUpdate() {
         const downloadUrl = data.data.download_url;
         const hasUpdate = compareVersions(config.version, latestVersion) < 0;
 
-        if (hasUpdate && downloadUrl) {
-            try {
-                await window.electron.bukaLinkEksternal(downloadUrl);
-            } catch (err) {}
-        }
-
-        return { hasUpdate, latestVersion };
+        return { hasUpdate, latestVersion, downloadUrl };
     } catch (err) {
         return { hasUpdate: false, latestVersion: config.version };
     }
