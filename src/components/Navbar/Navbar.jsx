@@ -33,9 +33,7 @@ function getInitialTheme(session) {
 }
 
 async function logout() {
-	const { data } = await api.post(
-		"/index.php?action=logout"
-	);
+	const { data } = await api.post("?action=logout");
 
 	return data;
 }
