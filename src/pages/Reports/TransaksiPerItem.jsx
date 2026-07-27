@@ -4,13 +4,12 @@ import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
-import { formatRupiah } from "../../services/helpers";
+import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerItemExcel } from "../../services/excelService";
 
 export default function TransaksiPerItem() {
-    const today = new Date().toISOString().split("T")[0];
-    const [startDate, setStartDate] = useState(today);
-    const [endDate, setEndDate] = useState(today);
+    const [startDate, setStartDate] = useState(getTodayDate());
+    const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
     
     const [transaksiItemData, setTransaksiItemData] = useState({});

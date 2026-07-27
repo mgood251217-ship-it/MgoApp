@@ -7,15 +7,13 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import Icon from "../../components/Icon/Icon";
 import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
-import { formatRupiah } from "../../services/helpers";
+import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 
 
 export default function TransaksiDetail() {
-    const today = new Date().toISOString().split("T")[0];
-    
-    const [startDate, setStartDate] = useState(today);
-    const [endDate, setEndDate] = useState(today);
+    const [startDate, setStartDate] = useState(getTodayDate());
+    const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
     
     const [orders, setOrders] = useState([]);

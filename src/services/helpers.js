@@ -3,7 +3,6 @@ export const sanitize = (data) => {
     return data.trim();
 };
 
-
 export const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -11,7 +10,6 @@ export const getTodayDate = () => {
     const day = String(today.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 };
-
 
 export const formatKeInternasional = (nomor) => {
     if (!nomor) return "";
@@ -32,6 +30,10 @@ export const formatRupiah = (angka) => {
         maximumFractionDigits: 0
     }).format(validNumber);
 };
+
+export const rapihkanAngka = (angka) => {
+    return Number(angka.toFixed(10));
+}
 
 export const titleCase = (teks) => {
     if (!teks) return "";

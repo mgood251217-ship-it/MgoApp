@@ -8,13 +8,12 @@ import Modal from "../../components/Modal/Modal";
 import Input from "../../components/Input/Input";
 import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
-import { formatRupiah } from "../../services/helpers";
+import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportKeuanganExcel } from "../../services/excelService";
 
 export default function Keuangan() {
-    const today = new Date().toISOString().split("T")[0];
-    const [startDate, setStartDate] = useState(today);
-    const [endDate, setEndDate] = useState(today);
+    const [startDate, setStartDate] = useState(getTodayDate());
+    const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
     
     const [financeData, setFinanceData] = useState([]);

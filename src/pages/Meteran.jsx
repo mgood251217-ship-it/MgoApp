@@ -8,19 +8,12 @@ import Icon from "../components/Icon/Icon";
 import Table from "../components/Table/Table";
 import { exportMeteranExcel } from "../services/excelService";
 import { authStore } from "../services/session";
+import { rapihkanAngka, getTodayDate } from "../services/helpers";
 
 export default function Meteran() {
     const session = authStore.getUser();
     const storeName = session?.store?.name ?? "Toko";
     const storeAddress = session?.store?.address ?? "Alamat";
-
-    const getTodayDate = () => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, "0");
-        const day = String(today.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    };
 
     const [category, setCategory] = useState("meter_outdoor");
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -107,7 +100,7 @@ export default function Meteran() {
                             p: rowItem.p,
                             l: rowItem.l,
                             qty: `${rowItem.qty}x`,
-                            m2: rowItem.m2
+                            m2: rapihkanAngka(rowItem.m2)
                         }));
 
                         const totalM2Value = dataState.total_m2_product?.[product.name] !== undefined 
@@ -134,7 +127,7 @@ export default function Meteran() {
 
                                 <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
                                     <strong style={{ color: "var(--warning)", fontSize: "14px" }}>
-                                        Total: {totalM2Value.toFixed(3)}
+                                        Total: {rapihkanAngka(totalM2Value)}
                                     </strong>
                                 </div>
                             </div>
@@ -178,7 +171,7 @@ export default function Meteran() {
                                     p: rowItem.p,
                                     l: rowItem.l,
                                     qty: `${rowItem.qty}x`,
-                                    m2: rowItem.m2
+                                    m2: rapihkanAngka(rowItem.m2)
                                 }));
 
                                 const totalM2 = product.rows.reduce((acc, curr) => acc + (curr.m2 || 0), 0);
@@ -192,7 +185,7 @@ export default function Meteran() {
                                             <Table id={`table-sublim-met-${index}`} showNumber={true} size="sm" rowKey="id" rowDataKey="id" columns={meteranColumns} rows={formattedRows} />
                                         </div>
                                         <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
-                                            <strong style={{ color: "var(--warning)", fontSize: "14px" }}>Total: {totalM2.toFixed(3)} M²</strong>
+                                            <strong style={{ color: "var(--warning)", fontSize: "14px" }}>Total: {rapihkanAngka(totalM2)} M²</strong>
                                         </div>
                                     </div>
                                 );
@@ -212,7 +205,7 @@ export default function Meteran() {
                                     id: idx,
                                     kg: rowItem.kg,
                                     qty: `${rowItem.qty}x`,
-                                    kg_total: rowItem.kg_total
+                                    kg_total: rapihkanAngka(rowItem.kg_total)
                                 }));
 
                                 const totalKg = product.rows.reduce((acc, curr) => acc + (curr.kg_total || 0), 0);
@@ -226,7 +219,7 @@ export default function Meteran() {
                                             <Table id={`table-sublim-kil-${index}`} showNumber={true} size="sm" rowKey="id" rowDataKey="id" columns={kiloanColumns} rows={formattedRows} />
                                         </div>
                                         <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
-                                            <strong style={{ color: "var(--info)", fontSize: "14px" }}>Total: {totalKg.toFixed(3)} Kg</strong>
+                                            <strong style={{ color: "var(--info)", fontSize: "14px" }}>Total: {rapihkanAngka(totalKg)} Kg</strong>
                                         </div>
                                     </div>
                                 );
