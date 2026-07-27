@@ -5,10 +5,9 @@
     color: #fff;
     font-weight: 500;
     transition: var(--transition);
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
     text-wrap: nowrap;
 }
 

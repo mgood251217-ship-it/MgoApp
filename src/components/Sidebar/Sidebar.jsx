@@ -11,23 +11,34 @@ import { LiaWindowRestore } from "react-icons/lia";
 import { authStore } from "../../services/session";
 
 const menus = [
-    { title: "Store", path: "/store", icon: <RiStore2Line /> },
+    { title: "Store", path: "/store", icon: <RiStore2Line />, restrict: true },
     { title: "Orders", path: "/orders", icon: <LuPackage /> },
-    { title: "Products", path: "/products", icon: <FiShoppingBag /> },
+    { title: "Products", path: "/products", icon: <FiShoppingBag />, restrict: true },
     { title: "Global Stocks", path: "/global-stocks", icon: <FaBoxes /> },
-    { title: "Meteran", path: "/meteran", icon: <TbRulerMeasure /> },
+    { title: "Meteran", path: "/meteran", icon: <TbRulerMeasure />, restrict: true },
     { title: "Failure", path: "/failure", icon: <MdOutlineErrorOutline /> },
     { title: "Maklun", path: "/maklun", icon: <LiaWindowRestore /> },
-    { title: "Report", path: "/report", icon: <FiFileText /> },
+    { title: "Report", path: "/report", icon: <FiFileText />, restrict: true },
     { title: "Settings", path: "/settings", icon: <MdOutlineSettings /> }
 ];
 
 export default function Sidebar() {
     const session = authStore.getUser();
-    const role = session?.user?.role ?? "guest";
+    
+    const role = (session?.user?.role || "GUEST").toUpperCase();
     const name = session?.user?.name ?? "Guest";
     const subtitle = session?.user?.initial ?? role;
     const avatar = session?.user?.foto_link;
+
+    const hasPrivilegeAccess = role === "ADMIN" || role === "MANAGER";
+
+    const filteredMenus = menus.filter(menu => {
+        if (menu.restrict) {
+            return hasPrivilegeAccess; 
+        }
+        return true; 
+    });
+
     return (
         <aside className="sidebar">
             <div className="sidebar-profile">
@@ -43,7 +54,7 @@ export default function Sidebar() {
             </div>
 
             <nav className="sidebar-menu">
-                {menus.map((menu) => (
+                {filteredMenus.map((menu) => (
                     <NavLink
                         key={menu.path}
                         to={menu.path}

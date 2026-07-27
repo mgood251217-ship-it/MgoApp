@@ -5,9 +5,18 @@ let currentUser = readLocalSession();
 const listeners = new Set();
 
 function readLocalSession() {
-    const data = localStorage.getItem(KEY);
-    return data ? JSON.parse(data) : null;
+  const data = localStorage.getItem(KEY);
+  if (!data) return null;
+
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    console.error("Data rusak, menghapus dari localStorage:", KEY);
+    removeLocalSession();
+    return null;
+  }
 }
+
 
 function writeLocalSession(data) {
     localStorage.setItem(KEY, JSON.stringify(data));
@@ -46,6 +55,7 @@ export const authStore = {
     checkSession: async () => {
         try {
             const response = await api.get("?action=session");
+            await writeLocalSession(response.data.data);
             return response.data.success;
         } catch (err) {
             if (err.response?.status === 401) return false;

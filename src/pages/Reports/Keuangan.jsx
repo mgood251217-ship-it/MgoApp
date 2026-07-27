@@ -251,23 +251,7 @@ export default function Keuangan() {
                     onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
                 />
             ) : "-"
-        },
-        {
-            key: "action",
-            title: "Aksi",
-            render: (row) => (
-                <Button 
-                    onClick={() => {
-                        setEditExpData(row);
-                        setExpForm({ information: row.information, nominal: row.nominal, picture: null });
-                        setShowExpModal(true);
-                    }}
-                    icon={<Icon name="edit" />} 
-                    variant="warning"
-                >
-                </Button>
-            )
-        }
+        }   
     ], []);
 
     const incomeColumns = useMemo(() => [
