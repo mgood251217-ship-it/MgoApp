@@ -4,12 +4,12 @@ import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
+import { getTodayDate } from "../../services/helpers";
 import { exportPemakaianBahanExcel } from "../../services/excelService";
 
 export default function PemakaianBahan() {
-    const today = new Date().toISOString().split("T")[0];
-    const [startDate, setStartDate] = useState(today);
-    const [endDate, setEndDate] = useState(today);
+    const [startDate, setStartDate] = useState(getTodayDate());
+    const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
     
     const [pemakaianBahanData, setPemakaianBahanData] = useState([]);

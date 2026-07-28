@@ -387,7 +387,7 @@ export default function Products() {
                     key={`prod-${p.product_id}-${p.stock}`}
                     defaultValue={p.stock || 0}
                     type="number"
-                    style={{ width: "100px", margin: 0, position: "absolute", top: "50%", transform: "translateY(-50%)"  }}
+                    style={{ width: "100px", margin: 0}}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
@@ -407,7 +407,7 @@ export default function Products() {
                     key={`fin-${f.finishing_id}-${f.stock}`}
                     defaultValue={f.stock || 0}
                     type="number"
-                    style={{ width: "100px", margin: 0, position: "absolute", top: "50%", transform: "translateY(-50%)"  }}
+                    style={{ width: "100px", margin: 0 }}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();

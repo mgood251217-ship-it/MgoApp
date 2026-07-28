@@ -9,7 +9,7 @@ import Input from "../components/Input/Input";
 import Select from "../components/Select/Select";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
-import { formatRupiah, getTodayDate } from "../services/helpers";
+import { formatRupiah } from "../services/helpers";
 import { exportFailureExcel } from "../services/excelService"; 
 import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
 
@@ -18,8 +18,9 @@ const CETAK_LIST = ['Warna tidak sesuai', 'Hasil belang/banding', 'Hasil blur', 
 const FINISH_FAIL_LIST = ['Salah potong', 'Salah laminasi', 'Mata ayam tidak rapi', 'Sambungan spanduk kurang rapi', 'Bubble laminasi', 'Lipatan rusak'];
 
 export default function Failure() {
-    const [startDate, setStartDate] = useState(getTodayDate());
-    const [endDate, setEndDate] = useState(getTodayDate());
+    const today = new Date().toISOString().split("T")[0];
+    const [startDate, setStartDate] = useState(today);
+    const [endDate, setEndDate] = useState(today);
     const [loading, setLoading] = useState(false);
     
     const [failures, setFailures] = useState([]);

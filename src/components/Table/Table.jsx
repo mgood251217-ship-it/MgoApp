@@ -69,8 +69,10 @@ export default function Table({
                             ))}
 
                             {actions && (
-                                <td className="table-actions">
-                                    {actions(row)}
+                                <td >
+                                    <div className="table-actions">
+                                        {actions(row)}
+                                    </div>
                                 </td>
                             )}
                         </tr>
