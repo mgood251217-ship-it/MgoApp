@@ -10,6 +10,7 @@ import Form from "../components/Form/Form";
 import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
+import DateFilter from "../components/DateFilter/DateFilter";
 import { formatRupiah, hitungDeadline, formatKeInternasional as formatNomorInternasional, getTodayDate } from "../services/helpers";
 import PaymentModal from "../components/PaymentModal/PaymentModal";
 import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
@@ -331,48 +332,26 @@ export default function Orders() {
                 title="Orders"
                 subtitle="Data pesanan masuk."
                 actions={
-                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                        <Input
-                            type="date"
-                            name="start_date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            margin="0"
-                        />
-                        <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>-</span>
-                        <Input
-                            type="date"
-                            name="end_date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            margin="0"
-                        />
-                        <Input
-                            name="search"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Cari pesanan..."
-                            margin="0"
-                            style={{ width: 500}}
-                        />
-                        <Button 
-                            variant="primary" 
-                            size="lg"
-                            icon={<Icon name="search" />} 
-                            onClick={loadData}
-                        >
-                            Filter
-                        </Button>
-                        <Button 
-                            variant="success" 
-                            size="lg"
-                            icon={<Icon name="add" />} 
-                            onClick={handleAddOrder}
-                        >
-                            Tambah
-                        </Button>
-                    </div>
+                    <Button 
+                        variant="success" 
+                        size="lg"
+                        icon={<Icon name="add" />} 
+                        onClick={handleAddOrder}
+                    >
+                        Tambah
+                    </Button>
                 }
+            />
+            
+            <DateFilter 
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Cari pesanan..."
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={loadData}
             />
 
             <div style={{ marginTop: 24, marginBottom: 16 }}>

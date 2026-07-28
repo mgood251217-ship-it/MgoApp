@@ -8,6 +8,9 @@ export default function DateFilter({
     endDate,
     onStartDateChange,
     onEndDateChange,
+    search,
+    onSearchChange,
+    searchPlaceholder = "Cari data...",
     onFilter,
     onExport,
     loading
@@ -25,6 +28,21 @@ export default function DateFilter({
             border: "1px solid var(--border)",
             boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
         }}>
+            {onSearchChange && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: "1 1 200px", maxWidth: "300px" }}>
+                    <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-muted)" }}>
+                        Pencarian
+                    </label>
+                    <Input
+                        type="text"
+                        value={search}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        placeholder={searchPlaceholder}
+                        margin="0"
+                    />
+                </div>
+            )}
+
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-muted)" }}>
                     Tanggal Mulai
@@ -54,6 +72,7 @@ export default function DateFilter({
                     onClick={onFilter}
                     disabled={loading}
                     icon={<Icon name="filter" />}
+                    size="lg"
                 >
                     {loading ? "Memuat..." : "Filter"}
                 </Button>

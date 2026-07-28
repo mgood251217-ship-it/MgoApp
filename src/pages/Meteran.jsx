@@ -6,6 +6,7 @@ import Select from "../components/Select/Select";
 import Button from "../components/Button/Button";
 import Icon from "../components/Icon/Icon";
 import Table from "../components/Table/Table";
+import DateFilter from "../components/DateFilter/DateFilter";
 import { exportMeteranExcel } from "../services/excelService";
 import { authStore } from "../services/session";
 import { rapihkanAngka, getTodayDate } from "../services/helpers";
@@ -384,8 +385,7 @@ export default function Meteran() {
             <Header
                 title="Meteran"
                 subtitle="Rekapitulasi penggunaan bahan."
-                actions={
-                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                actions={   
                         <Select
                             name="category"
                             value={category}
@@ -394,41 +394,16 @@ export default function Meteran() {
                             margin="0"
                             style={{ width: "180px"}}
                         />
-                        <Input
-                            type="date"
-                            name="start_date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            margin="0"
-                        />
-                        <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>-</span>
-                        <Input
-                            type="date"
-                            name="end_date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            margin="0"
-                        />
-                        <Button 
-                            size="lg"
-                            variant="primary" 
-                            icon={<Icon name="search" />} 
-                            onClick={loadData}
-                        >
-                            Filter
-                        </Button>
-                        <Button 
-                            size="lg"
-                            variant="success"
-                            icon={<Icon name="download" />} 
-                            onClick={handleExportExcel}
-                        >
-                            Export Excel
-                        </Button>
-                    </div>
                 }
             />
-
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={loadData}
+                onExport={handleExportExcel}
+            />
             {renderContent()}
         </>
     );
