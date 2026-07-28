@@ -315,24 +315,17 @@ export default function Failure() {
             title: "Aksi",
             render: (row) => (
                 <div style={{ display: "flex", gap: "8px" }}>
-                    <button 
+                    <Button 
                         onClick={() => handleEdit(row)}
-                        style={{
-                            padding: "4px 8px", background: "var(--primary)", color: "#fff",
-                            border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px"
-                        }}
                     >
                         Edit
-                    </button>
-                    <button 
+                    </Button>
+                    <Button 
                         onClick={() => handleDelete(row)}
-                        style={{
-                            padding: "4px 8px", background: "#ef4444", color: "#fff",
-                            border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px"
-                        }}
+                        variant="danger"
                     >
                         Hapus
-                    </button>
+                    </Button>
                 </div>
             )
         }

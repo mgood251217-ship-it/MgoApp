@@ -385,7 +385,7 @@ export default function Meteran() {
             <Header
                 title="Meteran"
                 subtitle="Rekapitulasi penggunaan bahan."
-                actions={   
+                actions={
                         <Select
                             name="category"
                             value={category}

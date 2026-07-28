@@ -300,12 +300,14 @@ export default function GlobalStocks() {
                 <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
                     <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                         <Button
+                            size="sm"
                             icon={<Icon name="edit" />}
                             onClick={() => handleOpenEditProduct(productDetails)}
                             title="Edit Produk"
                             variant="warning">
                         </Button>
                         <Button
+                            size="sm"
                             icon={<Icon name="delete" />}
                             onClick={() => handleDeleteProduct(productDetails)}
                             title="Hapus Produk"
@@ -316,8 +318,8 @@ export default function GlobalStocks() {
                 <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>{productDetails.sa_awal || 0}</td>
                 {daysInMonth.map(day => {
                     const dailyData = productDetails.daily?.[day];
-                    const stockIn = dailyData?.sm || 0;
-                    const stockOut = dailyData?.sk || 0;
+                    const stockIn = dailyData?.sm || '';
+                    const stockOut = dailyData?.sk || '';
                     return (
                         <td key={day} style={{ padding: "0", borderRight: "1px solid var(--border)", minWidth: "40px", transition: "background 0.2s" }} title={`Edit tanggal ${day}`} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(var(--primary-rgb), 0.3)"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                             <div style={{ display: "flex", width: "100%", height: "100%", cursor: "pointer" }}>
