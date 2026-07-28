@@ -7,7 +7,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import Icon from "../../components/Icon/Icon";
 import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
-import { formatRupiah, getTodayDate } from "../../services/helpers";
+import { formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 
 
@@ -266,7 +266,7 @@ export default function TransaksiDetail() {
                                     <div>
                                         <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Konsumen</div>
                                         <div style={{ fontWeight: "600", color: "var(--text)" }}>{order.customer_name}</div>
-                                        <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "2px" }}>{order.nomor}</div>
+                                        <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "2px" }}>{formatKeInternasional(order.nomor)}</div>
                                     </div>
                                     <div>
                                         <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Waktu Dibuat</div>

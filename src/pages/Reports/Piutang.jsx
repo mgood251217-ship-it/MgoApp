@@ -3,7 +3,7 @@ import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import Table from "../../components/Table/Table";
-import { formatRupiah } from "../../services/helpers";
+import { formatRupiah, formatKeInternasional } from "../../services/helpers";
 import { exportPiutangExcel } from "../../services/excelService";
 
 export default function Piutang() {
@@ -77,7 +77,7 @@ export default function Piutang() {
             title: "Nomor",
             render: (row) => (
                 <a 
-                    href={formatWaLink(row.nomor)} 
+                    href={formatKeInternasional(row.nomor)} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     style={{ color: "var(--primary)", textDecoration: "none", fontWeight: "500" }}
