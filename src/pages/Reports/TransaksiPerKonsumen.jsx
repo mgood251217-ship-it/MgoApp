@@ -1,13 +1,16 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
+import Button from "../../components/Button/Button";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerKonsumenExcel } from "../../services/excelService";
 
 export default function TransaksiPerKonsumen() {
+    const navigate = useNavigate();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -168,50 +171,19 @@ export default function TransaksiPerKonsumen() {
                                 showNumber={true}
                                 actions={(row) => (
                                     <div style={{ display: "flex", gap: "6px" }}>
-                                        <button 
+                                        <Button 
                                             onClick={() => {
-                                                const noHp = row.phone || row.nomor || row.phone_number;
-                                                const waNumber = formatWaLink(noHp);
-                                                if (waNumber) {
-                                                    window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
-                                                } else {
-                                                    alert("Nomor HP konsumen tidak tersedia.");
-                                                }
+                                                const params = new URLSearchParams({
+                                                    search: row.nomorator,
+                                                    start_date: row.date,
+                                                    end_date: row.date 
+                                                }).toString();
+
+                                                navigate(`/reports/transaksi-detail?${params}`);
                                             }}
-                                            style={{
-                                                padding: "6px 12px",
-                                                borderRadius: "6px",
-                                                background: "rgba(76, 175, 80, 0.1)",
-                                                border: "1px solid rgba(76, 175, 80, 0.2)",
-                                                color: "var(--success)",
-                                                cursor: "pointer",
-                                                fontSize: "12px",
-                                                fontWeight: "600",
-                                                transition: "all 0.2s"
-                                            }}
-                                            onMouseOver={(e) => e.currentTarget.style.background = "rgba(76, 175, 80, 0.2)"}
-                                            onMouseOut={(e) => e.currentTarget.style.background = "rgba(76, 175, 80, 0.1)"}
-                                        >
-                                            WA
-                                        </button>
-                                        <button 
-                                            onClick={() => console.log("Detail Order", row.order_id)}
-                                            style={{
-                                                padding: "6px 12px",
-                                                borderRadius: "6px",
-                                                background: "var(--surface)",
-                                                border: "1px solid var(--border)",
-                                                color: "var(--text)",
-                                                cursor: "pointer",
-                                                fontSize: "12px",
-                                                fontWeight: "600",
-                                                transition: "all 0.2s"
-                                            }}
-                                            onMouseOver={(e) => e.currentTarget.style.background = "var(--border)"}
-                                            onMouseOut={(e) => e.currentTarget.style.background = "var(--surface)"}
                                         >
                                             Lihat
-                                        </button>
+                                        </Button>
                                     </div>
                                 )}
                             />

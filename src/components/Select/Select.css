@@ -41,7 +41,7 @@
     padding: 0 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--background);
+    background: inherit;
     color: var(--text);
     font-size: 14px;
     outline: none;
@@ -50,14 +50,12 @@
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image:
-        linear-gradient(45deg, transparent 50%, currentColor 50%),
-        linear-gradient(135deg, currentColor 50%, transparent 50%);
-    background-position:
-        calc(100% - 18px) calc(50% - 3px),
-        calc(100% - 13px) calc(50% - 3px);
-    background-size: 6px 6px;
-    background-repeat: no-repeat;
+}
+
+.select option {
+    background-color: #111827;
+    color: #f8fafc;
+    padding: 10px;
 }
 
 .select:focus {
@@ -70,10 +68,10 @@
 }
 
 .select-error {
-    border-color: #ef4444;
+    border-color: var(--danger);
 }
 
 .select-error-text {
     font-size: 13px;
-    color: #ef4444;
+    color: var(--danger);
 }

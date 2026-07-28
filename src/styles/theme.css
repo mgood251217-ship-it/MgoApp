@@ -24,12 +24,12 @@
     --danger: #991b1b;
     --danger-hover: #7f1d1d;
 
-    --background: #111827;
+    --background: linear-gradient(to right top, #111827, #0e192f, #0b1a38, #091b40, #071b48);
     --bg-body: #111827;
     --bg-sidebar: #111827;
     --bg-navbar: #111827;
     --bg-footer: #111827;
-    --bg-content: #1f2937;
+    --bg-content: #111827;
 
     --sidebar: #111827;
     --navbar: #111827;

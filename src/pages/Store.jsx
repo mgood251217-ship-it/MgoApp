@@ -365,15 +365,15 @@ export default function Store() {
             />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ padding: '20px', background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <small style={{ color: 'var(--text)' }}>Total Order 30 Hari</small>
                     <h3 style={{ margin: '8px 0 0' }}>{stats.summary?.total_30?.toLocaleString() ?? 0}</h3>
                 </div>
-                <div style={{ padding: '20px', background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <small style={{ color: 'var(--text)' }}>Total Hari Ini</small>
                     <h3 style={{ margin: '8px 0 0' }}>{stats.summary?.total_today?.toLocaleString() ?? 0}</h3>
                 </div>
-                <div style={{ padding: '20px', background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <small style={{ color: 'var(--text)' }}>Top Customer: {stats.summary?.top_customer}</small>
                     <h3 style={{ margin: '8px 0 0' }}>Rp {stats.summary?.top_total?.toLocaleString() ?? 0}</h3>
                 </div>

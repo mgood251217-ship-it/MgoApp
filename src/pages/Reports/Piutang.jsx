@@ -4,6 +4,8 @@ import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import Table from "../../components/Table/Table";
+import Button from "../../components/Button/Button";
+import Icon from "../../components/Icon/Icon";
 import { formatRupiah, formatKeInternasional } from "../../services/helpers";
 import { exportPiutangExcel } from "../../services/excelService";
 
@@ -131,7 +133,7 @@ export default function Piutang() {
                 alignItems: "center",
                 marginBottom: "24px"
             }}>
-                <button 
+                <Button 
                     onClick={fetchPiutang}
                     disabled={loading}
                     style={{
@@ -147,22 +149,15 @@ export default function Piutang() {
                     }}
                 >
                     {loading ? "Memuat..." : "Refresh Data"}
-                </button>
+                </Button>
 
-                <button 
+                <Button 
                     onClick={handleExportExcel}
-                    style={{
-                        padding: "8px 16px",
-                        background: "var(--success)",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        fontWeight: "600"
-                    }}
+                    variant="success"
+                    icon={<Icon name="excel"/>}
                 >
                     Export Excel
-                </button>
+                </Button>
             </div>
 
             <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -175,8 +170,7 @@ export default function Piutang() {
                         size="md"
                         showNumber={true}
                         actions={(row) => (
-                            <div style={{ display: "flex", gap: "8px" }}>
-                                <button 
+                                <Button 
                                     onClick={() => {
                                         const params = new URLSearchParams({
                                             search: row.nomorator,
@@ -186,43 +180,9 @@ export default function Piutang() {
 
                                         navigate(`/reports/transaksi-detail?${params}`);
                                     }}
-                                    style={{
-                                        padding: "6px 12px",
-                                        borderRadius: "6px",
-                                        background: "var(--surface)",
-                                        border: "1px solid var(--border)",
-                                        color: "var(--text)",
-                                        cursor: "pointer",
-                                        fontSize: "12px",
-                                        fontWeight: "600",
-                                        transition: "all 0.2s"
-                                    }}
-                                    onMouseOver={(e) => e.currentTarget.style.background = "var(--border)"}
-                                    onMouseOut={(e) => e.currentTarget.style.background = "var(--surface)"}
                                 >
                                     Detail
-                                </button>
-                                <a 
-                                    href={formatWaLink(row.nomor)} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={{
-                                        padding: "6px 12px",
-                                        borderRadius: "6px",
-                                        background: "rgba(76, 175, 80, 0.1)",
-                                        border: "1px solid rgba(76, 175, 80, 0.2)",
-                                        color: "var(--success)",
-                                        cursor: "pointer",
-                                        fontSize: "12px",
-                                        fontWeight: "600",
-                                        textDecoration: "none",
-                                        display: "inline-block"
-                                    }}
-                                    title="Tagih via WhatsApp"
-                                >
-                                    WA
-                                </a>
-                            </div>
+                                </Button>
                         )}
                     />
                 </div>

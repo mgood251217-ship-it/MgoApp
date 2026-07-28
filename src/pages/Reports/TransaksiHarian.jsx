@@ -7,6 +7,7 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiHarianExcel } from "../../services/excelService";
+import Button from "../../components/Button/Button";
 
 export default function TransaksiHarian() {
     const navigate = useNavigate();
@@ -173,7 +174,7 @@ export default function TransaksiHarian() {
                         size="sm"
                         showNumber={true}
                         actions={(row) => (
-                            <button 
+                            <Button 
                                 onClick={() => {
                                     const params = new URLSearchParams({
                                         search: row.nomorator,
@@ -183,22 +184,9 @@ export default function TransaksiHarian() {
 
                                     navigate(`/reports/transaksi-detail?${params}`);
                                 }}
-                                style={{
-                                    padding: "6px 12px",
-                                    borderRadius: "6px",
-                                    background: "var(--surface)",
-                                    border: "1px solid var(--border)",
-                                    color: "var(--text)",
-                                    cursor: "pointer",
-                                    fontSize: "12px",
-                                    fontWeight: "600",
-                                    transition: "all 0.2s"
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.background = "var(--border)"}
-                                onMouseOut={(e) => e.currentTarget.style.background = "var(--surface)"}
                             >
                                 Lihat
-                            </button>
+                            </Button>
                         )}
                     />
                 </div>
