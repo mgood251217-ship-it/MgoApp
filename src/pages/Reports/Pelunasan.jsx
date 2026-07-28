@@ -1,13 +1,16 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
+import Button from "../../components/Button/Button";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportPelunasanExcel } from "../../services/excelService";
 
 export default function Pelunasan() {
+    const navigate = useNavigate();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -182,24 +185,19 @@ export default function Pelunasan() {
                         size="sm"
                         showNumber={true}
                         actions={(row) => (
-                            <button 
-                                onClick={() => console.log("Detail Order", row.order_id)}
-                                style={{
-                                    padding: "6px 12px",
-                                    borderRadius: "6px",
-                                    background: "var(--surface)",
-                                    border: "1px solid var(--border)",
-                                    color: "var(--text)",
-                                    cursor: "pointer",
-                                    fontSize: "12px",
-                                    fontWeight: "600",
-                                    transition: "all 0.2s"
+                            <Button 
+                                onClick={() => {
+                                    const params = new URLSearchParams({
+                                        search: row.nomorator,
+                                        start_date: row.order_date,
+                                        end_date: row.order_date 
+                                    }).toString();
+
+                                    navigate(`/reports/transaksi-detail?${params}`);
                                 }}
-                                onMouseOver={(e) => e.currentTarget.style.background = "var(--border)"}
-                                onMouseOut={(e) => e.currentTarget.style.background = "var(--surface)"}
                             >
                                 Lihat
-                            </button>
+                            </Button>
                         )}
                     />
                 </div>

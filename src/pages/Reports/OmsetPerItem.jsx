@@ -119,22 +119,6 @@ export default function OmsetPerItem() {
                 />
             </div>
 
-            <div style={{ padding: "0 24px", marginTop: "16px", marginBottom: "8px" }}>
-                <div style={{
-                    background: "var(--primary)",
-                    color: "white",
-                    padding: "16px 24px",
-                    borderRadius: "12px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                }}>
-                    <span style={{ fontSize: "16px", fontWeight: "500" }}>Total Keseluruhan Omset</span>
-                    <span style={{ fontSize: "24px", fontWeight: "bold" }}>{formatRupiah(totalOmsetKeseluruhan)}</span>
-                </div>
-            </div>
-
             <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "32px" }}>
                 <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
                     <Table 
@@ -146,7 +130,22 @@ export default function OmsetPerItem() {
                         showNumber={true}
                     />
                 </div>
-
+                <div style={{ 
+                    padding: "20px", 
+                    background: "var(--surface)", 
+                    borderRadius: "12px", 
+                    border: "1px dashed var(--border)",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center"
+                }}>
+                    <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total Keseluruhan Omset</div>
+                        <div style={{ fontWeight: "bold", fontSize: "24px", color: "#ef4444" }}>
+                            {formatRupiah(totalOmsetKeseluruhan)}
+                        </div>
+                    </div>
+                </div>
                 {omsetItemData.length === 0 && !loading && (
                     <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
                         Tidak ada data omset pada rentang tanggal ini.

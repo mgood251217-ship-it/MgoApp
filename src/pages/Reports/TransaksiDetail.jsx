@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import DateFilter from "../../components/DateFilter/DateFilter";
@@ -12,8 +13,10 @@ import { exportTransaksiDetailExcel } from "../../services/excelService";
 
 
 export default function TransaksiDetail() {
-    const [startDate, setStartDate] = useState(getTodayDate());
-    const [endDate, setEndDate] = useState(getTodayDate());
+    const [searchParams] = useSearchParams();
+    const [startDate, setStartDate] = useState(searchParams.get("start_date") || getTodayDate());
+    const [endDate, setEndDate] = useState(searchParams.get("end_date") || getTodayDate());
+    const [search, setSearch] = useState(searchParams.get("search") || "");
     const [loading, setLoading] = useState(false);
     
     const [orders, setOrders] = useState([]);
@@ -31,7 +34,8 @@ export default function TransaksiDetail() {
                 params: { 
                     action: "transactions_detail",
                     start_date: startDate,
-                    end_date: endDate
+                    end_date: endDate,
+                    search: search
                 } 
             });
 
@@ -208,6 +212,9 @@ export default function TransaksiDetail() {
 
             <div style={{ padding: "0 24px" }}>
                 <DateFilter 
+                    search={search}
+                    onSearchChange={setSearch}
+                    searchPlaceholder="Cari data ...."
                     startDate={startDate}
                     endDate={endDate}
                     onStartDateChange={setStartDate}

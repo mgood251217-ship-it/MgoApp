@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
@@ -7,6 +8,7 @@ import { formatRupiah, formatKeInternasional } from "../../services/helpers";
 import { exportPiutangExcel } from "../../services/excelService";
 
 export default function Piutang() {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
     const [piutangData, setPiutangData] = useState([]);
@@ -175,7 +177,15 @@ export default function Piutang() {
                         actions={(row) => (
                             <div style={{ display: "flex", gap: "8px" }}>
                                 <button 
-                                    onClick={() => console.log("Detail Order", row.order_id)}
+                                    onClick={() => {
+                                        const params = new URLSearchParams({
+                                            search: row.nomorator,
+                                            start_date: row.date,
+                                            end_date: row.date 
+                                        }).toString();
+
+                                        navigate(`/reports/transaksi-detail?${params}`);
+                                    }}
                                     style={{
                                         padding: "6px 12px",
                                         borderRadius: "6px",

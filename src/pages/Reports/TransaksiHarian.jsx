@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
@@ -8,6 +9,7 @@ import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiHarianExcel } from "../../services/excelService";
 
 export default function TransaksiHarian() {
+    const navigate = useNavigate();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -172,7 +174,15 @@ export default function TransaksiHarian() {
                         showNumber={true}
                         actions={(row) => (
                             <button 
-                                onClick={() => console.log("Detail Order", row.order_id)}
+                                onClick={() => {
+                                    const params = new URLSearchParams({
+                                        search: row.nomorator,
+                                        start_date: startDate,
+                                        end_date: endDate 
+                                    }).toString();
+
+                                    navigate(`/reports/transaksi-detail?${params}`);
+                                }}
                                 style={{
                                     padding: "6px 12px",
                                     borderRadius: "6px",
