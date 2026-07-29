@@ -437,6 +437,32 @@ ipcMain.handle("pindah-file-ke-folder", async (event, { filePaths, targetFolderP
     return { success: true, results };
 });
 
+ipcMain.handle("rename-file-order", async (event, { oldPath, newPath }) => {
+    try {
+        if (oldPath === newPath) {
+            return { success: true };
+        }
+        try {
+            await fs.access(newPath);
+            return { success: false, message: "Nama file sudah dipakai di folder ini." };
+        } catch (err) {}
+
+        await fs.rename(oldPath, newPath);
+        return { success: true };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
+
+ipcMain.handle("delete-file-order", async (event, filePath) => {
+    try {
+        await fs.unlink(filePath);
+        return { success: true };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
+
 ipcMain.handle("set-icon-folder-order", async (event, { folderPath, status }) => {
     if (process.platform !== "win32") {
         return { success: false, message: "Fitur ini hanya didukung di Windows." };

@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("electron", {
     analisisFolderOrder: (folderPath) => ipcRenderer.invoke('analisis-folder-order', folderPath),
     buatFolderOrder: (folderPath) => ipcRenderer.invoke('buat-folder-order', folderPath),
     pindahFileKeFolder: (data) => ipcRenderer.invoke('pindah-file-ke-folder', data),
+    renameFileOrder: (data) => ipcRenderer.invoke('rename-file-order', data),
+    deleteFileOrder: (filePath) => ipcRenderer.invoke('delete-file-order', filePath),
     setIconFolderOrder: (data) => ipcRenderer.invoke('set-icon-folder-order', data),
     bukaLinkEksternal: (url) => ipcRenderer.invoke('buka-link-eksternal', url),
     downloadUpdate: (url) => ipcRenderer.invoke('download-update', url),

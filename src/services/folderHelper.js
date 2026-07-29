@@ -148,6 +148,20 @@ export const extractQuantityFromFilename = (filename) => {
     return qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
 };
 
+export const buildRenamedFilenameWithQuantity = (filename, newQuantity) => {
+    const extMatch = String(filename).match(/\.[^/.]+$/);
+    const ext = extMatch ? extMatch[0] : "";
+    const nameNoExt = ext ? filename.slice(0, -ext.length) : filename;
+
+    const qtyMatch = nameNoExt.match(/(\d+)(\s*)(PCS|KALI|SET|LBR|LEMBAR|QTY|BUAH|X\s*PRINT)/i);
+    if (qtyMatch) {
+        const before = nameNoExt.slice(0, qtyMatch.index);
+        const after = nameNoExt.slice(qtyMatch.index + qtyMatch[0].length);
+        return `${before}${newQuantity}${qtyMatch[2]}${qtyMatch[3]}${after}${ext}`;
+    }
+    return `${nameNoExt}_${newQuantity}PCS${ext}`;
+};
+
 export const formatUkuran = (file) => {
     if (file.panjangM == null || file.lebarM == null) return "-";
     const estimasi = file.dpiDetected === false ? " (estimasi)" : "";

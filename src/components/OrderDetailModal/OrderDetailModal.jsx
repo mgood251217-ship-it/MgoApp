@@ -7,7 +7,7 @@ import Icon from "../Icon/Icon";
 import Select from "../Select/Select";
 import Form from "../Form/Form";
 import { formatRupiah } from "../../services/helpers";
-import { FOLDER_STATUS_LABEL, formatUkuran } from "../../services/folderHelper";
+import { FOLDER_STATUS_LABEL, formatUkuran, buildRenamedFilenameWithQuantity } from "../../services/folderHelper";
 import useOrderFolderStatus from "../../hooks/useOrderFolderStatus";
 import ChangeFolderIconModal from "../ChangeFolderIconModal/ChangeFolderIconModal";
 
@@ -20,6 +20,12 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         order_item_id: "",
         store_id: ""
     });
+
+    const [renamingPath, setRenamingPath] = useState(null);
+    const [renameValue, setRenameValue] = useState("");
+    const [editingQtyPath, setEditingQtyPath] = useState(null);
+    const [qtyValue, setQtyValue] = useState("");
+    const [processingFile, setProcessingFile] = useState(null);
 
     useEffect(() => {
         if (!open) return;
@@ -96,6 +102,77 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
             loadStores();
         } catch (err) {
             setAlertConfig({ type: "error", message: "Gagal memperbarui maklun" });
+        }
+    };
+
+    const refreshFolders = () => {
+        if (viewOrderDetails && viewOrderData?.items) {
+            folder.checkFolders(viewOrderDetails, viewOrderData.items);
+        }
+    };
+
+    const handleStartRename = (file, folderPath) => {
+        setRenamingPath(`${folderPath}\\${file.nama}`);
+        setRenameValue(file.nama);
+    };
+
+    const handleConfirmRename = async (oldFullPath, folderPath) => {
+        const oldName = oldFullPath.split("\\").pop();
+        if (!renameValue || renameValue === oldName) {
+            setRenamingPath(null);
+            return;
+        }
+        setProcessingFile(oldFullPath);
+        const newFullPath = `${folderPath}\\${renameValue}`;
+        const res = await window.electron.renameFileOrder({ oldPath: oldFullPath, newPath: newFullPath });
+        setProcessingFile(null);
+        setRenamingPath(null);
+        if (!res.success) {
+            setAlertConfig({ show: true, type: "error", message: res.message || "Gagal mengganti nama file." });
+        } else {
+            setAlertConfig({ show: true, type: "success", message: "Nama file berhasil diubah." });
+            refreshFolders();
+        }
+    };
+
+    const handleStartEditQty = (file, folderPath) => {
+        setEditingQtyPath(`${folderPath}\\${file.nama}`);
+        setQtyValue(String(file.quantity));
+    };
+
+    const handleConfirmQty = async (file, folderPath) => {
+        const newQty = parseInt(qtyValue, 10);
+        setEditingQtyPath(null);
+        if (!newQty || newQty === file.quantity) return;
+
+        const oldFullPath = `${folderPath}\\${file.nama}`;
+        const newName = buildRenamedFilenameWithQuantity(file.nama, newQty);
+        const newFullPath = `${folderPath}\\${newName}`;
+
+        setProcessingFile(oldFullPath);
+        const res = await window.electron.renameFileOrder({ oldPath: oldFullPath, newPath: newFullPath });
+        setProcessingFile(null);
+        if (!res.success) {
+            setAlertConfig({ show: true, type: "error", message: res.message || "Gagal mengubah quantity." });
+        } else {
+            setAlertConfig({ show: true, type: "success", message: "Quantity berhasil diubah." });
+            refreshFolders();
+        }
+    };
+
+    const handleDeleteFile = async (file, folderPath) => {
+        const ok = window.confirm(`Hapus file "${file.nama}"? Tindakan ini tidak bisa dibatalkan.`);
+        if (!ok) return;
+
+        const fullPath = `${folderPath}\\${file.nama}`;
+        setProcessingFile(fullPath);
+        const res = await window.electron.deleteFileOrder(fullPath);
+        setProcessingFile(null);
+        if (!res.success) {
+            setAlertConfig({ show: true, type: "error", message: res.message || "Gagal menghapus file." });
+        } else {
+            setAlertConfig({ show: true, type: "success", message: "File berhasil dihapus." });
+            refreshFolders();
         }
     };
 
@@ -203,18 +280,82 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                                         <th style={{ padding: "4px 8px" }}>Qty</th>
                                                         <th style={{ padding: "4px 8px" }}>Warna</th>
                                                         <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>Total (m²)</th>
+                                                        <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>Aksi</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {files.map((f, idx) => (
-                                                        <tr key={idx} style={{ borderBottom: "1px solid var(--border)" }}>
-                                                            <td style={{ padding: "4px 8px", wordBreak: "break-all" }}>{f.nama}</td>
-                                                            <td style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>{formatUkuran(f)}</td>
-                                                            <td style={{ padding: "4px 8px" }}>{f.quantity}</td>
-                                                            <td style={{ padding: "4px 8px" }}>{f.colorMode}</td>
-                                                            <td style={{ padding: "4px 8px" }}>{f.totalLuas != null ? f.totalLuas : "-"}</td>
-                                                        </tr>
-                                                    ))}
+                                                    {files.map((f, idx) => {
+                                                        const fullPath = `${folderPath}\\${f.nama}`;
+                                                        const isRenaming = renamingPath === fullPath;
+                                                        const isEditingQty = editingQtyPath === fullPath;
+                                                        const isProcessing = processingFile === fullPath;
+
+                                                        return (
+                                                            <tr key={idx} style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                <td style={{ padding: "4px 8px", wordBreak: "break-all" }}>
+                                                                    {isRenaming ? (
+                                                                        <input
+                                                                            autoFocus
+                                                                            value={renameValue}
+                                                                            onChange={(e) => setRenameValue(e.target.value)}
+                                                                            onBlur={() => handleConfirmRename(fullPath, folderPath)}
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === "Enter") handleConfirmRename(fullPath, folderPath);
+                                                                                if (e.key === "Escape") setRenamingPath(null);
+                                                                            }}
+                                                                            style={{ width: "100%", fontSize: 13 }}
+                                                                        />
+                                                                    ) : f.nama}
+                                                                </td>
+                                                                <td style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>{formatUkuran(f)}</td>
+                                                                <td style={{ padding: "4px 8px" }}>
+                                                                    {isEditingQty ? (
+                                                                        <input
+                                                                            autoFocus
+                                                                            type="number"
+                                                                            min="1"
+                                                                            value={qtyValue}
+                                                                            onChange={(e) => setQtyValue(e.target.value)}
+                                                                            onBlur={() => handleConfirmQty(f, folderPath)}
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === "Enter") handleConfirmQty(f, folderPath);
+                                                                                if (e.key === "Escape") setEditingQtyPath(null);
+                                                                            }}
+                                                                            style={{ width: 50, fontSize: 13 }}
+                                                                        />
+                                                                    ) : (
+                                                                        <span
+                                                                            style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                                                                            onClick={() => handleStartEditQty(f, folderPath)}
+                                                                            title="Klik untuk ubah quantity"
+                                                                        >
+                                                                            {f.quantity}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td style={{ padding: "4px 8px" }}>{f.colorMode}</td>
+                                                                <td style={{ padding: "4px 8px" }}>{f.totalLuas != null ? f.totalLuas : "-"}</td>
+                                                                <td style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>
+                                                                    <div style={{ display: "flex", gap: 4 }}>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="secondary"
+                                                                            icon={<Icon name="edit" />}
+                                                                            disabled={isProcessing}
+                                                                            onClick={() => handleStartRename(f, folderPath)}
+                                                                        />
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="danger"
+                                                                            icon={<Icon name="delete" />}
+                                                                            disabled={isProcessing}
+                                                                            onClick={() => handleDeleteFile(f, folderPath)}
+                                                                        />
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                             <div style={{ textAlign: "right", marginTop: 8, fontWeight: "bold", fontSize: 13 }}>
