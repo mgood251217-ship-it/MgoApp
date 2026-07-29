@@ -55,14 +55,47 @@ const ICONS = {
     cancel: path.join(ICON_BASE, "folder-cancel.ico"),
 };
 
+async function getPdfDimensions(filePath) {
+    const buffer = await fs.readFile(filePath);
+    const text = buffer.toString("latin1");
+    const match = text.match(/\/MediaBox\s*\[\s*([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s*\]/);
+    if (!match) return null;
+
+    const x1 = parseFloat(match[1]);
+    const y1 = parseFloat(match[2]);
+    const x2 = parseFloat(match[3]);
+    const y2 = parseFloat(match[4]);
+
+    return { widthPt: Math.abs(x2 - x1), heightPt: Math.abs(y2 - y1) };
+}
+
 async function getFileMeta(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     const rasterExt = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".psd"];
     const isPdf = ext === ".pdf";
+    const isCdr = ext === ".cdr";
 
     const empty = { colorMode: "unknown", widthPx: null, heightPx: null, dpi: null, dpiDetected: false, panjangM: null, lebarM: null };
 
-    if (!rasterExt.includes(ext) && !isPdf) return empty;
+    if (isCdr) {
+        return { colorMode: "-", widthPx: null, heightPx: null, dpi: null, dpiDetected: false, panjangM: null, lebarM: null };
+    }
+
+    if (isPdf) {
+        try {
+            const dims = await getPdfDimensions(filePath);
+            if (!dims) return empty;
+
+            const panjangM = Math.round((dims.widthPt / 72) * 0.0254 * 100) / 100;
+            const lebarM = Math.round((dims.heightPt / 72) * 0.0254 * 100) / 100;
+
+            return { colorMode: "unknown", widthPx: null, heightPx: null, dpi: 72, dpiDetected: true, panjangM, lebarM };
+        } catch (err) {
+            return empty;
+        }
+    }
+
+    if (!rasterExt.includes(ext)) return empty;
 
     try {
         const metadata = await sharp(filePath).metadata();
@@ -81,7 +114,7 @@ async function getFileMeta(filePath) {
 
         const dpiDetected = !!metadata.density;
         let dpi = metadata.density || null;
-        if (!dpi) dpi = isPdf ? 72 : 96;
+        if (!dpi) dpi = 96;
 
         let panjangM = null;
         let lebarM = null;
@@ -366,7 +399,7 @@ ipcMain.handle("save-settings", async (event, newSettings) => {
 });
 
 ipcMain.handle("analisis-folder-order", async (event, folderPath) => {
-    const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff"];
+    const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff", ".cdr"];
     try {
         const entries = await fs.readdir(folderPath, { withFileTypes: true });
         const hasil = await Promise.all(
