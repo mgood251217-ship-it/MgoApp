@@ -4,7 +4,7 @@
     left: 60px;
     right: 0;
     height: 56px;
-    background: var(--navbar);
+    background: var(--bg-navbar);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;

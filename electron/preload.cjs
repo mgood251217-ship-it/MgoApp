@@ -26,4 +26,5 @@ contextBridge.exposeInMainWorld("electron", {
 
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (data) => ipcRenderer.invoke('save-settings', data),
+    restartApp: () => ipcRenderer.send('restart-app')
 });

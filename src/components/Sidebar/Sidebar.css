@@ -4,7 +4,7 @@
     left: 0;
     width: 60px;
     height: 100vh;
-    background: var(--sidebar);
+    background: var(--bg-sidebar);
     border-right: 1px solid var(--border);
     overflow: hidden;
     transition: width .25s ease;

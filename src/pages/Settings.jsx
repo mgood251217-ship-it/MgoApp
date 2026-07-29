@@ -19,6 +19,7 @@ const LAYOUT_COLORS = [
     { key: "theme_sidebar", label: "Background Sidebar" },
     { key: "theme_navbar", label: "Background Navbar" },
     { key: "theme_background", label: "Background Utama" },
+    { key: "theme_footer", label: "Background Footer" },
 ];
 
 const ACCENT_COLORS = [
@@ -63,6 +64,22 @@ export default function Settings() {
 
     const handleInputChange = (key, value) => {
         setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleResetField = (key) => {
+        setSettings(prev => ({ ...prev, [key]: "" }));
+    };
+
+    const handleRestart = async () => {
+        try {
+            if (window.electron && window.electron.restartApp) {
+                await window.electron.restartApp();
+            } else {
+                setAlertConfig({ show: true, type: "error", message: "Fungsi restartApp belum ditambahkan di preload.js/main.js" });
+            }
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: "Gagal melakukan restart." });
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -137,6 +154,14 @@ export default function Settings() {
                                                 >
                                                     Pilih
                                                 </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="danger"
+                                                    icon={<Icon name="refresh" />}
+                                                    onClick={() => handleResetField(key)}
+                                                >
+                                                    Reset
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
@@ -162,9 +187,9 @@ export default function Settings() {
                                             <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
                                                 {label}
                                             </label>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                                                <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase" }}>
-                                                    {settings[key] || "#000000"}
+                                            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                                <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase", width: "70px", textAlign: "right" }}>
+                                                    {settings[key] || "DEFAULT"}
                                                 </span>
                                                 <div style={{ position: "relative", width: "42px", height: "42px", borderRadius: "8px", overflow: "hidden", border: "2px solid var(--border)" }}>
                                                     <input
@@ -185,6 +210,14 @@ export default function Settings() {
                                                         }}
                                                     />
                                                 </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="danger"
+                                                    icon={<Icon name="refresh" />}
+                                                    onClick={() => handleResetField(key)}
+                                                >
+                                                    Reset
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
@@ -210,9 +243,9 @@ export default function Settings() {
                                             <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
                                                 {label}
                                             </label>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                                                <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase" }}>
-                                                    {settings[key] || "#000000"}
+                                            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                                <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase", width: "70px", textAlign: "right" }}>
+                                                    {settings[key] || "DEFAULT"}
                                                 </span>
                                                 <div style={{ position: "relative", width: "42px", height: "42px", borderRadius: "8px", overflow: "hidden", border: "2px solid var(--border)" }}>
                                                     <input
@@ -233,6 +266,14 @@ export default function Settings() {
                                                         }}
                                                     />
                                                 </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="danger"
+                                                    icon={<Icon name="refresh" />}
+                                                    onClick={() => handleResetField(key)}
+                                                >
+                                                    Reset
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
@@ -241,7 +282,16 @@ export default function Settings() {
                             
                         </div>
 
-                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px", paddingBottom: "24px" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "16px", marginTop: "16px", paddingBottom: "24px" }}>
+                            <Button
+                                type="button"
+                                size="lg"
+                                variant="warning"
+                                onClick={handleRestart}
+                                icon={<Icon name="refresh" />}
+                            >
+                                Restart Aplikasi
+                            </Button>
                             <Button
                                 type="submit"
                                 size="lg"

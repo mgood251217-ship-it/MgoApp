@@ -526,6 +526,11 @@ ipcMain.handle("set-icon-folder-order", async (event, { folderPath, status }) =>
     }
 });
 
+ipcMain.on('restart-app', () => {
+    app.relaunch();
+    app.exit(0);
+});
+
 app.whenReady().then(async () => {
     await ensureIconsInstalled();
     await createWindow();
