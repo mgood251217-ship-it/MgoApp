@@ -1,33 +1,47 @@
 :root {
+    color-scheme: light;
+
     --primary: #2563eb;
     --primary-hover: #1d4ed8;
 
     --secondary: #6b7280;
-    --warning: rgb(141, 152, 20);
+    --secondary-hover: #4b5563;
+
     --success: #22c55e;
+    --success-hover: #166534;
+
     --info: #38bdf8;
+    --info-hover: #0284c7;
 
-    --background: #f3f4f6;
-
-    --bg-sidebar: #ffffff;
-    --bg-navbar: #ffffff;
-    --bg-footer: #ffffff;
-
-    --text: #111827;
-    --text-secondary: #6b7280;
-
-    --border: #e5e7eb;
-
-    --hover: #dde5ef;
+    --warning: #eab308;
+    --warning-hover: #ca8a04;
 
     --danger: #ef4444;
     --danger-hover: #dc2626;
 
+    --background: #f3f4f6;
+    --bg-body: #f3f4f6;
+    --bg-content: #ffffff;
+
+    --bg-sidebar: #ffffff;
+    --sidebar: #ffffff;
+
+    --bg-navbar: #ffffff;
+    --navbar: #ffffff;
+
+    --bg-footer: #ffffff;
+    --footer: #ffffff;
+
+    --text: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+
+    --border: #e5e7eb;
+    --hover: #dde5ef;
+    --active: #2563eb;
+
     --shadow: 0 8px 24px rgba(0, 0, 0, .08);
-
     --radius: 8px;
-
     --transition: .2s ease;
-
     --wallpaper: url("../../public/wallpaper.png");
 }

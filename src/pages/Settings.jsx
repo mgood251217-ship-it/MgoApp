@@ -19,6 +19,7 @@ const LAYOUT_COLORS = [
     { key: "theme_sidebar", label: "Background Sidebar" },
     { key: "theme_navbar", label: "Background Navbar" },
     { key: "theme_background", label: "Background Utama" },
+    { key: "theme_content", label: "Background Konten" },
     { key: "theme_footer", label: "Background Footer" },
 ];
 
@@ -26,12 +27,44 @@ const ACCENT_COLORS = [
     { key: "theme_primary", label: "Primary (Utama)" },
     { key: "theme_secondary", label: "Secondary (Sekunder)" },
     { key: "theme_success", label: "Success (Sukses)" },
+    { key: "theme_info", label: "Info (Informasi)" },
     { key: "theme_warning", label: "Warning (Peringatan)" },
     { key: "theme_danger", label: "Danger (Bahaya)" },
 ];
 
+const TEXT_COLORS = [
+    { key: "theme_text", label: "Teks Utama" },
+    { key: "theme_text_secondary", label: "Teks Sekunder" },
+    { key: "theme_text_muted", label: "Teks Redup (Muted)" },
+];
+
+const OTHER_COLORS = [
+    { key: "theme_border", label: "Warna Garis (Border)" },
+    { key: "theme_active", label: "Warna Aktif (Active)" },
+];
+
+const THEME_MAPPING = {
+    theme_sidebar: '--sidebar',
+    theme_navbar: '--navbar',
+    theme_background: '--bg-body',
+    theme_content: '--bg-content',
+    theme_footer: '--footer',
+    theme_primary: '--primary',
+    theme_secondary: '--secondary',
+    theme_success: '--success',
+    theme_info: '--info',
+    theme_warning: '--warning',
+    theme_danger: '--danger',
+    theme_text: '--text',
+    theme_text_secondary: '--text-secondary',
+    theme_text_muted: '--text-muted',
+    theme_border: '--border',
+    theme_active: '--active'
+};
+
 export default function Settings() {
     const [settings, setSettings] = useState({});
+    const [defaultColors, setDefaultColors] = useState({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
@@ -49,6 +82,22 @@ export default function Settings() {
     }, []);
 
     useEffect(() => {
+        const computedStyles = getComputedStyle(document.documentElement);
+        const defaults = {};
+        
+        Object.keys(THEME_MAPPING).forEach(key => {
+            let val = computedStyles.getPropertyValue(THEME_MAPPING[key]).trim();
+            if (val.startsWith('#')) {
+                if (val.length === 4) {
+                    val = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
+                }
+                defaults[key] = val;
+            } else {
+                defaults[key] = "#000000";
+            }
+        });
+        
+        setDefaultColors(defaults);
         loadSettings();
     }, [loadSettings]);
 
@@ -100,6 +149,64 @@ export default function Settings() {
         }
     };
 
+    const renderColorGroup = (title, fields) => (
+        <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+            <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
+                <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>{title}</h3>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {fields.map(({ key, label }) => (
+                    <div key={key} style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center", 
+                        padding: "16px 20px", 
+                        backgroundColor: "var(--background)", 
+                        border: "1px solid var(--border)", 
+                        borderRadius: "10px" 
+                    }}>
+                        <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
+                            {label}
+                        </label>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                            <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase", width: "70px", textAlign: "right" }}>
+                                {settings[key] || defaultColors[key] || "#000000"}
+                            </span>
+                            <div style={{ position: "relative", width: "42px", height: "42px", borderRadius: "8px", overflow: "hidden", border: "2px solid var(--border)" }}>
+                                <input
+                                    type="color"
+                                    name={key}
+                                    value={settings[key] || defaultColors[key] || "#000000"}
+                                    onChange={(e) => handleInputChange(key, e.target.value)}
+                                    style={{
+                                        position: "absolute",
+                                        top: "-10px",
+                                        left: "-10px",
+                                        width: "62px",
+                                        height: "62px",
+                                        padding: "0",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        background: "transparent"
+                                    }}
+                                />
+                            </div>
+                            <Button
+                                type="button"
+                                variant="danger"
+                                icon={<Icon name="refresh" />}
+                                onClick={() => handleResetField(key)}
+                            >
+                                Reset
+                            </Button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             {alertConfig.show && (
@@ -123,14 +230,14 @@ export default function Settings() {
                 ) : (
                     <Form id="formSettings" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "32px", maxWidth: "1600px" }}>
                         
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "32px", alignItems: "start" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", gap: "32px", alignItems: "start" }}>
                             
-                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "12px", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
                                 <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
                                     <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Path Folder Produksi</h3>
                                 </div>
                                 
-                                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "20px" }}>
                                     {PATH_FIELDS.map(({ key, label }) => (
                                         <div key={key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                                             <label style={{ fontWeight: "600", fontSize: 13, color: "var(--text-secondary)" }}>
@@ -168,117 +275,10 @@ export default function Settings() {
                                 </div>
                             </div>
 
-                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "12px", border: "1px solid var(--border)" }}>
-                                <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
-                                    <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Warna Layout & Latar</h3>
-                                </div>
-
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    {LAYOUT_COLORS.map(({ key, label }) => (
-                                        <div key={key} style={{ 
-                                            display: "flex", 
-                                            justifyContent: "space-between", 
-                                            alignItems: "center", 
-                                            padding: "16px 20px", 
-                                            backgroundColor: "var(--background)", 
-                                            border: "1px solid var(--border)", 
-                                            borderRadius: "10px" 
-                                        }}>
-                                            <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
-                                                {label}
-                                            </label>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                                                <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase", width: "70px", textAlign: "right" }}>
-                                                    {settings[key] || "DEFAULT"}
-                                                </span>
-                                                <div style={{ position: "relative", width: "42px", height: "42px", borderRadius: "8px", overflow: "hidden", border: "2px solid var(--border)" }}>
-                                                    <input
-                                                        type="color"
-                                                        name={key}
-                                                        value={settings[key] || "#000000"}
-                                                        onChange={(e) => handleInputChange(key, e.target.value)}
-                                                        style={{
-                                                            position: "absolute",
-                                                            top: "-10px",
-                                                            left: "-10px",
-                                                            width: "62px",
-                                                            height: "62px",
-                                                            padding: "0",
-                                                            border: "none",
-                                                            cursor: "pointer",
-                                                            background: "transparent"
-                                                        }}
-                                                    />
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    variant="danger"
-                                                    icon={<Icon name="refresh" />}
-                                                    onClick={() => handleResetField(key)}
-                                                >
-                                                    Reset
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "12px", border: "1px solid var(--border)" }}>
-                                <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
-                                    <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Warna Aksen & Status</h3>
-                                </div>
-
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    {ACCENT_COLORS.map(({ key, label }) => (
-                                        <div key={key} style={{ 
-                                            display: "flex", 
-                                            justifyContent: "space-between", 
-                                            alignItems: "center", 
-                                            padding: "16px 20px", 
-                                            backgroundColor: "var(--background)", 
-                                            border: "1px solid var(--border)", 
-                                            borderRadius: "10px" 
-                                        }}>
-                                            <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
-                                                {label}
-                                            </label>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                                                <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase", width: "70px", textAlign: "right" }}>
-                                                    {settings[key] || "DEFAULT"}
-                                                </span>
-                                                <div style={{ position: "relative", width: "42px", height: "42px", borderRadius: "8px", overflow: "hidden", border: "2px solid var(--border)" }}>
-                                                    <input
-                                                        type="color"
-                                                        name={key}
-                                                        value={settings[key] || "#000000"}
-                                                        onChange={(e) => handleInputChange(key, e.target.value)}
-                                                        style={{
-                                                            position: "absolute",
-                                                            top: "-10px",
-                                                            left: "-10px",
-                                                            width: "62px",
-                                                            height: "62px",
-                                                            padding: "0",
-                                                            border: "none",
-                                                            cursor: "pointer",
-                                                            background: "transparent"
-                                                        }}
-                                                    />
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    variant="danger"
-                                                    icon={<Icon name="refresh" />}
-                                                    onClick={() => handleResetField(key)}
-                                                >
-                                                    Reset
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            {renderColorGroup("Warna Layout & Latar", LAYOUT_COLORS)}
+                            {renderColorGroup("Warna Aksen & Status", ACCENT_COLORS)}
+                            {renderColorGroup("Warna Teks", TEXT_COLORS)}
+                            {renderColorGroup("Warna Elemen Lainnya", OTHER_COLORS)}
                             
                         </div>
 
