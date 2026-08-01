@@ -1,10 +1,7 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "../api/axios";
 import Header from "../components/Header/Header";
-import Input from "../components/Input/Input";
 import Select from "../components/Select/Select";
-import Button from "../components/Button/Button";
-import Icon from "../components/Icon/Icon";
 import Table from "../components/Table/Table";
 import DateFilter from "../components/DateFilter/DateFilter";
 import { exportMeteranExcel } from "../services/excelService";
@@ -37,7 +34,7 @@ export default function Meteran() {
         { value: "meter_finishing_jersey", label: "Finishing Jersey" }
     ], []);
 
-    const loadData = useCallback(async () => {
+    const loadData = async () => {
         try {
             const res = await api.get("", {
                 params: {
@@ -50,11 +47,11 @@ export default function Meteran() {
         } catch (err) {
             console.error(err);
         }
-    }, [category, startDate, endDate]);
+    };
 
     useEffect(() => {
         loadData();
-    }, [loadData]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (!dataState) return;
