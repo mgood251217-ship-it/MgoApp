@@ -81,6 +81,11 @@ export default function Aktivitas() {
             render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.date}</span>
         },
         { 
+            key: "order_date", 
+            title: "Tanggal Order",
+            render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.date}</span>
+        },
+        { 
             key: "order_id", 
             title: "ID Order",
             render: (row) => <span style={{ fontWeight: "bold" }}>{row.order_id || "-"}</span>
