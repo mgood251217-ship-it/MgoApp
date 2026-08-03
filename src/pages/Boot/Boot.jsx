@@ -56,6 +56,7 @@ export default function Boot() {
     }, [initialize]);
 
     const handleContinueOld = () => {
+        if (updateInfo?.forceUpdate) return;
         const resumeIndex = updateInfo.nextStepIndex;
         setUpdateInfo(null);
         runSteps(resumeIndex);
@@ -95,6 +96,7 @@ export default function Boot() {
                 latestVersion={updateInfo.latestVersion}
                 downloading={downloading}
                 progress={progress}
+                mandatory={updateInfo.forceUpdate}
                 onContinueOld={handleContinueOld}
                 onUpdateNow={handleUpdateNow}
             />

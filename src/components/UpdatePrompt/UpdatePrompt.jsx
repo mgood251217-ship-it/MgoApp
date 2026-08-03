@@ -1,16 +1,20 @@
 import "./UpdatePrompt.css";
 import logo from "/logo.png";
 
-export default function UpdatePrompt({ latestVersion, downloading, progress, onContinueOld, onUpdateNow }) {
+export default function UpdatePrompt({ latestVersion, downloading, progress, mandatory, onContinueOld, onUpdateNow }) {
     return (
         <div className="update-prompt">
             <div className="update-prompt-container">
                 <img src={logo} alt="MGO" className="update-prompt-logo" />
 
-                <h1 className="update-prompt-title">Update Tersedia</h1>
+                <h1 className="update-prompt-title">
+                    {mandatory ? "Update Wajib" : "Update Tersedia"}
+                </h1>
 
                 <p className="update-prompt-message">
-                    Versi baru ({latestVersion}) sudah tersedia. Update sekarang atau lanjutkan dengan versi yang ada?
+                    {mandatory
+                        ? `Versi baru (${latestVersion}) wajib diinstall untuk melanjutkan menggunakan aplikasi.`
+                        : `Versi baru (${latestVersion}) sudah tersedia. Update sekarang atau lanjutkan dengan versi yang ada?`}
                 </p>
 
                 {downloading ? (
@@ -22,9 +26,11 @@ export default function UpdatePrompt({ latestVersion, downloading, progress, onC
                     </div>
                 ) : (
                     <div className="update-prompt-actions">
-                        <button className="update-prompt-button-secondary" onClick={onContinueOld}>
-                            Lanjutkan Versi Lama
-                        </button>
+                        {!mandatory && (
+                            <button className="update-prompt-button-secondary" onClick={onContinueOld}>
+                                Lanjutkan Versi Lama
+                            </button>
+                        )}
                         <button className="update-prompt-button-primary" onClick={onUpdateNow}>
                             Update Sekarang
                         </button>
