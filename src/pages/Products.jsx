@@ -9,6 +9,14 @@ import Modal from "../components/Modal/Modal";
 import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
 import Pagination from "../components/Pagination/Pagination";
+import { 
+    getCachedCategories, 
+    getCachedPaginatedProducts, 
+    getCachedFinishings, 
+    clearProductCache, 
+    clearFinishingCache, 
+    clearCategoryCache 
+} from "../services/apiCache";
 
 export default function Products() {
     const [products, setProducts] = useState([]);
@@ -75,26 +83,15 @@ export default function Products() {
 
     const loadData = useCallback(async () => {
         try {
-            const resProd = await api.get("", {
-                params: {
-                    action: "pagination_products",
-                    page,
-                    limit,
-                    search: debouncedSearch
-                }
-            });
-            setProducts(resProd.data?.data?.data ?? []);
-            setTotalPages(resProd.data?.data?.total_pages ?? 1);
+            const prodData = await getCachedPaginatedProducts(page, limit, debouncedSearch);
+            setProducts(prodData.data);
+            setTotalPages(prodData.total_pages);
 
-            const resCat = await api.get("", {
-                params: { action: "categories" }
-            });
-            setCategories(resCat.data?.data ?? []);
+            const catData = await getCachedCategories();
+            setCategories(catData);
 
-            const resFin = await api.get("", {
-                params: { action: "finishings" }
-            });
-            setFinishings(resFin.data?.data ?? []);
+            const finData = await getCachedFinishings();
+            setFinishings(finData);
         } catch (err) {
             console.error(err);
         }
@@ -109,7 +106,6 @@ export default function Products() {
         return () => clearTimeout(timer);
     }, [search]);
 
-    // Load Data triggers when dependencies change
     useEffect(() => {
         loadData();
     }, [loadData]);
@@ -219,6 +215,7 @@ export default function Products() {
             }
 
             await api.post("", payload, { params: { action } });
+            clearProductCache();
             setOpenProduct(false);
             loadData();
         } catch (err) {
@@ -244,6 +241,7 @@ export default function Products() {
             }
 
             await api.post("", payload, { params: { action } });
+            clearFinishingCache();
             setOpenFinishing(false);
             loadData();
         } catch (err) {
@@ -264,6 +262,7 @@ export default function Products() {
             }
 
             await api.post("", payload, { params: { action } });
+            clearCategoryCache();
             setOpenCategory(false);
             loadData();
         } catch (err) {
@@ -288,6 +287,11 @@ export default function Products() {
             }
 
             await api.post("", payload, { params: { action } });
+            
+            if (deleteConfig.type === "product") clearProductCache();
+            else if (deleteConfig.type === "finishing") clearFinishingCache();
+            else if (deleteConfig.type === "category") clearCategoryCache();
+            
             setConfirmOpen(false);
             loadData();
         } catch (err) {
@@ -302,10 +306,12 @@ export default function Products() {
                 payload.append("product_id", id);
                 payload.append("quantity", newStock);
                 await api.post("", payload, { params: { action: "update_stock_product" } });
+                clearProductCache();
             } else if (type === "finishing") {
                 payload.append("finishing_id", id);
                 payload.append("quantity", newStock);
                 await api.post("", payload, { params: { action: "update_stock_finishing" } });
+                clearFinishingCache();
             }
             loadData();
         } catch (err) {

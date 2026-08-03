@@ -7,6 +7,10 @@ import Icon from "../components/Icon/Icon";
 import Input from "../components/Input/Input";
 import Select from "../components/Select/Select";
 import Modal from "../components/Modal/Modal";
+import {
+    getCachedUsers, getCachedMachines, getCachedLocations,
+    clearUsersCache, clearMachinesCache, clearLocationsCache
+} from '../services/apiCache';
 import { Line, Bar } from 'react-chartjs-2';
 import { 
     Chart as ChartJS, 
@@ -66,15 +70,15 @@ export default function Store() {
     const loadData = useCallback(async () => {
         try {
             const [resUsers, resMachines, resLocations, resStats] = await Promise.all([
-                api.get("", { params: { action: "users" } }),
-                api.get("", { params: { action: "machines" } }),
-                api.get("", { params: { action: "locations" } }),
+                getCachedUsers(),
+                getCachedMachines(),
+                getCachedLocations(),
                 api.get("", { params: { action: "order_analysis" } })
             ]);
 
-            setUsers(resUsers.data?.data ?? []);
-            setMachines(resMachines.data?.data ?? []);
-            setLocations(resLocations.data?.data ?? []);
+            setUsers(resUsers ?? []);
+            setMachines(resMachines ?? []);
+            setLocations(resLocations ?? []);
             setStats(resStats.data?.data ?? { chart_30: {}, chart_365: {}, summary: {} });
         } catch (error) {
             console.error(error);
@@ -149,6 +153,7 @@ export default function Store() {
 
             setIsUserModalOpen(false);
             setUserFormData(initialUserFormState);
+            await clearUsersCache();
             loadData();
         } catch (error) {
             alert(`Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`);
@@ -168,6 +173,7 @@ export default function Store() {
                 params: { action: "delete_user" }
             });
 
+            await clearUsersCache();
             loadData();
         } catch (error) {
             alert("Gagal menghapus user.");
@@ -218,6 +224,7 @@ export default function Store() {
 
             setIsMachineModalOpen(false);
             setMachineFormData(initialMachineFormState);
+            await clearMachinesCache();
             loadData();
         } catch (error) {
             alert(`Gagal ${isMachineEditMode ? 'mengedit' : 'menambah'} mesin.`);
@@ -237,6 +244,7 @@ export default function Store() {
                 params: { action: "delete_machine" }
             });
 
+            await clearMachinesCache();
             loadData();
         } catch (error) {
             alert("Gagal menghapus mesin.");

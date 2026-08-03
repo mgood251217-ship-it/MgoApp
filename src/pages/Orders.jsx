@@ -16,6 +16,7 @@ import PaymentModal from "../components/PaymentModal/PaymentModal";
 import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
+import { getCachedInitials } from "../services/apiCache";
 
 export default function Orders() {
     const navigate = useNavigate();
@@ -92,8 +93,8 @@ export default function Orders() {
 
     const getOperators = useCallback(async () => {
         try {
-            const res = await api.get("", { params: { action: "get_initial" } });
-            setOperators(res.data?.data || []);
+            const res = await getCachedInitials();
+            setOperators(res || []);
         } catch (err) {}
     }, []);
 

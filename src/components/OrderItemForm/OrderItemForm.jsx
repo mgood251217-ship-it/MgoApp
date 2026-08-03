@@ -1,9 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import api from "../../api/axios";
 import Input from "../Input/Input";
 import Select from "../Select/Select";
 import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
+import { 
+    getCachedCategories, 
+    getCachedProductsByCategory, 
+    getCachedFinishingsByCategory 
+} from "../../services/apiCache";
 
 export default function OrderItemForm({ 
     initialData,
@@ -51,8 +55,8 @@ export default function OrderItemForm({
 
     const loadCategories = useCallback(async () => {
         try {
-            const res = await api.get("", { params: { action: "categories" } });
-            setCategories(res.data?.data || []);
+            const data = await getCachedCategories();
+            setCategories(data);
         } catch (err) {}
     }, []);
 
@@ -72,11 +76,8 @@ export default function OrderItemForm({
                 return;
             }
             try {
-                const resProducts = await api.get("", {
-                    params: { action: "products_by_category", category_id: formItem.category_id }
-                });
+                const fetchedProducts = await getCachedProductsByCategory(formItem.category_id);
                 
-                const fetchedProducts = resProducts.data?.data || [];
                 let mappedProducts = [];
                 let sizesMap = {};
 
@@ -104,10 +105,8 @@ export default function OrderItemForm({
                 setProducts(mappedProducts);
                 setPaketSizesMap(sizesMap);
 
-                const resFinishings = await api.get("", {
-                    params: { action: "finishing_by_category", category_id: formItem.category_id }
-                });
-                setFinishings(resFinishings.data?.data || []);
+                const fetchedFinishings = await getCachedFinishingsByCategory(formItem.category_id);
+                setFinishings(fetchedFinishings);
             } catch (err) {}
         };
         fetchProductsAndFinishings();

@@ -19,7 +19,7 @@
     --danger: #ef4444;
     --danger-hover: #dc2626;
 
-    --background: #f3f4f6;
+    --background: linear-gradient(to right top, #f7fff6, #ebfcf7, #e1f8fa, #ddf3fe, #e1ecff);   
     --bg-body: #f3f4f6;
     --bg-content: #ffffff;
 

@@ -12,6 +12,7 @@ import Alert from "../components/Alert/Alert";
 import { formatRupiah } from "../services/helpers";
 import { exportFailureExcel } from "../services/excelService"; 
 import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
+import { getCachedUsers, getCachedMachines, getCachedFailures, clearFailuresCache } from "../services/apiCache";
 
 const DESAIN_LIST = ['Resolusi pecah', 'Salah ukuran', 'Salah penulisan teks', 'Salah data customer', 'Font berubah', 'File corrupt'];
 const CETAK_LIST = ['Warna tidak sesuai', 'Hasil belang/banding', 'Hasil blur', 'Head strike', 'Tinta bocor', 'Kertas/media macet', 'Hasil miring', 'Hasil terpotong'];
@@ -58,17 +59,8 @@ export default function Failure() {
     const fetchFailures = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "failure",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
-
-            if (res.data?.success) {
-                setFailures(res.data.data || []);
-            }
+            const res = await getCachedFailures(startDate, endDate);
+            setFailures(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -78,11 +70,11 @@ export default function Failure() {
 
     const loadOperatorsAndMachines = useCallback(async () => {
         try {
-            const resUsers = await api.get("", { params: { action: "users" } });
-            setOperators(resUsers.data?.data || []);
+            const resUsers = await getCachedUsers();
+            setOperators(resUsers);
 
-            const resMachines = await api.get("", { params: { action: "machines" } });
-            setMachines(resMachines.data?.data || []);
+            const resMachines = await getCachedMachines();
+            setMachines(resMachines);
         } catch (err) {
             console.error("Gagal load dropdown:", err);
         }
@@ -150,6 +142,7 @@ export default function Failure() {
                 setAlertConfig({ show: true, type: "error", message: res.data.message || "Gagal update info." });
             } else {
                 setEditInfoModalOpen(false);
+                await clearFailuresCache();
                 fetchFailures();
             }
         } catch (err) {
@@ -166,6 +159,7 @@ export default function Failure() {
                 const payload = new FormData();
                 payload.append("failure_id", row.failure_id);
                 await api.post("", payload, { params: { action: "delete_failure" } });
+                await clearFailuresCache();
                 fetchFailures();
             } catch (err) {
                 console.error(err);
@@ -224,6 +218,7 @@ export default function Failure() {
                 setAlertConfig({ show: true, type: "error", message: res.data.message || "Gagal menyimpan data." });
             } else {
                 setModalOpen(false);
+                await clearFailuresCache();
                 fetchFailures();
                 resetForm();
             }
@@ -254,7 +249,7 @@ export default function Failure() {
     };
 
     const operatorOptions = useMemo(() => operators.map(u => ({ value: u.user_id, label: u.name })), [operators]);
-    const machineOptions = useMemo(() => machines.map(m => ({ value: m.machine_id, label: m.nama_mesin })), [machines]);
+    const machineOptions = useMemo(() => machines.map(m => ({ value: m.machine_id, label: m.name })), [machines]);
     const burdenOptions = [
         { value: "KANTOR", label: "Kantor" },
         { value: "OPERATOR", label: "Operator" }
