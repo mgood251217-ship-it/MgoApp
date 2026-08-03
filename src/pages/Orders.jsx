@@ -17,13 +17,16 @@ import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
 import { getCachedInitials } from "../services/apiCache";
+import config from "../services/config";
 
 export default function Orders() {
+    const sse = config.serverUrl + `/api/sse.php?}`;
     const navigate = useNavigate();
     const [ordersOnline, setOrdersOnline] = useState([]);
     const [ordersOffline, setOrdersOffline] = useState([]);
     const [operators, setOperators] = useState([]);
     const initialLoadRef = useRef(false);
+    const lastOrderUpdateRef = useRef(0);
     
     const [search, setSearch] = useState("");
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -75,6 +78,7 @@ export default function Orders() {
     }, []);
 
     const loadData = useCallback(async () => {
+
         try {
             const res = await api.get("", {
                 params: {
@@ -109,7 +113,35 @@ export default function Orders() {
         return () => {
             window.clearTimeout(timeoutId);
         };
-    }, [loadData, getOperators]); 
+    }, [loadData, getOperators]);
+
+    useEffect(() => {
+        const sseUrl = config.serverUrl + `/api/sse.php`;
+        const eventSource = new EventSource(sseUrl, { withCredentials: true });
+
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.order_updated_at && data.order_updated_at > lastOrderUpdateRef.current) {
+                    if (lastOrderUpdateRef.current !== 0) {
+                        loadData();
+                    }
+                    lastOrderUpdateRef.current = data.order_updated_at;
+                }
+            } catch (err) {
+                console.error("Gagal parse SSE data", err);
+            }
+        };
+
+        eventSource.onerror = (error) => {
+            console.error("Koneksi SSE terputus", error);
+            eventSource.close();
+        };
+
+        return () => {
+            eventSource.close();
+        };
+    }, [loadData]);
 
     const handlePayClick = useCallback((row) => {
         setSelectedOrder(row);
