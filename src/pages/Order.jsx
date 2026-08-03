@@ -56,6 +56,25 @@ export default function Order() {
         }, 100);
     };
 
+    const focusNextField = () => {
+        setTimeout(() => {
+            const panjangInput = document.querySelector('input[name="panjang"]');
+            const qtyInput = document.querySelector('input[name="qty"]');
+            
+            if (panjangInput && panjangInput.offsetParent !== null) {
+                panjangInput.focus();
+                if (typeof panjangInput.select === 'function') panjangInput.select();
+            } 
+            else if (qtyInput && qtyInput.offsetParent !== null) {
+                qtyInput.focus();
+                if (typeof qtyInput.select === 'function') qtyInput.select();
+            }
+            else {
+                focusCategoryField();
+            }
+        }, 150);
+    };
+
     const loadOrderData = useCallback(async () => {
         try {
             const res = await api.get("", {
@@ -156,11 +175,15 @@ export default function Order() {
                 setAlertConfig({ show: true, type: "error", message: res.data.message || "Gagal menyimpan item." });
             } else {
                 setInitialFormItem({
-                    order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
+                    order_item_id: "", 
+                    category_id: submittedForm.category_id, 
+                    product_id: submittedForm.product_id, 
+                    panjang: "", lebar: "",
                     qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
                 });
                 loadOrderData();
-                focusCategoryField();
+                
+                focusNextField();
             }
         } catch (err) {
             const errorMsg = err.response?.data?.message || err.message || "Terjadi kesalahan sistem.";
@@ -308,8 +331,6 @@ export default function Order() {
             <div style={{ display: "flex", gap: "24px", marginTop: "24px", alignItems: "flex-start" }}>
                 <div style={{ width: "40%", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "8px", border: "1px solid var(--border)" }}>
                     <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
-                    
-                    {/* Memanggil Komponen yang sudah di pisah */}
                     <OrderItemForm 
                         initialData={initialFormItem}
                         isSubmitting={isSubmitting}
@@ -324,7 +345,6 @@ export default function Order() {
                             qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
                         })}
                     >
-                        {/* Anak elemen (children) dimasukkan ke dalam form jika diperlukan */}
                         <div style={{ padding: "12px", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", borderRadius: "6px", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--text)" }}>Estimasi Harga:</span>
                             <span style={{ fontWeight: "bold", color: "var(--success)", fontSize: "16px" }}>
