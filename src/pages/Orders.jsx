@@ -16,7 +16,7 @@ import PaymentModal from "../components/PaymentModal/PaymentModal";
 import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
-import { getCachedInitials } from "../services/apiCache";
+import { getCachedInitials, getCachedOrderDetail } from "../services/apiCache";
 import config from "../services/config";
 
 export default function Orders() {
@@ -155,11 +155,8 @@ export default function Orders() {
 
     const handleViewOrder = useCallback(async (row) => {
         try {
-            const res = await api.get("", { 
-                params: { action: "order_detail", order_id: row.order_id } 
-            });
-            const data = res.data?.data || { total: 0, items: [], diskon_per_produk: {} };
-            setViewOrderData(data);
+            const res = await getCachedOrderDetail(row.order_id);
+            setViewOrderData(res || { total: 0, items: [], diskon_per_produk: {} });
             setViewOrderDetails(row);
             setViewModalOpen(true);
         } catch (err) {}

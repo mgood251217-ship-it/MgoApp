@@ -5,12 +5,14 @@ const memoryCache = {
     initials: null,
     machines: null,
     locations: null,
+    storeNames: null,
     failures: null,
     categories: null,
     productsByCategory: {},
     finishingsByCategory: {},
     paginatedProducts: {},
-    finishings: null
+    finishings: null,
+    orderDetail: {},
 };
 
 export const getCachedUsers = async () => {
@@ -52,6 +54,17 @@ export const getCachedLocations = async () => {
         const res = await api.get("", { params: { action: "locations"}});
         memoryCache.locations = res.data?.data || [];
         return memoryCache.locations;
+    } catch (err) {
+        return [];
+    }
+}
+
+export const getCachedStoreNames = async () => {
+    if (memoryCache.storeNames) return memoryCache.storeNames;
+    try {
+        const res = await api.get("", { params: { action: "store_names" } });
+        memoryCache.storeNames = res.data?.data || [];
+        return memoryCache.storeNames;
     } catch (err) {
         return [];
     }
@@ -135,6 +148,19 @@ export const getCachedFinishings = async () => {
     }
 };
 
+export const getCachedOrderDetail = async (orderId) => {
+    const cacheKey = orderId;
+    if (memoryCache.orderDetail[cacheKey]) return memoryCache.orderDetail[cacheKey];
+    try {
+        const res = await api.get("", { params: { action: "order_detail", order_id: orderId } });
+        const result = res.data?.data || null;
+        memoryCache.orderDetail[cacheKey] = result;
+        return result;
+    }catch (err) {
+        return [];
+    }
+}
+
 export const clearUsersCache = () => {
     memoryCache.users = null;
     memoryCache.initials = null;
@@ -167,6 +193,10 @@ export const clearCategoryCache = () => {
     clearProductCache();
     clearFinishingCache();
 };
+
+export const clearCacheOrderDetail = (orderId) => {
+    memoryCache.orderDetail[orderId] = null;
+}
 
 export const clearCache = () => {
     memoryCache.categories = null;

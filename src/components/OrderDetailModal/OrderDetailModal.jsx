@@ -10,6 +10,7 @@ import { formatRupiah } from "../../services/helpers";
 import { FOLDER_STATUS_LABEL, formatUkuran, buildRenamedFilenameWithQuantity } from "../../services/folderHelper";
 import useOrderFolderStatus from "../../hooks/useOrderFolderStatus";
 import ChangeFolderIconModal from "../ChangeFolderIconModal/ChangeFolderIconModal";
+import { getCachedStoreNames } from "../../services/apiCache";
 
 export default function OrderDetailModal({ open, onClose, viewOrderDetails, viewOrderData, setAlertConfig }) {
     const folder = useOrderFolderStatus(setAlertConfig);
@@ -36,8 +37,8 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
 
     const loadStores = useCallback(async () => {
         try {
-            const res = await api.get("", { params: { action: "store_names" } });
-            setStores(res.data?.data || []);
+            const res = await getCachedStoreNames();
+            setStores(res);
         } catch (err) {
             setAlertConfig({ type: "error", message: "Gagal memuat data store" });
         }

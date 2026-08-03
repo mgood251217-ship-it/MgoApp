@@ -12,6 +12,7 @@ import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { formatRupiah } from "../services/helpers";
 import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
+import { getCachedOrderDetail, getCachedStoreNames, clearCacheOrderDetail } from "../services/apiCache";
 
 export default function Order() {
     const { order_id } = useParams();
@@ -77,10 +78,8 @@ export default function Order() {
 
     const loadOrderData = useCallback(async () => {
         try {
-            const res = await api.get("", {
-                params: { action: "order_detail", order_id: order_id }
-            });
-            const data = res.data?.data || {};
+            const res = await getCachedOrderDetail(order_id);
+            const data = res || {};
             const loadedItems = data.items || [];
             
             setItems(loadedItems);
@@ -99,8 +98,8 @@ export default function Order() {
 
     const loadStores = useCallback(async () => {
         try {
-            const res = await api.get("", { params: { action: "store_names" } });
-            setStores(res.data?.data || []);
+            const res = await getCachedStoreNames();
+            setStores(res || []);
         } catch (err) {}
     }, []);
 
@@ -181,6 +180,7 @@ export default function Order() {
                     panjang: "", lebar: "",
                     qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
                 });
+                await clearCacheOrderDetail(order_id);
                 loadOrderData();
                 
                 focusNextField();
@@ -198,6 +198,7 @@ export default function Order() {
             const payload = new FormData();
             payload.append("order_item_id", itemId);
             await api.post("", payload, { params: { action: "delete_order_item" } });
+            await clearCacheOrderDetail(order_id);
             loadOrderData();
         } catch (err) {}
     };
@@ -218,6 +219,7 @@ export default function Order() {
             payload.append("store_id", maklunData.store_id);
             await api.post("", payload, { params: { action: "update_maklun" } });
             setMaklunModalOpen(false);
+            await clearCacheOrderDetail(order_id);
             loadOrderData();
         } catch (err) {}
     };
@@ -229,6 +231,7 @@ export default function Order() {
             payload.append("order_id", order_id);
             payload.append("note", noteInput);
             await api.post("", payload, { params: { action: "update_customer_note" } });
+            await clearCacheOrderDetail(order_id);
             loadOrderData();
         } catch (err) {}
     };
