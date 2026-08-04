@@ -20,7 +20,6 @@ import { getCachedInitials, getCachedOrderDetail } from "../services/apiCache";
 import config from "../services/config";
 
 export default function Orders() {
-    const sse = config.serverUrl + `/api/sse.php?}`;
     const navigate = useNavigate();
     const [ordersOnline, setOrdersOnline] = useState([]);
     const [ordersOffline, setOrdersOffline] = useState([]);
@@ -116,30 +115,43 @@ export default function Orders() {
     }, [loadData, getOperators]);
 
     useEffect(() => {
-        const sseUrl = config.serverUrl + `/api/sse.php`;
-        const eventSource = new EventSource(sseUrl, { withCredentials: true });
+        const sseUrl = config.serverUrl + `/api/sse.php?modules=dataset`;
+        let eventSource = null;
 
-        eventSource.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.order_updated_at && data.order_updated_at > lastOrderUpdateRef.current) {
-                    if (lastOrderUpdateRef.current !== 0) {
-                        loadData();
+        const connectSSE = () => {
+            eventSource = new EventSource(sseUrl, { withCredentials: true });
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.orders_updated_at && data.orders_updated_at > lastOrderUpdateRef.current) {
+                        if (lastOrderUpdateRef.current !== 0) {
+                            loadData();
+                        }
+                        lastOrderUpdateRef.current = data.orders_updated_at;
                     }
-                    lastOrderUpdateRef.current = data.order_updated_at;
+                } catch (err) {
+                    console.log("Error parsing SSE data:", err);
                 }
-            } catch (err) {
-                console.error("Gagal parse SSE data", err);
-            }
+            };
+
+            eventSource.onerror = (error) => {
+                console.warn("Koneksi SSE terputus. Mencoba menyambung kembali dalam 3 detik...");
+                eventSource.close(); 
+                
+                setTimeout(() => {
+                    connectSSE();
+                }, 3000);
+            };
         };
 
-        eventSource.onerror = (error) => {
-            console.error("Koneksi SSE terputus", error);
-            eventSource.close();
-        };
+        connectSSE();
 
         return () => {
-            eventSource.close();
+            if (eventSource) {
+                eventSource.close();
+            }
         };
     }, [loadData]);
 
