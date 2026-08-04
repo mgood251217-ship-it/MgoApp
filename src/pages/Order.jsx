@@ -142,6 +142,25 @@ export default function Order() {
         return () => clearTimeout(timeoutId);
     }, [activeFormItem, order_id]);
 
+    useEffect(() => {
+        const notifyServerOnLeave = () => {
+            if (!order_id) return;
+            
+            const payload = new FormData();
+            payload.append("order_id", order_id);
+            
+            api.post("", payload, { params: { action: "trigger_order_update" } })
+               .catch(() => {});
+        };
+
+        window.addEventListener("beforeunload", notifyServerOnLeave);
+
+        return () => {
+            window.removeEventListener("beforeunload", notifyServerOnLeave);
+            notifyServerOnLeave();
+        };
+    }, [order_id]);
+
     const handleAddItem = async (submittedForm) => {
         if (!submittedForm.category_id || !submittedForm.product_id || !submittedForm.qty) {
             setAlertConfig({ show: true, type: "error", message: "Kategori, Produk, dan Quantity wajib diisi!" });

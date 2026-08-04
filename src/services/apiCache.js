@@ -260,17 +260,39 @@ export const getCachedFinishings = async () => {
 };
 
 export const getCachedOrderDetail = async (orderId) => {
-    const cacheKey = orderId;
+    const cacheKey = String(orderId);
+    const dataset = await getServerDataset();
+    const globalOrderUpdate = dataset.orders_updated_at || 0;
+    
+    let specificOrderUpdate = 0;
+    if (dataset.order_trigger && dataset.order_trigger[cacheKey]) {
+        specificOrderUpdate = dataset.order_trigger[cacheKey]; 
+    }
+
+    const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
+
     const orderMap = getStorage("orderDetail", {});
-    if (orderMap[cacheKey]) return orderMap[cacheKey];
+    const cachedItem = orderMap[cacheKey];
+
+    if (cachedItem && cachedItem.updatedAt >= serverTime) {
+        return cachedItem.data;
+    }
+
     try {
         const res = await api.get("", { params: { action: "order_detail", order_id: orderId } });
         const result = res.data?.data || null;
-        orderMap[cacheKey] = result;
-        setStorage("orderDetail", orderMap);
+
+        if (result) {
+            orderMap[cacheKey] = {
+                data: result,
+                updatedAt: serverTime > 0 ? serverTime : Date.now()
+            };
+            setStorage("orderDetail", orderMap);
+        }
+
         return result;
     } catch (err) {
-        return [];
+        return cachedItem ? cachedItem.data : [];
     }
 };
 
