@@ -10,6 +10,7 @@ import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
 import { formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
+import { getCachedTransactionsDetail } from "../../services/apiCache";
 
 
 export default function TransaksiDetail() {
@@ -30,22 +31,12 @@ export default function TransaksiDetail() {
     const fetchTransactions = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "transactions_detail",
-                    start_date: startDate,
-                    end_date: endDate,
-                    search: search
-                } 
-            });
-
-            if (res.data?.success) {
-                setOrders(res.data.data.orders || []);
-                setItemsByOrder(res.data.data.itemsByOrder || {});
-                setPaymentsByOrder(res.data.data.paymentsByOrder || {});
-                setTransfersByOrder(res.data.data.transfersByOrder || {});
-                setNotesByOrder(res.data.data.notesByOrder || {});
-            }
+            const res = await getCachedTransactionsDetail(startDate, endDate, search);
+                setOrders(res.orders || []);
+                setItemsByOrder(res.itemsByOrder || {});
+                setPaymentsByOrder(res.paymentsByOrder || {});
+                setTransfersByOrder(res.transfersByOrder || {});
+                setNotesByOrder(res.notesByOrder || {});
         } catch (error) {
             console.error(error);
         } finally {

@@ -8,6 +8,7 @@ import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportPelunasanExcel } from "../../services/excelService";
+import { getCachedTransactionsCapture } from "../../services/apiCache";
 
 export default function Pelunasan() {
     const navigate = useNavigate();
@@ -26,27 +27,18 @@ export default function Pelunasan() {
     const fetchPelunasan = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "transactions_capture",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
+            const res = await getCachedTransactionsCapture();
 
-            if (res.data?.success) {
-                const rawData = res.data.data.pelunasan.data || [];
-                // Filter hanya status_label PELUNASAN jika diperlukan, atau langsung dari response API
-                const filteredData = rawData.filter(item => item.status_label === "PELUNASAN");
-                
-                setPelunasanData(filteredData);
-                setSummary({
-                    total_tf: res.data.data.pelunasan.total_tf || 0,
-                    total_cash: res.data.data.pelunasan.total_cash || 0,
-                    grand_total: res.data.data.pelunasan.grand_total || 0,
-                    total_transaksi: filteredData.length
-                });
-            }
+            const rawData = res.pelunasan.data || [];
+            const filteredData = rawData.filter(item => item.status_label === "PELUNASAN");
+            
+            setPelunasanData(filteredData);
+            setSummary({
+                total_tf: res.pelunasan.total_tf || 0,
+                total_cash: res.pelunasan.total_cash || 0,
+                grand_total: res.pelunasan.grand_total || 0,
+                total_transaksi: filteredData.length
+            });
         } catch (error) {
             console.error(error);
         } finally {

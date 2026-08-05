@@ -6,6 +6,7 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { getTodayDate } from "../../services/helpers";
 import { exportPemakaianBahanExcel } from "../../services/excelService";
+import { getCachedProductUsed } from "../../services/apiCache";
 
 export default function PemakaianBahan() {
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -17,16 +18,10 @@ export default function PemakaianBahan() {
     const fetchPemakaianBahan = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "product_used",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
+            const res = await getCachedProductUsed(startDate, endDate);
 
-            if (res.data?.success) {
-                setPemakaianBahanData(res.data.data || []);
+            if (res) {
+                setPemakaianBahanData(res);
             }
         } catch (error) {
             console.error(error);

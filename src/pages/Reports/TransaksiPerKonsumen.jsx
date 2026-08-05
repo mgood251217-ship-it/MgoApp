@@ -8,6 +8,7 @@ import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerKonsumenExcel } from "../../services/excelService";
+import { getCachedAllOrderDetail } from "../../services/apiCache";
 
 export default function TransaksiPerKonsumen() {
     const navigate = useNavigate();
@@ -20,17 +21,8 @@ export default function TransaksiPerKonsumen() {
     const fetchTransaksiKonsumen = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "all_detail_order",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
-
-            if (res.data?.success) {
-                setTransaksiKonsumenData(res.data.data.transaksi_konsumen || {});
-            }
+            const res = await getCachedAllOrderDetail(startDate, endDate);
+            setTransaksiKonsumenData(res.transaksi_konsumen || {});
         } catch (error) {
             console.error(error);
         } finally {

@@ -6,6 +6,7 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
 import { exportTransaksiBulananExcel } from "../../services/excelService";
+import { getCachedTransactionsCapture } from "../../services/apiCache";
 
 export default function TransaksiBulanan() {
     const todayObj = new Date();
@@ -31,24 +32,16 @@ export default function TransaksiBulanan() {
     const fetchBulanan = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "transactions_capture",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
+            const res = await getCachedTransactionsCapture();
 
-            if (res.data?.success) {
-                const rawData = res.data.data.rekap?.data_per_tanggal || [];
-                setBulananData(rawData);
-                setSummary({
-                    total_tf: res.data.data.rekap?.total_bulan_tf || 0,
-                    total_cash: res.data.data.rekap?.total_bulan_cash || 0,
-                    grand_total: res.data.data.rekap?.total_bulan || 0,
-                    total_transaksi: res.data.data.rekap?.total_transaksi_all || 0
-                });
-            }
+            const rawData = res.rekap?.data_per_tanggal || [];
+            setBulananData(rawData);
+            setSummary({
+                total_tf: res.rekap?.total_bulan_tf || 0,
+                total_cash: res.rekap?.total_bulan_cash || 0,
+                grand_total: res.rekap?.total_bulan || 0,
+                total_transaksi: res.rekap?.total_transaksi_all || 0
+            });
         } catch (error) {
             console.error(error);
         } finally {

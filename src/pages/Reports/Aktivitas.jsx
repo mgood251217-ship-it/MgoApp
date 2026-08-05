@@ -6,6 +6,7 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportAktivitasExcel } from "../../services/excelService";
+import { getCachedActivity, getCachedOrderArchive } from "../../services/apiCache";
 
 export default function Aktivitas() {
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -19,29 +20,17 @@ export default function Aktivitas() {
         setLoading(true);
         try {
             const [resActivity, resArchive] = await Promise.all([
-                api.get("", { 
-                    params: { 
-                        action: "activity",
-                        start_date: startDate,
-                        end_date: endDate
-                    } 
-                }),
-                api.get("", { 
-                    params: { 
-                        action: "order_archive",
-                        start_date: startDate,
-                        end_date: endDate
-                    } 
-                })
+                getCachedActivity(startDate, endDate),
+                getCachedOrderArchive(startDate, endDate)
             ]);
 
-            if (resActivity.data?.success) {
-                const mappedActivities = (resActivity.data.data || []).map(({ done, ...rest }) => rest);
+            if (resActivity) {
+                const mappedActivities = (resActivity || []).map(({ done, ...rest }) => rest);
                 setActivityData(mappedActivities);
             }
 
-            if (resArchive.data?.success) {
-                const archiveValues = Object.values(resArchive.data.data || {});
+            if (resArchive) {
+                const archiveValues = Object.values(resArchive || {});
                 setArchiveData(archiveValues);
             }
         } catch (error) {

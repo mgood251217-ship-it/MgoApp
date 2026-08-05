@@ -4,6 +4,7 @@ import api from "../api/axios";
 import Header from "../components/Header/Header";
 import Card from "../components/Card/Card";
 import { formatRupiah } from "../services/helpers";
+import { getCachedReport } from "../services/apiCache";
 
 export default function Report() {
     const [data, setData] = useState(null);
@@ -12,8 +13,8 @@ export default function Report() {
     useEffect(() => {
         const fetchReport = async () => {
             try {
-                const res = await api.get("", { params: { action: "report" } });
-                setData(res.data?.data || null);
+                const res = await getCachedReport();
+                setData(res || null);
             } catch (error) {
                 console.error(error);
             }

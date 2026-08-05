@@ -6,6 +6,7 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportStatistikKaryawanExcel } from "../../services/excelService";
+import { getCachedStatistics } from "../../services/apiCache";
 
 export default function StatistikKaryawan() {
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -23,16 +24,10 @@ export default function StatistikKaryawan() {
     const fetchStatistik = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "statistics",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
+            const res = await getCachedStatistics(startDate, endDate);
 
-            if (res.data?.success && res.data.data) {
-                const { users, receiverCounts, pickupCounts, settingCounts, omsetPerUser } = res.data.data;
+            if (res) {
+                const { users, receiverCounts, pickupCounts, settingCounts, omsetPerUser } = res;
                 
                 const normUsers = users || {};
                 const normReceiver = receiverCounts || {};

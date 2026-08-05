@@ -8,6 +8,7 @@ import Table from "../../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiHarianExcel } from "../../services/excelService";
 import Button from "../../components/Button/Button";
+import { getCachedTransactionsCapture } from "../../services/apiCache";
 
 export default function TransaksiHarian() {
     const navigate = useNavigate();
@@ -26,23 +27,14 @@ export default function TransaksiHarian() {
     const fetchHarian = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "transactions_capture",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
+            const res = await getCachedTransactionsCapture();
+            setHarianData(res.harian.data || []);
+            setSummary({
+                total_tf: res.harian.total_tf || 0,
+                total_cash: res.harian.total_cash || 0,
+                grand_total: res.harian.grand_total || 0,
+                total_transaksi: res.rekap?.total_transaksi_all || 0
             });
-
-            if (res.data?.success) {
-                setHarianData(res.data.data.harian.data || []);
-                setSummary({
-                    total_tf: res.data.data.harian.total_tf || 0,
-                    total_cash: res.data.data.harian.total_cash || 0,
-                    grand_total: res.data.data.harian.grand_total || 0,
-                    total_transaksi: res.data.data.rekap?.total_transaksi_all || 0
-                });
-            }
         } catch (error) {
             console.error(error);
         } finally {

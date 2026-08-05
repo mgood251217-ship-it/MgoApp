@@ -302,7 +302,9 @@ export const getCachedOrdersAnalysis = async () => {
 export const getCachedOrders = async (startDate, endDate, search) => {
     const cacheKey = `${startDate}_${endDate}_${search}`;
     const dataset = await getServerDataset();
-    const serverTime = dataset.orders_updated_at || 0;
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
     const ordersMap = getStorage("orders", {});
 
     if (ordersMap[cacheKey] && ordersMap[cacheKey].updatedAt >= serverTime) {
@@ -341,6 +343,21 @@ export const getCachedOrderDetail = async (orderId) => {
     const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
 
     const orderMap = getStorage("orderDetail", {});
+    const currentMs = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    let mapChanged = false;
+
+    for (const key in orderMap) {
+        if (orderMap[key] && currentMs - (orderMap[key].localSavedAt || 0) > oneDayMs) {
+            delete orderMap[key];
+            mapChanged = true;
+        }
+    }
+
+    if (mapChanged) {
+        setStorage("orderDetail", orderMap);
+    }
+
     const cachedItem = orderMap[cacheKey];
 
     if (cachedItem && cachedItem.updatedAt >= serverTime) {
@@ -354,7 +371,8 @@ export const getCachedOrderDetail = async (orderId) => {
         if (result) {
             orderMap[cacheKey] = {
                 data: result,
-                updatedAt: serverTime > 0 ? serverTime : Date.now()
+                updatedAt: serverTime > 0 ? serverTime : currentMs,
+                localSavedAt: currentMs
             };
             setStorage("orderDetail", orderMap);
         }
@@ -362,6 +380,366 @@ export const getCachedOrderDetail = async (orderId) => {
         return result;
     } catch (err) {
         return cachedItem ? cachedItem.data : [];
+    }
+};
+
+export const getCachedTransactionsCapture = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const transactionsMap = getStorage("transactionsCapture", {});
+
+    if (transactionsMap[cacheKey] && transactionsMap[cacheKey].updatedAt >= serverTime) {
+        return transactionsMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "transactions_capture",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || {};
+
+        transactionsMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("transactionsCapture", transactionsMap);
+        
+        return result;
+    } catch (err) {
+        return transactionsMap[cacheKey]?.data || {};
+    }
+};
+
+export const getCachedTransactionsDetail = async (startDate, endDate, search) => {
+    const cacheKey = `${startDate}_${endDate}_${search}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const transactionsDetailMap = getStorage("transactionsDetail", {});
+
+    if (transactionsDetailMap[cacheKey] && transactionsDetailMap[cacheKey].updatedAt >= serverTime) {
+        return transactionsDetailMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "transactions_detail",
+                start_date: startDate,
+                end_date: endDate,
+                search: search
+            }
+        });
+        
+        const result = res.data?.data || {};
+
+        transactionsDetailMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("transactionsDetail", transactionsDetailMap);
+        
+        return result;
+    } catch (err) {
+        return transactionsDetailMap[cacheKey]?.data || {};
+    }
+};
+
+export const getCachedAllOrderDetail = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const allOrderDetailMap = getStorage("allOrderDetail", {});
+
+    if (allOrderDetailMap[cacheKey] && allOrderDetailMap[cacheKey].updatedAt >= serverTime) {
+        return allOrderDetailMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "all_detail_order",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || {};
+
+        allOrderDetailMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("allOrderDetail", allOrderDetailMap);
+        
+        return result;
+    } catch (err) {
+        return allOrderDetailMap[cacheKey]?.data || {};
+    }
+};
+
+export const getCachedPiutang = async () => {
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const cachedData = getStorage("piutang", null);
+    const cachedTime = getStorage("piutang_time", 0);
+
+    if (cachedData && cachedTime >= serverTime) {
+        return cachedData;
+    }
+
+    try {
+        const res = await api.get("", { params: { action: "piutang" } });
+        const result = res.data?.data || { data: [], total: 0 };
+        setStorage("piutang", result);
+        setStorage("piutang_time", serverTime > 0 ? serverTime : Date.now());
+        return result;
+    } catch (err) {
+        return cachedData || { data: [], total: 0 };
+    }
+};
+
+export const getCachedReport = async () => {
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const cachedData = getStorage("report", null);
+    const cachedTime = getStorage("report_time", 0);
+
+    if (cachedData && cachedTime >= serverTime) {
+        return cachedData;
+    }
+
+    try {
+        const res = await api.get("", { params: { action: "report" } });
+        const result = res.data?.data || { data: [], total: 0 };
+        setStorage("report", result);
+        setStorage("report_time", serverTime > 0 ? serverTime : Date.now());
+        return result;
+    } catch (err) {
+        return cachedData || { data: [], total: 0 };
+    }
+};
+
+export const getCachedProductUsed = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const serverTime = orderTime;
+    const productUsedMap = getStorage("productUsed", {});
+
+    if (productUsedMap[cacheKey] && productUsedMap[cacheKey].updatedAt >= serverTime) {
+        return productUsedMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "product_used",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || [];
+
+        productUsedMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("productUsed", productUsedMap);
+        
+        return result;
+    } catch (err) {
+        return productUsedMap[cacheKey]?.data || [];
+    }
+};
+
+export const getCachedOmsetItem = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const serverTime = orderTime;
+    const omsetItemMap = getStorage("omsetItem", {});
+
+    if (omsetItemMap[cacheKey] && omsetItemMap[cacheKey].updatedAt >= serverTime) {
+        return omsetItemMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "omset_item",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || [];
+
+        omsetItemMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("omsetItem", omsetItemMap);
+        
+        return result;
+    } catch (err) {
+        return omsetItemMap[cacheKey]?.data || [];
+    }
+};
+
+export const getCachedStatistics = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const statisticMap = getStorage("statistic", {});
+
+    if (statisticMap[cacheKey] && statisticMap[cacheKey].updatedAt >= serverTime) {
+        return statisticMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "statistics",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || {};
+
+        statisticMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("statistic", statisticMap);
+        
+        return result;
+    } catch (err) {
+        return statisticMap[cacheKey]?.data || {};
+    }
+};
+
+export const getCachedFinance = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const financeTime = dataset.finance_updated_at || 0;
+    const serverTime = Math.max(orderTime, financeTime);
+    const financeMap = getStorage("finance", {});
+
+    if (financeMap[cacheKey] && financeMap[cacheKey].updatedAt >= serverTime) {
+        return financeMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "finance",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || {};
+
+        financeMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("finance", financeMap);
+        
+        return result;
+    } catch (err) {
+        return financeMap[cacheKey]?.data || {};
+    }
+};
+
+export const getCachedActivity = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const activityMap = getStorage("activity", {});
+
+    if (activityMap[cacheKey] && activityMap[cacheKey].updatedAt >= serverTime) {
+        return activityMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "activity",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || [];
+
+        activityMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("activity", activityMap);
+        
+        return result;
+    } catch (err) {
+        return activityMap[cacheKey]?.data || [];
+    }
+};
+
+export const getCachedOrderArchive = async (startDate, endDate) => {
+    const cacheKey = `${startDate}_${endDate}`;
+    const dataset = await getServerDataset();
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
+    const archiveMap = getStorage("orderArchive", {});
+
+    if (archiveMap[cacheKey] && archiveMap[cacheKey].updatedAt >= serverTime) {
+        return archiveMap[cacheKey].data;
+    }
+
+    try {
+        const res = await api.get("", {
+            params: {
+                action: "order_archive",
+                start_date: startDate,
+                end_date: endDate
+            }
+        });
+        
+        const result = res.data?.data || {};
+
+        archiveMap[cacheKey] = { 
+            data: result, 
+            updatedAt: serverTime > 0 ? serverTime : Date.now() 
+        };
+        setStorage("orderArchive", archiveMap);
+        
+        return result;
+    } catch (err) {
+        return archiveMap[cacheKey]?.data || {};
     }
 };
 

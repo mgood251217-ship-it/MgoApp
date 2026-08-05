@@ -6,6 +6,7 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportOmsetPerItemExcel } from "../../services/excelService";
+import { getCachedOmsetItem } from "../../services/apiCache";
 
 export default function OmsetPerItem() {
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -18,21 +19,13 @@ export default function OmsetPerItem() {
     const fetchOmsetItem = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "omset_item",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
+            const res = await getCachedOmsetItem(startDate, endDate);
 
-            if (res.data?.success) {
-                const data = res.data.data || [];
-                setOmsetItemData(data);
-                
-                const total = data.reduce((acc, curr) => acc + Number(curr.total_omset), 0);
-                setTotalOmsetKeseluruhan(total);
-            }
+            const data = res || [];
+            setOmsetItemData(data);
+            
+            const total = data.reduce((acc, curr) => acc + Number(curr.total_omset), 0);
+            setTotalOmsetKeseluruhan(total);
         } catch (error) {
             console.error(error);
         } finally {

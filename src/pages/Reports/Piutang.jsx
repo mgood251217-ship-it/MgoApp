@@ -8,6 +8,7 @@ import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
 import { formatRupiah, formatKeInternasional } from "../../services/helpers";
 import { exportPiutangExcel } from "../../services/excelService";
+import { getCachedPiutang } from "../../services/apiCache";
 
 export default function Piutang() {
     const navigate = useNavigate();
@@ -19,13 +20,11 @@ export default function Piutang() {
     const fetchPiutang = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { action: "piutang" } 
-            });
+            const res = await getCachedPiutang();
 
-            if (res.data?.success) {
-                setPiutangData(res.data.data.data || []);
-                setTotalPiutang(res.data.data.total || 0);
+            if (res) {
+                setPiutangData(res.data || []);
+                setTotalPiutang(res.total || 0);
             }
         } catch (error) {
             console.error(error);

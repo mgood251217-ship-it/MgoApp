@@ -10,6 +10,7 @@ import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportKeuanganExcel } from "../../services/excelService";
+import { getCachedFinance } from "../../services/apiCache";
 
 export default function Keuangan() {
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -20,12 +21,10 @@ export default function Keuangan() {
     const [expenditureData, setExpenditureData] = useState([]);
     const [incomeData, setIncomeData] = useState([]);
 
-    // Modal States
     const [showExpModal, setShowExpModal] = useState(false);
     const [showIncModal, setShowIncModal] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(null); // State untuk modal foto
+    const [selectedImage, setSelectedImage] = useState(null);
     
-    // Form States
     const [editExpData, setEditExpData] = useState(null);
     const [editIncData, setEditIncData] = useState(null);
     
@@ -35,18 +34,12 @@ export default function Keuangan() {
     const fetchFinance = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { 
-                params: { 
-                    action: "finance",
-                    start_date: startDate,
-                    end_date: endDate
-                } 
-            });
+            const res = await getCachedFinance(startDate, endDate);
 
-            if (res.data?.success) {
-                setFinanceData(res.data.data.finance || []);
-                setExpenditureData(res.data.data.expenditure || []);
-                setIncomeData(res.data.data.income || []);
+            if (res) {
+                setFinanceData(res.finance || []);
+                setExpenditureData(res.expenditure || []);
+                setIncomeData(res.income || []);
             }
         } catch (error) {
             console.error(error);
