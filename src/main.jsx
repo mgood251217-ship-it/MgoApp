@@ -25,5 +25,4 @@ async function initApp() {
   )
 }
 
-// Jalankan fungsinya
 initApp();

@@ -16,7 +16,7 @@ import PaymentModal from "../components/PaymentModal/PaymentModal";
 import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
-import { getCachedInitials, getCachedOrderDetail } from "../services/apiCache";
+import { getCachedInitials, getCachedOrders, getCachedOrderDetail } from "../services/apiCache";
 import config from "../services/config";
 
 export default function Orders() {
@@ -79,16 +79,9 @@ export default function Orders() {
     const loadData = useCallback(async () => {
 
         try {
-            const res = await api.get("", {
-                params: {
-                    action: "get_orders",
-                    search: search,
-                    start_date: startDate,
-                    end_date: endDate
-                }
-            });
+            const res = await getCachedOrders(startDate, endDate, search);
 
-            const responseData = res.data?.data || {};
+            const responseData = res;
             setOrdersOnline(formatTableData(responseData.online ?? []));
             setOrdersOffline(formatTableData(responseData.offline ?? []));
         } catch (err) {}
