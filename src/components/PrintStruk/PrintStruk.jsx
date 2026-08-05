@@ -3,6 +3,7 @@ import api from "../../api/axios";
 import { formatRupiah, formatTime } from "../../services/helpers";
 import config from "../../services/config";
 import "./PrintStruk.css";
+import { getCachedStoreData } from "../../services/apiCache";
 
 export default function PrintStruk({ orderId, onClose }) {
     const [data, setData] = useState(null);
@@ -15,7 +16,7 @@ export default function PrintStruk({ orderId, onClose }) {
             try {
                 const [resOrder, resStore, resPayment] = await Promise.all([
                     api.get("", { params: { action: "order_detail", order_id: orderId } }),
-                    api.get("", { params: { action: "store" } }),
+                    getCachedStoreData(),
                     api.get("", { params: { action: "order_payment", order_id: orderId } })
                 ]);
                 
@@ -23,8 +24,8 @@ export default function PrintStruk({ orderId, onClose }) {
                     setData(resOrder.data.data);
                 }
                 
-                if (resStore.data?.data) {
-                    setStore(resStore.data.data);
+                if (resStore) {
+                    setStore(resStore);
                 } else if (resStore.data) {
                     setStore(resStore.data);
                 }

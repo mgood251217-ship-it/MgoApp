@@ -95,6 +95,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         e.preventDefault();
         try {
             const payload = new FormData();
+            payload.append("order_id", viewOrderData.order.order_id);
             payload.append("order_item_id", maklunData.order_item_id);
             payload.append("store_id", maklunData.store_id);
             await api.post("", payload, { params: { action: "update_maklun" } });

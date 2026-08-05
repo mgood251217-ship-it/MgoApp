@@ -45,6 +45,27 @@ const getServerDataset = async () => {
     return datasetPromise;
 };
 
+export const getCachedStoreData = async () => {
+    const dataset = await getServerDataset();
+    const serverTime = dataset.store_data_updated_at || 0;
+    const cachedData = getStorage("storeData", null);
+    const cachedTime = getStorage("storeData_time", 0);
+
+    if (cachedData && cachedTime >= serverTime) {
+        return cachedData;
+    }
+
+    try {
+        const res = await api.get("", { params: { action: "store" } });
+        const result = res.data?.data || [];
+        setStorage("storeData", result);
+        setStorage("storeData_time", serverTime);
+        return result;
+    } catch (err) {
+        return cachedData || [];
+    }
+}
+
 export const getCachedUsers = async () => {
     const dataset = await getServerDataset();
     const serverTime = dataset.users_updated_at || 0;

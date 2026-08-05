@@ -5,6 +5,7 @@ import api from "../../api/axios";
 import { formatRupiah, formatTime } from "../../services/helpers";
 import config from "../../services/config";
 import "./PrintPdf.css";
+import { getCachedStoreData } from "../../services/apiCache";
 
 export default function PrintPdf({ orderId, onClose }) {
     const [data, setData] = useState(null);
@@ -17,12 +18,12 @@ export default function PrintPdf({ orderId, onClose }) {
             try {
                 const [resOrder, resStore, resPayment] = await Promise.all([
                     api.get("", { params: { action: "order_detail", order_id: orderId } }),
-                    api.get("", { params: { action: "store" } }),
+                    getCachedStoreData(),
                     api.get("", { params: { action: "order_payment", order_id: orderId } })
                 ]);
                 
                 if (resOrder.data?.data) setData(resOrder.data.data);
-                if (resStore.data?.data) setStore(resStore.data.data);
+                if (resStore) setStore(resStore);
                 else if (resStore.data) setStore(resStore.data);
                 if (resPayment.data?.data) setPaymentData(resPayment.data.data);
                 else if (resPayment.data) setPaymentData(resPayment.data);
