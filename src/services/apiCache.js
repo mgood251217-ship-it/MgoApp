@@ -259,6 +259,25 @@ export const getCachedFinishings = async () => {
     }
 };
 
+export const getCachedOrdersAnalysis = async () => {
+    const dataset = await getServerDataset();
+    const serverTime = dataset.orders_updated_at || 0;
+    const cachedData = getStorage("ordersAnalysis", null);
+    const cachedTime = getStorage("ordersAnalysis_time", 0);
+    if (cachedData && cachedTime >= serverTime) {
+        return cachedData;
+    }
+    try {
+        const res = await api.get("", { params: { action: "order_analysis" } });
+        const result = res.data?.data || { chart_30: {}, chart_365: {}, summary: {} };
+        setStorage("ordersAnalysis", result);
+        setStorage("ordersAnalysis_time", serverTime);
+        return result;
+    } catch (err) {
+        return cachedData || [];
+    }
+}
+
 export const getCachedOrders = async (startDate, endDate, search) => {
     const cacheKey = `${startDate}_${endDate}_${search}`;
     const dataset = await getServerDataset();

@@ -8,7 +8,7 @@ import Input from "../components/Input/Input";
 import Select from "../components/Select/Select";
 import Modal from "../components/Modal/Modal";
 import {
-    getCachedUsers, getCachedMachines, getCachedLocations,
+    getCachedUsers, getCachedMachines, getCachedLocations, getCachedOrdersAnalysis,
     clearUsersCache, clearMachinesCache, clearLocationsCache
 } from '../services/apiCache';
 import { Line, Bar } from 'react-chartjs-2';
@@ -73,13 +73,13 @@ export default function Store() {
                 getCachedUsers(),
                 getCachedMachines(),
                 getCachedLocations(),
-                api.get("", { params: { action: "order_analysis" } })
+                getCachedOrdersAnalysis()
             ]);
 
-            setUsers(resUsers ?? []);
-            setMachines(resMachines ?? []);
-            setLocations(resLocations ?? []);
-            setStats(resStats.data?.data ?? { chart_30: {}, chart_365: {}, summary: {} });
+            setUsers(resUsers);
+            setMachines(resMachines);
+            setLocations(resLocations);
+            setStats(resStats);
         } catch (error) {
             console.error(error);
         }
