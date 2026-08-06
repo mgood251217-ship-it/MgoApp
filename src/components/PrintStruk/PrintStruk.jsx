@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
-import { formatRupiah, formatTime } from "../../services/helpers";
+import { formatRupiah, formatTime, titleCase } from "../../services/helpers";
 import config from "../../services/config";
 import "./PrintStruk.css";
 import { getCachedStoreData } from "../../services/apiCache";
@@ -51,7 +51,7 @@ export default function PrintStruk({ orderId, onClose }) {
     if (!data || !store || !paymentData) return null;
 
     const storeId = store.store_id || "";
-    const storeName = store.name || store.branch || "MGO Store";
+    const storeName = titleCase(store.name || store.branch || "MGO Store");
     const storeAddress = store.address || "";
     const storePhone = store.nomor || "";
     

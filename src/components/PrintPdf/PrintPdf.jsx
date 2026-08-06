@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import api from "../../api/axios";
-import { formatRupiah, formatTime } from "../../services/helpers";
+import { formatRupiah, formatTime, titleCase } from "../../services/helpers";
 import config from "../../services/config";
 import "./PrintPdf.css";
 import { getCachedStoreData } from "../../services/apiCache";
@@ -37,7 +37,7 @@ export default function PrintPdf({ orderId, onClose }) {
     if (!data || !store || !paymentData) return null;
 
     const storeId = store.store_id || "";
-    const storeName = store.name || store.branch || "MGO Store";
+    const storeName = titleCase(store.name || store.branch || "MGO Store");
     const storeAddress = store.address || "";
     const storePhone = store.nomor || "";
     

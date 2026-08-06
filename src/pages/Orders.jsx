@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import Header from "../components/Header/Header";
@@ -24,8 +25,12 @@ export default function Orders() {
     const [ordersOnline, setOrdersOnline] = useState([]);
     const [ordersOffline, setOrdersOffline] = useState([]);
     const [operators, setOperators] = useState([]);
+    
     const initialLoadRef = useRef(false);
     const lastOrderUpdateRef = useRef(0);
+    const debounceTimerRef = useRef(null);
+    const isNameFocusedRef = useRef(false);
+    const nameInputWrapperRef = useRef(null);
     
     const [search, setSearch] = useState("");
     const [startDate, setStartDate] = useState(getTodayDate());
@@ -65,6 +70,10 @@ export default function Orders() {
         system: "OFFLINE"
     });
 
+    const [customerSuggestions, setCustomerSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [suggestionPos, setSuggestionPos] = useState({ top: 0, left: 0 });
+
     const formatTableData = useCallback((data) => {
         return data.map(row => ({
             ...row,
@@ -77,10 +86,8 @@ export default function Orders() {
     }, []);
 
     const loadData = useCallback(async () => {
-
         try {
             const res = await getCachedOrders(startDate, endDate, search);
-
             const responseData = res;
             setOrdersOnline(formatTableData(responseData.online ?? []));
             setOrdersOffline(formatTableData(responseData.offline ?? []));
@@ -148,6 +155,29 @@ export default function Orders() {
         };
     }, [loadData]);
 
+    const updateDropdownPosition = useCallback(() => {
+        if (nameInputWrapperRef.current) {
+            const rect = nameInputWrapperRef.current.getBoundingClientRect();
+            setSuggestionPos({
+                top: rect.top,
+                left: rect.right + 8 
+            });
+        }
+    }, []);
+
+    useEffect(() => {
+        if (showSuggestions) {
+            updateDropdownPosition();
+            window.addEventListener('resize', updateDropdownPosition);
+            window.addEventListener('scroll', updateDropdownPosition, true); 
+            
+            return () => {
+                window.removeEventListener('resize', updateDropdownPosition);
+                window.removeEventListener('scroll', updateDropdownPosition, true);
+            };
+        }
+    }, [showSuggestions, updateDropdownPosition]);
+
     const handlePayClick = useCallback((row) => {
         setSelectedOrder(row);
         setPaymentModalOpen(true);
@@ -177,9 +207,49 @@ export default function Orders() {
         setProcessModalOpen(true);
     }, []);
 
+    const fetchCustomerHistory = async (nameQuery) => {
+        try {
+            const res = await api.get("", {
+                params: { action: "history_name_and_nomor", name: nameQuery }
+            });
+            if (res.data?.success && res.data.data && isNameFocusedRef.current) {
+                setCustomerSuggestions(res.data.data);
+                setShowSuggestions(true);
+            } else {
+                setCustomerSuggestions([]);
+                setShowSuggestions(false);
+            }
+        } catch (err) {
+            setCustomerSuggestions([]);
+            setShowSuggestions(false);
+        }
+    };
+
     const handleFormChange = (e) => {
         const { name, value } = e.target;
         setFormOrder(prev => ({ ...prev, [name]: value }));
+
+        if (name === "customer_name") {
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+            if (value.trim() !== "") {
+                debounceTimerRef.current = setTimeout(() => {
+                    fetchCustomerHistory(value);
+                }, 700);
+            } else {
+                setCustomerSuggestions([]);
+                setShowSuggestions(false);
+            }
+        }
+    };
+
+    const handleSuggestionClick = (item) => {
+        setFormOrder(prev => ({
+            ...prev,
+            customer_name: item.name,
+            nomor: item.nomor
+        }));
+        setShowSuggestions(false);
+        isNameFocusedRef.current = false;
     };
 
     const formatDateTime = (val) => {
@@ -209,6 +279,8 @@ export default function Orders() {
             user_id: "",
             system: defaultSystem
         });
+        setCustomerSuggestions([]);
+        setShowSuggestions(false);
         setAddModalOpen(true);
     };
 
@@ -228,6 +300,16 @@ export default function Orders() {
 
     const handleAddSubmit = async (e) => {
         e.preventDefault();
+        
+        const requiredFields = ["customer_name", "nomor", "deadline", "user_id", "system"];
+        for (const field of requiredFields) {
+            if (!formOrder[field]) {
+                const element = document.querySelector(`[name="${field}"]`);
+                if (element) element.focus();
+                return;
+            }
+        }
+
         try {
             const payload = new FormData();
             payload.append("customer_name", formOrder.customer_name);
@@ -462,16 +544,66 @@ export default function Orders() {
                 headerColor="success"
             >
                 <Form id="formAddOrder" onSubmit={handleAddSubmit}>
-                    <Input
-                        labelPosition="left"
-                        labelWidth={130}
-                        name="customer_name"
-                        value={formOrder.customer_name}
-                        onChange={handleFormChange}
-                        label="Nama"
-                        placeholder="Nama Pelanggan"
-                        required
-                    />
+                    <div ref={nameInputWrapperRef}>
+                        <Input
+                            labelPosition="left"
+                            labelWidth={130}
+                            name="customer_name"
+                            value={formOrder.customer_name}
+                            onChange={handleFormChange}
+                            onFocus={() => {
+                                isNameFocusedRef.current = true;
+                                if (customerSuggestions.length > 0 && formOrder.customer_name.trim() !== "") {
+                                    setShowSuggestions(true);
+                                }
+                            }}
+                            onBlur={() => {
+                                isNameFocusedRef.current = false;
+                                setTimeout(() => {
+                                    setShowSuggestions(false);
+                                }, 200);
+                            }}
+                            label="Nama"
+                            placeholder="Nama Pelanggan"
+                            required
+                            autoComplete="off"
+                        />
+                    </div>
+                    {showSuggestions && customerSuggestions.length > 0 && createPortal(
+                        <div style={{
+                            position: "fixed",
+                            top: suggestionPos.top,
+                            left: suggestionPos.left,
+                            width: "250px",
+                            backgroundColor: "var(--bg-content)",
+                            border: "1px solid var(--border)",
+                            borderRadius: "4px",
+                            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                            zIndex: 999999, 
+                            maxHeight: "300px",
+                            overflowY: "auto"
+                        }}>
+                            {customerSuggestions.map((item, idx) => (
+                                <div
+                                    key={idx}
+                                    style={{ 
+                                        padding: "8px 12px", 
+                                        cursor: "pointer", 
+                                        display: "flex", 
+                                        justifyContent: "space-between" 
+                                    }}
+                                    onClick={() => handleSuggestionClick(item)}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = "var(--primary)"}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                                >
+                                    <span style={{ pointerEvents: "none" }}>{item.name}</span>
+                                    <span style={{ color: "var(--text-muted)", fontSize: "0.9em", pointerEvents: "none" }}>{item.nomor}</span>
+                                </div>
+                            ))}
+                        </div>,
+                        document.body
+                    )}
+
                     <Input
                         labelPosition="left"
                         labelWidth={130}
