@@ -15,6 +15,16 @@ const setStorage = (key, val) => {
     } catch (e) {}
 };
 
+const getCleanedDailyMap = (key) => {
+    const map = getStorage(key, {});
+    const today = new Date().toDateString();
+    
+    if (map._lastCleared !== today) {
+        return { _lastCleared: today };
+    }
+    return map;
+};
+
 let datasetCache = null;
 let datasetPromise = null;
 let lastFetchTime = 0;
@@ -165,7 +175,7 @@ export const getCachedFailures = async (startDate, endDate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const dataset = await getServerDataset();
     const serverTime = dataset.failures_updated_at || 0;
-    const failuresMap = getStorage("failures", {});
+    const failuresMap = getCleanedDailyMap("failures");
     if (failuresMap[cacheKey] && failuresMap[cacheKey].updatedAt >= serverTime) {
         return failuresMap[cacheKey].data;
     }
@@ -305,7 +315,7 @@ export const getCachedOrders = async (startDate, endDate, search) => {
     const orderTime = dataset.orders_updated_at || 0;
     const paymentTime = dataset.payments_updated_at || 0;
     const serverTime = Math.max(orderTime, paymentTime);
-    const ordersMap = getStorage("orders", {});
+    const ordersMap = getCleanedDailyMap("orders");
 
     if (ordersMap[cacheKey] && ordersMap[cacheKey].updatedAt >= serverTime) {
         return ordersMap[cacheKey].data;
@@ -341,23 +351,7 @@ export const getCachedOrderDetail = async (orderId) => {
     }
 
     const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
-
-    const orderMap = getStorage("orderDetail", {});
-    const currentMs = Date.now();
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    let mapChanged = false;
-
-    for (const key in orderMap) {
-        if (orderMap[key] && currentMs - (orderMap[key].localSavedAt || 0) > oneDayMs) {
-            delete orderMap[key];
-            mapChanged = true;
-        }
-    }
-
-    if (mapChanged) {
-        setStorage("orderDetail", orderMap);
-    }
-
+    const orderMap = getCleanedDailyMap("orderDetail");
     const cachedItem = orderMap[cacheKey];
 
     if (cachedItem && cachedItem.updatedAt >= serverTime) {
@@ -371,8 +365,7 @@ export const getCachedOrderDetail = async (orderId) => {
         if (result) {
             orderMap[cacheKey] = {
                 data: result,
-                updatedAt: serverTime > 0 ? serverTime : currentMs,
-                localSavedAt: currentMs
+                updatedAt: serverTime > 0 ? serverTime : Date.now()
             };
             setStorage("orderDetail", orderMap);
         }
@@ -389,7 +382,7 @@ export const getCachedTransactionsCapture = async (startDate, endDate) => {
     const orderTime = dataset.orders_updated_at || 0;
     const paymentTime = dataset.payments_updated_at || 0;
     const serverTime = Math.max(orderTime, paymentTime);
-    const transactionsMap = getStorage("transactionsCapture", {});
+    const transactionsMap = getCleanedDailyMap("transactionsCapture");
 
     if (transactionsMap[cacheKey] && transactionsMap[cacheKey].updatedAt >= serverTime) {
         return transactionsMap[cacheKey].data;
@@ -424,7 +417,7 @@ export const getCachedTransactionsDetail = async (startDate, endDate, search) =>
     const orderTime = dataset.orders_updated_at || 0;
     const paymentTime = dataset.payments_updated_at || 0;
     const serverTime = Math.max(orderTime, paymentTime);
-    const transactionsDetailMap = getStorage("transactionsDetail", {});
+    const transactionsDetailMap = getCleanedDailyMap("transactionsDetail");
 
     if (transactionsDetailMap[cacheKey] && transactionsDetailMap[cacheKey].updatedAt >= serverTime) {
         return transactionsDetailMap[cacheKey].data;
@@ -460,7 +453,7 @@ export const getCachedAllOrderDetail = async (startDate, endDate) => {
     const orderTime = dataset.orders_updated_at || 0;
     const paymentTime = dataset.payments_updated_at || 0;
     const serverTime = Math.max(orderTime, paymentTime);
-    const allOrderDetailMap = getStorage("allOrderDetail", {});
+    const allOrderDetailMap = getCleanedDailyMap("allOrderDetail");
 
     if (allOrderDetailMap[cacheKey] && allOrderDetailMap[cacheKey].updatedAt >= serverTime) {
         return allOrderDetailMap[cacheKey].data;
@@ -540,7 +533,7 @@ export const getCachedProductUsed = async (startDate, endDate) => {
     const dataset = await getServerDataset();
     const orderTime = dataset.orders_updated_at || 0;
     const serverTime = orderTime;
-    const productUsedMap = getStorage("productUsed", {});
+    const productUsedMap = getCleanedDailyMap("productUsed");
 
     if (productUsedMap[cacheKey] && productUsedMap[cacheKey].updatedAt >= serverTime) {
         return productUsedMap[cacheKey].data;
@@ -574,7 +567,7 @@ export const getCachedOmsetItem = async (startDate, endDate) => {
     const dataset = await getServerDataset();
     const orderTime = dataset.orders_updated_at || 0;
     const serverTime = orderTime;
-    const omsetItemMap = getStorage("omsetItem", {});
+    const omsetItemMap = getCleanedDailyMap("omsetItem");
 
     if (omsetItemMap[cacheKey] && omsetItemMap[cacheKey].updatedAt >= serverTime) {
         return omsetItemMap[cacheKey].data;
@@ -609,7 +602,7 @@ export const getCachedStatistics = async (startDate, endDate) => {
     const orderTime = dataset.orders_updated_at || 0;
     const paymentTime = dataset.payments_updated_at || 0;
     const serverTime = Math.max(orderTime, paymentTime);
-    const statisticMap = getStorage("statistic", {});
+    const statisticMap = getCleanedDailyMap("statistic");
 
     if (statisticMap[cacheKey] && statisticMap[cacheKey].updatedAt >= serverTime) {
         return statisticMap[cacheKey].data;
@@ -644,7 +637,7 @@ export const getCachedFinance = async (startDate, endDate) => {
     const orderTime = dataset.orders_updated_at || 0;
     const financeTime = dataset.finance_updated_at || 0;
     const serverTime = Math.max(orderTime, financeTime);
-    const financeMap = getStorage("finance", {});
+    const financeMap = getCleanedDailyMap("finance");
 
     if (financeMap[cacheKey] && financeMap[cacheKey].updatedAt >= serverTime) {
         return financeMap[cacheKey].data;
@@ -679,7 +672,7 @@ export const getCachedActivity = async (startDate, endDate) => {
     const orderTime = dataset.orders_updated_at || 0;
     const paymentTime = dataset.payments_updated_at || 0;
     const serverTime = Math.max(orderTime, paymentTime);
-    const activityMap = getStorage("activity", {});
+    const activityMap = getCleanedDailyMap("activity");
 
     if (activityMap[cacheKey] && activityMap[cacheKey].updatedAt >= serverTime) {
         return activityMap[cacheKey].data;
@@ -714,7 +707,7 @@ export const getCachedOrderArchive = async (startDate, endDate) => {
     const orderTime = dataset.orders_updated_at || 0;
     const paymentTime = dataset.payments_updated_at || 0;
     const serverTime = Math.max(orderTime, paymentTime);
-    const archiveMap = getStorage("orderArchive", {});
+    const archiveMap = getCleanedDailyMap("orderArchive");
 
     if (archiveMap[cacheKey] && archiveMap[cacheKey].updatedAt >= serverTime) {
         return archiveMap[cacheKey].data;
