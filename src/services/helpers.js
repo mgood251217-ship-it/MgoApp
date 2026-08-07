@@ -1,3 +1,9 @@
+export function delay(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+
 export const sanitize = (data) => {
     if (typeof data !== "string") return data;
     return data.trim();

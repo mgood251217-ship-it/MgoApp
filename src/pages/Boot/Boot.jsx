@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Splash from "../../components/Splash/Splash";
 import UpdatePrompt from "../../components/UpdatePrompt/UpdatePrompt";
-import { delay } from "../../utils/delay";
+import { delay } from "../../services/helpers";
 import { bootSteps } from "./steps";
 
 export default function Boot() {

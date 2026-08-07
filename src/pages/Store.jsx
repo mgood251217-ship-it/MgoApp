@@ -24,7 +24,30 @@ import {
     Legend 
 } from 'chart.js';
 
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+const customIcon = new L.Icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
+
+function MapClickHandler({ onMapClick }) {
+    useMapEvents({
+        click: (e) => {
+            onMapClick(e.latlng.lat, e.latlng.lng);
+        }
+    });
+    return null;
+}
 
 export default function Store() {
     const [users, setUsers] = useState([]);
@@ -58,6 +81,10 @@ export default function Store() {
         type: ""
     };
     const [machineFormData, setMachineFormData] = useState(initialMachineFormState);
+
+    const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+    const [pendingLocation, setPendingLocation] = useState(null);
+    const [loadingLocationForm, setLoadingLocationForm] = useState(false);
 
     const roleOptions = useMemo(() => [
         { value: "ADMIN", label: "ADMIN" },
@@ -251,6 +278,39 @@ export default function Store() {
         }
     }, [loadData]);
 
+    const handleMapClick = (lat, lng) => {
+        setPendingLocation({ lat, lng });
+        setIsLocationModalOpen(true);
+    };
+
+    const handleSubmitLocation = async (e) => {
+        e.preventDefault();
+        if (!pendingLocation) return;
+        setLoadingLocationForm(true);
+
+        try {
+            const payload = new FormData();
+            payload.append("latitude", pendingLocation.lat);
+            payload.append("longitude", pendingLocation.lng);
+
+            await api.post("", payload, {
+                params: { action: "set_location" }
+            });
+
+            alert("Lokasi berhasil ditambahkan!");
+            await clearLocationsCache();
+            loadData();
+            
+            setIsLocationModalOpen(false);
+            setPendingLocation(null);
+        } catch (error) {
+            console.error(error);
+            alert("Gagal menambahkan lokasi.");
+        } finally {
+            setLoadingLocationForm(false);
+        }
+    };
+
     const chartOptions = useMemo(() => ({
         responsive: true,
         interaction: { mode: 'index', intersect: false },
@@ -347,6 +407,10 @@ export default function Store() {
         </div>
     ), [handleDeleteMachine]);
 
+    const mapCenter = locations.length > 0 
+        ? [parseFloat(locations[0].latitude), parseFloat(locations[0].longitude)]
+        : [-6.9175, 107.6191];
+
     return (
         <>
             <Header 
@@ -425,18 +489,64 @@ export default function Store() {
                 </div>
             </div>
 
-            {locations.length > 0 && (
-                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%' }}>
-                    <h4 style={{ marginTop: 0, marginBottom: '16px' }}>Lokasi: {locations[0].name}</h4>
-                    <iframe 
-                        width="100%" 
-                        height="400" 
-                        style={{ border: 0, borderRadius: '8px' }} 
-                        loading="lazy" 
-                        allowFullScreen 
-                        src={`https://maps.google.com/maps?q=${locations[0].latitude},${locations[0].longitude}&z=15&output=embed`}
-                    ></iframe>
+            <div style={{ background: 'var(--background)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', marginBottom: '24px' }}>
+                <h4 style={{ marginTop: 0, marginBottom: '8px' }}>Lokasi Cabang</h4>
+                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-muted)' }}>Klik di mana saja pada peta untuk menambahkan titik lokasi baru.</p>
+                <div style={{ height: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    <MapContainer 
+                        center={mapCenter} 
+                        zoom={13} 
+                        style={{ height: '100%', width: '100%' }}
+                    >
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                        
+                        {locations.map((loc, idx) => (
+                            <Marker 
+                                key={loc.id || idx} 
+                                position={[parseFloat(loc.latitude), parseFloat(loc.longitude)]}
+                                icon={customIcon}
+                            >
+                                <Popup>
+                                    <strong>{loc.name || `Lokasi ${idx + 1}`}</strong><br/>
+                                    Lat: {loc.latitude}<br/>
+                                    Lng: {loc.longitude}
+                                </Popup>
+                            </Marker>
+                        ))}
+                        
+                        <MapClickHandler onMapClick={handleMapClick} />
+                    </MapContainer>
                 </div>
+            </div>
+
+            {isLocationModalOpen && (
+            <Modal 
+                size='sm'
+                open={isLocationModalOpen}
+                title="Tambah Lokasi Cabang" 
+                onClose={() => setIsLocationModalOpen(false)}
+            >
+                <form onSubmit={handleSubmitLocation}>
+                    <div style={{ margin: "0 0 16px 0", fontSize: "14px", color: "var(--text)" }}>
+                        <p style={{ marginTop: 0, marginBottom: "12px" }}>Anda akan menyimpan titik koordinat berikut sebagai lokasi baru:</p>
+                        <div style={{ padding: "12px", background: "var(--background)", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                            <strong>Latitude:</strong> {pendingLocation?.lat.toFixed(6)} <br/>
+                            <strong>Longitude:</strong> {pendingLocation?.lng.toFixed(6)}
+                        </div>
+                    </div>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        size='full-lg'
+                        disabled={loadingLocationForm}
+                        icon={<Icon name="save" />}>
+                        {loadingLocationForm ? "Menyimpan..." : "Simpan Lokasi"}
+                    </Button>
+                </form>
+            </Modal>
             )}
 
             {isUserModalOpen && (
