@@ -6,6 +6,8 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
+import Tag from "../../components/Tag/Tag";
+import Icon from "../../components/Icon/Icon";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportPelunasanExcel } from "../../services/excelService";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
@@ -27,7 +29,7 @@ export default function Pelunasan() {
     const fetchPelunasan = async () => {
         setLoading(true);
         try {
-            const res = await getCachedTransactionsCapture();
+            const res = await getCachedTransactionsCapture(startDate, endDate);
 
             const rawData = res.pelunasan.data || [];
             const filteredData = rawData.filter(item => item.status_label === "PELUNASAN");
@@ -69,20 +71,14 @@ export default function Pelunasan() {
         }
     };
 
-    const renderMethodBadge = (method) => {
+    const renderMethodTag = (method) => {
         if (!method || method === "-") return <span style={{ color: "var(--text-muted)" }}>-</span>;
         const isTF = method === "TF";
         return (
-            <span style={{
-                padding: "4px 8px",
-                borderRadius: "4px",
-                fontSize: "11px",
-                fontWeight: "600",
-                background: isTF ? "rgba(33, 150, 243, 0.1)" : "rgba(76, 175, 80, 0.1)",
-                color: isTF ? "var(--primary)" : "var(--success)"
-            }}>
+            <Tag variant={isTF ? "primary" : "success"}>
                 {method}
-            </span>
+            </Tag>
+            
         );
     };
 
@@ -114,7 +110,7 @@ export default function Pelunasan() {
         { 
             key: "dp_method", 
             title: "Metode DP",
-            render: (row) => renderMethodBadge(row.dp_method)
+            render: (row) => renderMethodTag(row.dp_method)
         },
         { 
             key: "dp_date", 
@@ -133,7 +129,7 @@ export default function Pelunasan() {
         { 
             key: "payment_method", 
             title: "Metode Lunas",
-            render: (row) => renderMethodBadge(row.payment_method)
+            render: (row) => renderMethodTag(row.payment_method)
         },
         { 
             key: "payment_date", 
@@ -178,6 +174,8 @@ export default function Pelunasan() {
                         showNumber={true}
                         actions={(row) => (
                             <Button 
+                                icon={<Icon name="next" />}
+                                size="sm"
                                 onClick={() => {
                                     const params = new URLSearchParams({
                                         search: row.nomorator,
@@ -196,7 +194,7 @@ export default function Pelunasan() {
 
                 <div style={{ 
                     padding: "20px", 
-                    background: "var(--surface)", 
+                    background: "var(--background)", 
                     borderRadius: "12px", 
                     border: "1px dashed var(--border)",
                     display: "flex",

@@ -1,0 +1,36 @@
+.tag{
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.tag-primary{
+    background: color-mix(in srgb, var(--primary) 20%, transparent);
+    color: var(--primary);
+}
+
+.tag-danger{
+    background: color-mix(in srgb, var(--danger) 20%, transparent);
+    color: var(--danger);
+}
+
+.tag-success{
+    background: color-mix(in srgb, var(--success) 20%, transparent);
+    color: var(--success);
+}
+
+.tag-warning{
+    background: color-mix(in srgb, var(--warning) 20%, transparent);
+    color: var(--warning);
+}
+
+.tag-secondary{
+    background: color-mix(in srgb, var(--secondary) 20%, transparent);
+    color: var(--secondary);
+}
+
+.tag-info{
+    background: color-mix(in srgb, var(--info) 20%, transparent);
+    color: var(--info);
+}

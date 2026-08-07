@@ -6,6 +6,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
+import Icon from "../../components/Icon/Icon";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerItemExcel } from "../../services/excelService";
 import { getCachedAllOrderDetail } from "../../services/apiCache";
@@ -50,15 +51,6 @@ export default function TransaksiPerItem() {
             console.error("Gagal export excel:", error);
             alert("Terjadi kesalahan saat melakukan export.");
         }
-    };
-
-    const formatWaLink = (phone) => {
-        if (!phone) return "";
-        let cleaned = phone.toString().replace(/\D/g, "");
-        if (cleaned.startsWith("0")) {
-            cleaned = "62" + cleaned.substring(1);
-        }
-        return cleaned;
     };
 
     const columns = useMemo(() => [
@@ -165,6 +157,8 @@ export default function TransaksiPerItem() {
                                 actions={(row) => (
                                     <div style={{ display: "flex", gap: "6px" }}>
                                         <Button 
+                                            icon={<Icon name="next" />}
+                                            size="sm"
                                             onClick={() => {
                                                 const params = new URLSearchParams({
                                                     search: row.nomorator,

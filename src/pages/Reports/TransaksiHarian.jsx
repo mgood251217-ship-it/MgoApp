@@ -8,6 +8,8 @@ import Table from "../../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiHarianExcel } from "../../services/excelService";
 import Button from "../../components/Button/Button";
+import Tag from "../../components/Tag/Tag";
+import Icon from "../../components/Icon/Icon";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
 
 export default function TransaksiHarian() {
@@ -27,7 +29,7 @@ export default function TransaksiHarian() {
     const fetchHarian = async () => {
         setLoading(true);
         try {
-            const res = await getCachedTransactionsCapture();
+            const res = await getCachedTransactionsCapture(startDate, endDate);
             setHarianData(res.harian.data || []);
             setSummary({
                 total_tf: res.harian.total_tf || 0,
@@ -93,36 +95,18 @@ export default function TransaksiHarian() {
             key: "payment_method", 
             title: "Metode",
             render: (row) => (
-                <span style={{
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    background: row.payment_method === "TF" ? "rgba(33, 150, 243, 0.1)" : "rgba(76, 175, 80, 0.1)",
-                    color: row.payment_method === "TF" ? "var(--primary)" : "var(--success)"
-                }}>
+                <Tag variant={row.payment_method === "TF" ? "primary" : "success"}>
                     {row.payment_method}
-                </span>
+                </Tag>
             )
         },
         { 
             key: "status_label", 
             title: "Status",
             render: (row) => (
-                <span style={{
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    background: (row.status_label === "LUNAS" || row.status_label === "PELUNASAN") 
-                        ? "rgba(76, 175, 80, 0.1)" 
-                        : "rgba(255, 152, 0, 0.1)",
-                    color: (row.status_label === "LUNAS" || row.status_label === "PELUNASAN") 
-                        ? "var(--success)" 
-                        : "var(--warning)"
-                }}>
+                <Tag variant={row.status_label === "LUNAS" || row.status_label === "PELUNASAN" ? "success" : "warning"}>
                     {row.status_label}
-                </span>
+                </Tag>
             )
         },
         { 
@@ -167,6 +151,8 @@ export default function TransaksiHarian() {
                         showNumber={true}
                         actions={(row) => (
                             <Button 
+                                icon={<Icon name="next" />}
+                                size="sm"
                                 onClick={() => {
                                     const params = new URLSearchParams({
                                         search: row.nomorator,
@@ -185,7 +171,7 @@ export default function TransaksiHarian() {
 
                 <div style={{ 
                     padding: "20px", 
-                    background: "var(--surface)", 
+                    background: "var(--background)", 
                     borderRadius: "12px", 
                     border: "1px dashed var(--border)",
                     display: "flex",

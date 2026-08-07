@@ -4,6 +4,7 @@ import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
+import CardTrophy from "../../components/CardTrophy/CardTrophy";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportStatistikKaryawanExcel } from "../../services/excelService";
 import { getCachedStatistics } from "../../services/apiCache";
@@ -127,30 +128,6 @@ export default function StatistikKaryawan() {
             )
         }
     ], []);
-
-    const CardTrophy = ({ title, value, person, unit }) => (
-        <div style={{
-            flex: "1 1 200px",
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-            padding: "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
-        }}>
-            <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "600", textTransform: "uppercase" }}>
-                🏆 {title}
-            </div>
-            <div style={{ fontSize: "20px", fontWeight: "bold", color: "var(--primary)" }}>
-                {person || "-"}
-            </div>
-            <div style={{ fontSize: "14px", color: "var(--text)" }}>
-                {value !== null && value !== undefined ? `${value} ${unit}` : "-"}
-            </div>
-        </div>
-    );
 
     return (
         <div style={{ 

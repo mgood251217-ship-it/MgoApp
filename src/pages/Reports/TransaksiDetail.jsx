@@ -8,6 +8,8 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import Icon from "../../components/Icon/Icon";
 import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
+import Tag from "../../components/Tag/Tag";
+import Modal from "../../components/Modal/Modal";
 import { formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 import { getCachedTransactionsDetail } from "../../services/apiCache";
@@ -27,6 +29,7 @@ export default function TransaksiDetail() {
     const [notesByOrder, setNotesByOrder] = useState({});
     
     const [hoveredTf, setHoveredTf] = useState(null);
+    const [selectedImage, setSelectedImage] = useState(null);
 
     const fetchTransactions = async () => {
         setLoading(true);
@@ -273,16 +276,11 @@ export default function TransaksiDetail() {
                                     <div>
                                         <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Sistem & Operator</div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <span style={{ 
-                                                background: order.system === "ONLINE" ? "rgba(33, 150, 243, 0.1)" : "rgba(76, 175, 80, 0.1)",
-                                                color: order.system === "ONLINE" ? "var(--primary)" : "var(--success)",
-                                                padding: "4px 8px",
-                                                borderRadius: "4px",
-                                                fontSize: "11px",
-                                                fontWeight: "600"
-                                            }}>
+                                            <Tag
+                                                variant={order.system === "ONLINE" ? "primary" : "success"}
+                                            >
                                                 {order.system}
-                                            </span>
+                                            </Tag>
                                             <span style={{ fontWeight: "600", fontSize: "13px", color: "var(--text)" }}>{order.operator}</span>
                                         </div>
                                     </div>
@@ -330,20 +328,13 @@ export default function TransaksiDetail() {
                                                         display: "flex",
                                                         flexDirection: "column",
                                                         gap: "8px",
-                                                        background: "var(--surface)"
+                                                        background: "var(--background)"
                                                     }}>
                                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{payment.date}</span>
-                                                            <span style={{ 
-                                                                fontSize: "11px", 
-                                                                fontWeight: "bold", 
-                                                                padding: "4px 8px", 
-                                                                borderRadius: "6px",
-                                                                background: payment.status === "LUNAS" ? "rgba(76, 175, 80, 0.1)" : "rgba(255, 152, 0, 0.1)",
-                                                                color: payment.status === "LUNAS" ? "var(--success)" : "var(--warning)"
-                                                            }}>
+                                                            <Tag variant={payment.status === "LUNAS" ? "success" : "warning"}>
                                                                 {payment.status}
-                                                            </span>
+                                                            </Tag>
                                                         </div>
                                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                                                             <div>
@@ -370,9 +361,9 @@ export default function TransaksiDetail() {
                                                                 onMouseEnter={() => setHoveredTf(tf.transfer_id)}
                                                                 onMouseLeave={() => setHoveredTf(null)}
                                                             >
-                                                                <a href={tf.img_link} target="_blank" rel="noreferrer">
                                                                     <img 
                                                                         src={tf.img_link} 
+                                                                        onClick={ () => setSelectedImage(tf.img_link) }
                                                                         alt="Bukti Transfer" 
                                                                         style={{ 
                                                                             width: "60px", 
@@ -386,7 +377,6 @@ export default function TransaksiDetail() {
                                                                         onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.1)"}
                                                                         onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
                                                                     />
-                                                                </a>
                                                                 
                                                                 {hoveredTf === tf.transfer_id && (
                                                                     <Button
@@ -537,6 +527,27 @@ export default function TransaksiDetail() {
                     })
                 )}
             </div>
+            <Modal 
+                open={!!selectedImage} 
+                onClose={() => setSelectedImage(null)} 
+                title="Bukti Transfer"
+                size="lg"
+            >
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "16px", background: "var(--background)", borderRadius: "8px" }}>
+                    {selectedImage && (
+                        <img 
+                            src={selectedImage} 
+                            alt="Bukti Lengkap" 
+                            style={{ 
+                                maxWidth: "100%", 
+                                maxHeight: "70vh", 
+                                objectFit: "contain", 
+                                borderRadius: "8px" 
+                            }} 
+                        />
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 }

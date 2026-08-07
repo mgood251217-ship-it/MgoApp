@@ -32,7 +32,7 @@ export default function TransaksiBulanan() {
     const fetchBulanan = async () => {
         setLoading(true);
         try {
-            const res = await getCachedTransactionsCapture();
+            const res = await getCachedTransactionsCapture(startDate, endDate);
 
             const rawData = res.rekap?.data_per_tanggal || [];
             setBulananData(rawData);
@@ -159,7 +159,7 @@ export default function TransaksiBulanan() {
 
                 <div style={{ 
                     padding: "20px", 
-                    background: "var(--surface)", 
+                    background: "var(--background)", 
                     borderRadius: "12px", 
                     border: "1px dashed var(--border)",
                     display: "flex",

@@ -125,7 +125,7 @@ export default function OmsetPerItem() {
                 </div>
                 <div style={{ 
                     padding: "20px", 
-                    background: "var(--surface)", 
+                    background: "var(--background)", 
                     borderRadius: "12px", 
                     border: "1px dashed var(--border)",
                     display: "flex",
@@ -134,7 +134,7 @@ export default function OmsetPerItem() {
                 }}>
                     <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total Keseluruhan Omset</div>
-                        <div style={{ fontWeight: "bold", fontSize: "24px", color: "#ef4444" }}>
+                        <div style={{ fontWeight: "bold", fontSize: "24px", color: "var(--primary)" }}>
                             {formatRupiah(totalOmsetKeseluruhan)}
                         </div>
                     </div>

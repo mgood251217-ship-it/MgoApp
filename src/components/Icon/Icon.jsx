@@ -81,6 +81,12 @@ const icons = {
             <path d="M5 4h14" />
         </>
     ),
+    next: (
+        <>
+            <path d="M6 12h11" />
+            <path d="M13 8l4 4-4 4" />
+        </>
+    ),
     visibility: (
         <>
             <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />

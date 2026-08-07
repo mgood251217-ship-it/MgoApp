@@ -6,6 +6,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
+import Icon from "../../components/Icon/Icon"
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerKonsumenExcel } from "../../services/excelService";
 import { getCachedAllOrderDetail } from "../../services/apiCache";
@@ -164,6 +165,8 @@ export default function TransaksiPerKonsumen() {
                                 actions={(row) => (
                                     <div style={{ display: "flex", gap: "6px" }}>
                                         <Button 
+                                            icon={<Icon name="next" />}
+                                            size="sm"
                                             onClick={() => {
                                                 const params = new URLSearchParams({
                                                     search: row.nomorator,

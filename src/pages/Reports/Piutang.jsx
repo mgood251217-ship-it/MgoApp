@@ -94,7 +94,7 @@ export default function Piutang() {
             key: "hutang", 
             title: "Piutang", 
             render: (row) => (
-                <span style={{ fontWeight: "bold", color: "#ef4444" }}>
+                <span style={{ fontWeight: "bold", color: "var(--danger)" }}>
                     {formatRupiah(Number(row.hutang))}
                 </span>
             )
@@ -124,7 +124,6 @@ export default function Piutang() {
             <Header title="Laporan Piutang" subtitle="Daftar tagihan konsumen yang belum lunas." />
             <ReportNav />
             
-            {/* Header / Aksi Sederhana (Tanpa DateFilter karena tidak butuh start_date & end_date) */}
             <div style={{ 
                 padding: "0 24px", 
                 display: "flex", 
@@ -135,17 +134,6 @@ export default function Piutang() {
                 <Button 
                     onClick={fetchPiutang}
                     disabled={loading}
-                    style={{
-                        padding: "8px 16px",
-                        background: "var(--surface)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "8px",
-                        cursor: loading ? "not-allowed" : "pointer",
-                        fontWeight: "600",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px"
-                    }}
                 >
                     {loading ? "Memuat..." : "Refresh Data"}
                 </Button>
@@ -170,6 +158,8 @@ export default function Piutang() {
                         showNumber={true}
                         actions={(row) => (
                                 <Button 
+                                    icon={<Icon name="next" />}
+                                    size="sm"
                                     onClick={() => {
                                         const params = new URLSearchParams({
                                             search: row.nomorator,
@@ -186,10 +176,9 @@ export default function Piutang() {
                     />
                 </div>
 
-                {/* Ringkasan Total Piutang */}
                 <div style={{ 
                     padding: "20px", 
-                    background: "var(--surface)", 
+                    background: "var(--background)", 
                     borderRadius: "12px", 
                     border: "1px dashed var(--border)",
                     display: "flex",
@@ -198,7 +187,7 @@ export default function Piutang() {
                 }}>
                     <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total Keseluruhan Piutang</div>
-                        <div style={{ fontWeight: "bold", fontSize: "24px", color: "#ef4444" }}>
+                        <div style={{ fontWeight: "bold", fontSize: "24px", color: "var(--danger)" }}>
                             {formatRupiah(totalPiutang)}
                         </div>
                     </div>

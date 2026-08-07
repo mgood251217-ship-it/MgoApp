@@ -84,7 +84,7 @@ export default function Meteran() {
                 <div style={{ marginTop: 24, marginBottom: 24 }}>
                     <div style={{ background: "var(--warning)", padding: "16px", borderRadius: "8px", border: "1px solid var(--warning-hover)", display: "inline-block" }}>
                         <h3 style={{ margin: 0, color: "var(--text)" }}>
-                            Total Keseluruhan: {totalAllM2} M²
+                            Total Keseluruhan: {rapihkanAngka(totalAllM2)} M²
                         </h3>
                     </div>
                 </div>
@@ -320,7 +320,7 @@ export default function Meteran() {
                             id: idx,
                             panjang: product.isA3 || product.isUV_A3 ? "A3" : rowItem.p,
                             qty: `${rowItem.qty}x`,
-                            total: rowItem.total
+                            total: rapihkanAngka(rowItem.total)
                         }));
 
                         const totalProduk = product.rows.reduce((acc, curr) => acc + (curr.total || 0), 0);
@@ -347,7 +347,7 @@ export default function Meteran() {
 
                                 <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
                                     <strong style={{ color: "var(--info)", fontSize: "14px" }}>
-                                        Total: {totalProduk}
+                                        Total: {rapihkanAngka(totalProduk)}
                                     </strong>
                                 </div>
                             </div>

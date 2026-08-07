@@ -80,7 +80,7 @@ export default function Orders() {
             formatted_nomor: formatNomorInternasional(row.nomor),
             formatted_total: formatRupiah(row.total),
             formatted_deadline: hitungDeadline(row.deadline),
-            formatted_dibayar: row.is_lunas ? `Lunas ${row.lunas_method}` : formatRupiah(row.total_paid),
+            formatted_dibayar: (row.is_lunas && row.total != 0 ? `Lunas ${row.lunas_method}` : formatRupiah(row.total_paid)),
             formatted_proses: row.project_initial !== "" ? `${row.project_process} ${row.project_initial}` : row.project_process
         }));
     }, []);
@@ -369,6 +369,10 @@ export default function Orders() {
         } catch (err) {}
     };
 
+    const handleNavigate = async (search) => {
+        navigate(search);
+    }
+
     const tableColumns = useMemo(() => [
         { key: "nomorator", title: "Invoice" },
         { key: "customer_name", title: "Pelanggan" },
@@ -420,8 +424,14 @@ export default function Orders() {
                 disabled={row.project_initial !== ""}
                 onClick={(e) => { e.stopPropagation(); handleProcessClick(row); }}
             />
+            <Button
+                size="sm"
+                variant="secondary"
+                icon={<Icon name="next" />}
+                onClick={() => { handleNavigate(`/reports/transaksi-detail?search=${row.nomorator}&start_date=${row.date}&end_date=${row.date}`) }}
+            />
         </div>
-    ), [handlePayClick, handleViewOrder, handleEditOrder, handleProcessClick]);
+    ), [handlePayClick, handleViewOrder, handleEditOrder, handleProcessClick, handleNavigate]);
 
     const operatorOptions = useMemo(() => {
         return Object.entries(operators).map(([id, name]) => ({

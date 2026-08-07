@@ -95,7 +95,6 @@ export default function Keuangan() {
         }
     };
 
-    // Form Handlers
     const handleSaveExpenditure = async (e) => {
         e.preventDefault();
         const formData = new FormData();
@@ -190,7 +189,7 @@ export default function Keuangan() {
         { 
             key: "expenditure", 
             title: "Pengeluaran",
-            render: (row) => <span style={{ color: "#ef4444", fontWeight: "600" }}>{formatRupiah(row.expenditure)}</span>
+            render: (row) => <span style={{ color: "var(--warning)", fontWeight: "600" }}>{formatRupiah(row.expenditure)}</span>
         },
         { 
             key: "saldo", 
@@ -198,7 +197,7 @@ export default function Keuangan() {
             render: (row) => (
                 <span style={{ 
                     fontWeight: "bold", 
-                    color: row.saldo < 0 ? "#ef4444" : "var(--success)" 
+                    color: row.saldo < 0 ? "var(--danger)" : "var(--success)" 
                 }}>
                     {formatRupiah(row.saldo)}
                 </span>
@@ -220,7 +219,7 @@ export default function Keuangan() {
         { 
             key: "nominal", 
             title: "Nominal",
-            render: (row) => <span style={{ fontWeight: "600", color: "#ef4444" }}>{formatRupiah(row.nominal)}</span>
+            render: (row) => <span style={{ fontWeight: "600", color: "var(--warning" }}>{formatRupiah(row.nominal)}</span>
         },
         { 
             key: "img_link", 

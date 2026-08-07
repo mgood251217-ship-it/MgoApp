@@ -164,9 +164,9 @@ export default function Aktivitas() {
                     <div style={{ 
                         fontSize: "16px", 
                         fontWeight: "bold", 
-                        color: "#e53935",
+                        color: "var(--danger)",
                         paddingLeft: "4px",
-                        borderLeft: "4px solid #e53935"
+                        borderLeft: "4px solid var(--danger)"
                     }}>
                         Arsip Order Terhapus
                     </div>
@@ -214,7 +214,7 @@ export default function Aktivitas() {
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Waktu Dihapus</div>
-                                                <div style={{ fontWeight: "600", fontSize: "14px", color: "#e53935" }}>{order.deleted_at}</div>
+                                                <div style={{ fontWeight: "600", fontSize: "14px", color: "var(--danger)" }}>{order.deleted_at}</div>
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Sistem & Dihapus Oleh</div>
@@ -229,7 +229,7 @@ export default function Aktivitas() {
                                                     }}>
                                                         {order.system}
                                                     </span>
-                                                    <span style={{ fontWeight: "600", fontSize: "13px", color: "#e53935" }}>{order.deleted_by_name}</span>
+                                                    <span style={{ fontWeight: "600", fontSize: "13px", color: "var(--danger)" }}>{order.deleted_by_name}</span>
                                                 </div>
                                             </div>
                                         </div>

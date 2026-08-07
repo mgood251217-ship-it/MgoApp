@@ -10,6 +10,7 @@ import Alert from "../components/Alert/Alert";
 import Table from "../components/Table/Table";
 import { formatRupiah } from "../services/helpers"; 
 import { exportGlobalStocksToExcel } from "../services/excelService";
+import { getCachedStoreNames } from "../services/apiCache";
 
 export default function GlobalStocks() {
     const todayStr = new Date().toISOString().split("T")[0];
@@ -178,8 +179,8 @@ export default function GlobalStocks() {
 
     const fetchStores = async () => {
         try {
-            const res = await api.get("", { params: { action: "get_store_global_stock" } }); 
-            if (res.data?.success) setStores(res.data.data || []);
+            const res = await getCachedStoreNames(); 
+            setStores(res || []);
         } catch (err) { console.error("Gagal load stores", err); }
     };
 
