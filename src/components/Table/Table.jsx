@@ -11,7 +11,7 @@ export default function Table({
     actions,
     onRowDoubleClick,
     showNumber = false,
-    sortable = false,
+    sortable = true,
 }) {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 

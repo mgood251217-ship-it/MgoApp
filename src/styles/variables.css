@@ -44,4 +44,8 @@
     --radius: 8px;
     --transition: .2s ease;
     --wallpaper: url("../../public/wallpaper.png");
+
+    --sidebar-width: 60px;
+    --sidebar-width-hover: 220px;
+    --navbar-height: 56px;
 }

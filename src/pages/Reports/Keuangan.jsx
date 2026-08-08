@@ -233,7 +233,7 @@ export default function Keuangan() {
                         width: "40px", 
                         height: "40px", 
                         objectFit: "cover", 
-                        borderRadius: "6px", 
+                        borderRadius: "var(--radius)", 
                         cursor: "pointer", 
                         border: "1px solid var(--border)",
                         transition: "transform 0.2s"
@@ -300,16 +300,14 @@ export default function Keuangan() {
                             Sync Data
                         </Button>
                     </div>
-                    <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                        <Table 
-                            id="table-finance"
-                            columns={financeColumns}
-                            rows={financeData}
-                            rowKey="finance_id"
-                            size="md"
-                            showNumber={true}
-                        />
-                    </div>
+                    <Table 
+                        id="table-finance"
+                        columns={financeColumns}
+                        rows={financeData}
+                        rowKey="finance_id"
+                        size="md"
+                        showNumber={true}
+                    />
                 </div>
 
                 <div style={{ 
@@ -332,16 +330,14 @@ export default function Keuangan() {
                                 Tambah
                             </Button>
                         </div>
-                        <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                            <Table 
-                                id="table-expenditure"
-                                columns={expenditureColumns}
-                                rows={expenditureData}
-                                rowKey="expenditure_id"
-                                size="sm"
-                                showNumber={true}
-                            />
-                        </div>
+                        <Table 
+                            id="table-expenditure"
+                            columns={expenditureColumns}
+                            rows={expenditureData}
+                            rowKey="expenditure_id"
+                            size="sm"
+                            showNumber={true}
+                        />
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -358,16 +354,14 @@ export default function Keuangan() {
                                 Tambah
                             </Button>
                         </div>
-                        <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                            <Table 
-                                id="table-income"
-                                columns={incomeColumns}
-                                rows={incomeData}
-                                rowKey="income_id"
-                                size="sm"
-                                showNumber={true}
-                            />
-                        </div>
+                        <Table 
+                            id="table-income"
+                            columns={incomeColumns}
+                            rows={incomeData}
+                            rowKey="income_id"
+                            size="sm"
+                            showNumber={true}
+                        />
                     </div>
                 </div>
             </div>
@@ -378,7 +372,7 @@ export default function Keuangan() {
                 title="Bukti Pengeluaran"
                 size="lg"
             >
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "16px", background: "var(--background)", borderRadius: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "16px", background: "var(--background)", borderRadius: "var(--radius)" }}>
                     {selectedImage && (
                         <img 
                             src={selectedImage} 
@@ -387,7 +381,7 @@ export default function Keuangan() {
                                 maxWidth: "100%", 
                                 maxHeight: "70vh", 
                                 objectFit: "contain", 
-                                borderRadius: "8px" 
+                                borderRadius: "var(--radius)" 
                             }} 
                         />
                     )}
@@ -424,7 +418,7 @@ export default function Keuangan() {
                                 style={{
                                     padding: "8px",
                                     border: "1px solid var(--border)",
-                                    borderRadius: "6px",
+                                    borderRadius: "var(--radius)",
                                     background: "var(--surface)"
                                 }}
                                 required
@@ -432,8 +426,8 @@ export default function Keuangan() {
                         </div>
                     )}
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "8px" }}>
-                        <button type="button" onClick={() => setShowExpModal(false)} style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid var(--border)", background: "transparent", cursor: "pointer" }}>Batal</button>
-                        <button type="submit" style={{ padding: "8px 16px", borderRadius: "6px", border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontWeight: "600" }}>Simpan</button>
+                        <button type="button" onClick={() => setShowExpModal(false)} style={{ padding: "8px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)", background: "transparent", cursor: "pointer" }}>Batal</button>
+                        <button type="submit" style={{ padding: "8px 16px", borderRadius: "var(--radius)", border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontWeight: "600" }}>Simpan</button>
                     </div>
                 </form>
             </Modal>
@@ -459,8 +453,8 @@ export default function Keuangan() {
                         required
                     />
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "8px" }}>
-                        <button type="button" onClick={() => setShowIncModal(false)} style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid var(--border)", background: "transparent", cursor: "pointer" }}>Batal</button>
-                        <button type="submit" style={{ padding: "8px 16px", borderRadius: "6px", border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontWeight: "600" }}>Simpan</button>
+                        <button type="button" onClick={() => setShowIncModal(false)} style={{ padding: "8px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)", background: "transparent", cursor: "pointer" }}>Batal</button>
+                        <button type="submit" style={{ padding: "8px 16px", borderRadius: "var(--radius)", border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontWeight: "600" }}>Simpan</button>
                     </div>
                 </form>
             </Modal>

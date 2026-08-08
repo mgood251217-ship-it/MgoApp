@@ -409,6 +409,11 @@ ipcMain.handle("save-settings", async (event, newSettings) => {
     }
 });
 
+ipcMain.on("restart-app", () => {
+    app.relaunch();
+    app.exit(0);
+});
+
 ipcMain.handle("analisis-folder-order", async (event, folderPath) => {
     const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff", ".cdr"];
     try {

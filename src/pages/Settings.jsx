@@ -5,6 +5,7 @@ import Button from "../components/Button/Button";
 import Form from "../components/Form/Form";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
+import Select from "../components/Select/Select";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
@@ -25,11 +26,17 @@ const LAYOUT_COLORS = [
 
 const ACCENT_COLORS = [
     { key: "theme_primary", label: "Primary (Utama)" },
+    { key: "theme_primary_hover", label: "Primary Hover" },
     { key: "theme_secondary", label: "Secondary (Sekunder)" },
+    { key: "theme_secondary_hover", label: "Secondary Hover" },
     { key: "theme_success", label: "Success (Sukses)" },
+    { key: "theme_success_hover", label: "Success Hover" },
     { key: "theme_info", label: "Info (Informasi)" },
+    { key: "theme_info_hover", label: "Info Hover" },
     { key: "theme_warning", label: "Warning (Peringatan)" },
+    { key: "theme_warning_hover", label: "Warning Hover" },
     { key: "theme_danger", label: "Danger (Bahaya)" },
+    { key: "theme_danger_hover", label: "Danger Hover" },
 ];
 
 const TEXT_COLORS = [
@@ -50,16 +57,39 @@ const THEME_MAPPING = {
     theme_content: '--bg-content',
     theme_footer: '--footer',
     theme_primary: '--primary',
+    theme_primary_hover: '--primary-hover',
     theme_secondary: '--secondary',
+    theme_secondary_hover: '--secondary-hover',
     theme_success: '--success',
+    theme_success_hover: '--success-hover',
     theme_info: '--info',
+    theme_info_hover: '--info-hover',
     theme_warning: '--warning',
+    theme_warning_hover: '--warning-hover',
     theme_danger: '--danger',
+    theme_danger_hover: '--danger-hover',
     theme_text: '--text',
     theme_text_secondary: '--text-secondary',
     theme_text_muted: '--text-muted',
     theme_border: '--border',
-    theme_active: '--active'
+    theme_active: '--active',
+    theme_navbar_height: '--navbar-height',
+    theme_sidebar_width: '--sidebar-width',
+    theme_sidebar_width_hover: '--sidebar-width-hover',
+    theme_radius: '--radius'
+};
+
+const toHex = (str) => {
+    if (!str) return "#000000";
+    if (str.startsWith('#')) {
+        if (str.length === 4) return '#' + str[1]+str[1]+str[2]+str[2]+str[3]+str[3];
+        return str.substring(0, 7);
+    }
+    const match = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        return "#" + match.slice(1, 4).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+    }
+    return "#000000";
 };
 
 export default function Settings() {
@@ -87,13 +117,14 @@ export default function Settings() {
         
         Object.keys(THEME_MAPPING).forEach(key => {
             let val = computedStyles.getPropertyValue(THEME_MAPPING[key]).trim();
-            if (val.startsWith('#')) {
-                if (val.length === 4) {
-                    val = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
-                }
+            if (val) {
                 defaults[key] = val;
             } else {
-                defaults[key] = "#000000";
+                if (key === 'theme_navbar_height') defaults[key] = '60px';
+                else if (key === 'theme_sidebar_width') defaults[key] = '80px';
+                else if (key === 'theme_sidebar_width_hover') defaults[key] = '250px';
+                else if (key === 'theme_radius') defaults[key] = '8px';
+                else defaults[key] = "#000000";
             }
         });
         
@@ -140,7 +171,7 @@ export default function Settings() {
                 setAlertConfig({ show: true, type: "error", message: res.message || "Gagal menyimpan pengaturan." });
             } else {
                 setSettings(res.data);
-                setAlertConfig({ show: true, type: "success", message: "Pengaturan berhasil disimpan. Restart aplikasi untuk menerapkan warna." });
+                setAlertConfig({ show: true, type: "success", message: "Pengaturan berhasil disimpan. Restart aplikasi untuk menerapkan perubahan." });
             }
         } catch (err) {
             setAlertConfig({ show: true, type: "error", message: "Terjadi kesalahan saat menyimpan." });
@@ -149,60 +180,113 @@ export default function Settings() {
         }
     };
 
+    const renderColorItem = (key, label) => {
+        const rawVal = settings[key] || defaultColors[key] || "#000000";
+        const isGrad = rawVal.includes('linear-gradient');
+        
+        let type = 'solid';
+        let c1 = toHex(rawVal);
+        let c2 = '#ffffff';
+        let angle = '90';
+
+        if (isGrad) {
+            type = 'gradient';
+            const match = rawVal.match(/linear-gradient\(\s*(\d+)deg\s*,\s*(.*?)\s*,\s*(.*?)\s*\)/);
+            if (match) {
+                angle = match[1];
+                c1 = toHex(match[2]);
+                c2 = toHex(match[3]);
+            }
+        }
+
+        const updateColor = (newType, newC1, newC2, newAngle) => {
+            if (newType === 'solid') {
+                handleInputChange(key, newC1);
+            } else {
+                handleInputChange(key, `linear-gradient(${newAngle}deg, ${newC1}, ${newC2})`);
+            }
+        };
+
+        return (
+            <div key={key} style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center", 
+                padding: "16px 20px", 
+                backgroundColor: "var(--background)", 
+                border: "1px solid var(--border)", 
+                borderRadius: "var(--radius)" 
+            }}>
+                <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
+                    {label}
+                </label>
+                
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <select
+                        value={type}
+                        onChange={e => updateColor(e.target.value, c1, c2, angle)}
+                        style={{ padding: "6px", borderRadius: "var(--radius)", background: "var(--bg-content)", color: "var(--text)", border: "1px solid var(--border)", outline: "none" }}
+                    >
+                        <option value="solid">Solid</option>
+                        <option value="gradient">Gradient</option>
+                    </select>
+
+                    {type === 'gradient' && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <input
+                                type="number"
+                                value={angle}
+                                onChange={e => updateColor('gradient', c1, c2, e.target.value)}
+                                style={{ width: "60px", padding: "6px", borderRadius: "var(--radius)", background: "var(--bg-content)", color: "var(--text)", border: "1px solid var(--border)", outline: "none" }}
+                                title="Sudut rotasi (derajat)"
+                            />
+                            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>deg</span>
+                        </div>
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "var(--bg-content)", padding: "4px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                        <input
+                            type="color"
+                            value={c1}
+                            onChange={e => updateColor(type, e.target.value, c2, angle)}
+                            style={{ width: "32px", height: "32px", padding: 0, border: "none", borderRadius: "var(--radius)", cursor: "pointer", background: "transparent" }}
+                            title="Warna 1"
+                        />
+                        {type === 'gradient' && (
+                            <input
+                                type="color"
+                                value={c2}
+                                onChange={e => updateColor('gradient', c1, e.target.value, angle)}
+                                style={{ width: "32px", height: "32px", padding: 0, border: "none", borderRadius: "var(--radius)", cursor: "pointer", background: "transparent" }}
+                                title="Warna 2"
+                            />
+                        )}
+                    </div>
+                    
+                    <div style={{ width: "40px", height: "40px", borderRadius: "var(--radius)", border: "1px solid var(--border)", background: rawVal }}></div>
+
+                    <Button
+                        type="button"
+                        variant="danger"
+                        icon={<Icon name="refresh" />}
+                        onClick={() => handleResetField(key)}
+                        style={{ marginLeft: "8px" }}
+                    >
+                        Reset
+                    </Button>
+                </div>
+            </div>
+        );
+    };
+
     const renderColorGroup = (title, fields) => (
-        <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+        <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
             <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
                 <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>{title}</h3>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {fields.map(({ key, label }) => (
-                    <div key={key} style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between", 
-                        alignItems: "center", 
-                        padding: "16px 20px", 
-                        backgroundColor: "var(--background)", 
-                        border: "1px solid var(--border)", 
-                        borderRadius: "10px" 
-                    }}>
-                        <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
-                            {label}
-                        </label>
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                            <span style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: "monospace", textTransform: "uppercase", width: "70px", textAlign: "right" }}>
-                                {settings[key] || defaultColors[key] || "#000000"}
-                            </span>
-                            <div style={{ position: "relative", width: "42px", height: "42px", borderRadius: "8px", overflow: "hidden", border: "2px solid var(--border)" }}>
-                                <input
-                                    type="color"
-                                    name={key}
-                                    value={settings[key] || defaultColors[key] || "#000000"}
-                                    onChange={(e) => handleInputChange(key, e.target.value)}
-                                    style={{
-                                        position: "absolute",
-                                        top: "-10px",
-                                        left: "-10px",
-                                        width: "62px",
-                                        height: "62px",
-                                        padding: "0",
-                                        border: "none",
-                                        cursor: "pointer",
-                                        background: "transparent"
-                                    }}
-                                />
-                            </div>
-                            <Button
-                                type="button"
-                                variant="danger"
-                                icon={<Icon name="refresh" />}
-                                onClick={() => handleResetField(key)}
-                            >
-                                Reset
-                            </Button>
-                        </div>
-                    </div>
-                ))}
+                {fields.map(({ key, label }) => renderColorItem(key, label))}
             </div>
         </div>
     );
@@ -219,7 +303,7 @@ export default function Settings() {
 
             <Header
                 title="Pengaturan"
-                subtitle="Konfigurasi path folder dan personalisasi tampilan aplikasi."
+                subtitle="Konfigurasi sistem, path folder, dan personalisasi tampilan aplikasi."
             />
 
             <div style={{ padding: "32px", flex: 1, overflowY: "auto" }}>
@@ -232,7 +316,7 @@ export default function Settings() {
                         
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", gap: "32px", alignItems: "start" }}>
                             
-                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "12px", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
+                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
                                 <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
                                     <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Path Folder Produksi</h3>
                                 </div>
@@ -275,8 +359,49 @@ export default function Settings() {
                                 </div>
                             </div>
 
+                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
+                                <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
+                                    <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Pengaturan Tata Letak & Tabel</h3>
+                                </div>
+                                
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
+                                    <Input
+                                        labelPosition="top"
+                                        label="Tinggi Navbar (px/rem)"
+                                        name="theme_navbar_height"
+                                        value={settings.theme_navbar_height || defaultColors.theme_navbar_height || ""}
+                                        onChange={(e) => handleInputChange("theme_navbar_height", e.target.value)}
+                                        placeholder="Contoh: 60px"
+                                    />
+                                    <Input
+                                        labelPosition="top"
+                                        label="Lebar Sidebar (px/rem)"
+                                        name="theme_sidebar_width"
+                                        value={settings.theme_sidebar_width || defaultColors.theme_sidebar_width || ""}
+                                        onChange={(e) => handleInputChange("theme_sidebar_width", e.target.value)}
+                                        placeholder="Contoh: 80px"
+                                    />
+                                    <Input
+                                        labelPosition="top"
+                                        label="Lebar Sidebar Saat Hover (px/rem)"
+                                        name="theme_sidebar_width_hover"
+                                        value={settings.theme_sidebar_width_hover || defaultColors.theme_sidebar_width_hover || ""}
+                                        onChange={(e) => handleInputChange("theme_sidebar_width_hover", e.target.value)}
+                                        placeholder="Contoh: 250px"
+                                    />
+                                    <Input
+                                        labelPosition="top"
+                                        label="Lengkungan Sudut / Radius (px/rem)"
+                                        name="theme_radius"
+                                        value={settings.theme_radius || defaultColors.theme_radius || ""}
+                                        onChange={(e) => handleInputChange("theme_radius", e.target.value)}
+                                        placeholder="Contoh: 8px"
+                                    />
+                                </div>
+                            </div>
+
                             {renderColorGroup("Warna Layout & Latar", LAYOUT_COLORS)}
-                            {renderColorGroup("Warna Aksen & Status", ACCENT_COLORS)}
+                            {renderColorGroup("Warna Aksen & Status (Termasuk Hover)", ACCENT_COLORS)}
                             {renderColorGroup("Warna Teks", TEXT_COLORS)}
                             {renderColorGroup("Warna Elemen Lainnya", OTHER_COLORS)}
                             

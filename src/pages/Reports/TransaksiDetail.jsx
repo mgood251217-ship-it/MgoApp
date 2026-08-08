@@ -244,7 +244,7 @@ export default function TransaksiDetail() {
                         return (
                             <div key={order.order_id} style={{ 
                                 background: "var(--background)", 
-                                borderRadius: "12px", 
+                                borderRadius: "var(--radius)", 
                                 border: "1px solid var(--border)",
                                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                                 overflow: "hidden",
@@ -289,15 +289,13 @@ export default function TransaksiDetail() {
                                 <div style={{ padding: "16px", borderBottom: "1px dashed var(--border)" }}>
                                     <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", color: "var(--text)" }}>Detail Item</div>
                                     
-                                    <div style={{ border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
-                                        <Table 
-                                            id={`table-items-${order.order_id}`}
-                                            columns={itemColumns} 
-                                            rows={items} 
-                                            size="sm"
-                                            rowKey="no"
-                                        />
-                                    </div>
+                                    <Table 
+                                        id={`table-items-${order.order_id}`}
+                                        columns={itemColumns} 
+                                        rows={items} 
+                                        size="sm"
+                                        rowKey="no"
+                                    />
 
                                     <div style={{ 
                                         display: "flex", 
@@ -322,7 +320,7 @@ export default function TransaksiDetail() {
                                                 payments.map((payment, idx) => (
                                                     <div key={idx} style={{ 
                                                         border: "1px solid var(--border)", 
-                                                        borderRadius: "8px", 
+                                                        borderRadius: "var(--radius)", 
                                                         padding: "12px", 
                                                         minWidth: "220px",
                                                         display: "flex",
@@ -369,7 +367,7 @@ export default function TransaksiDetail() {
                                                                             width: "60px", 
                                                                             height: "60px", 
                                                                             objectFit: "cover", 
-                                                                            borderRadius: "8px", 
+                                                                            borderRadius: "var(--radius)", 
                                                                             border: "2px solid var(--border)",
                                                                             cursor: "pointer",
                                                                             transition: "transform 0.2s"
@@ -425,7 +423,7 @@ export default function TransaksiDetail() {
                                                 style={{
                                                     height: "76px",
                                                     padding: "0 16px",
-                                                    borderRadius: "8px",
+                                                    borderRadius: "var(--radius)",
                                                     border: "2px dashed var(--border)",
                                                     display: "flex",
                                                     alignItems: "center",
@@ -453,7 +451,7 @@ export default function TransaksiDetail() {
                                                 style={{
                                                     height: "76px",
                                                     padding: "0 16px",
-                                                    borderRadius: "8px",
+                                                    borderRadius: "var(--radius)",
                                                     border: "2px dashed var(--border)",
                                                     display: "flex",
                                                     alignItems: "center",
@@ -542,7 +540,7 @@ export default function TransaksiDetail() {
                                 maxWidth: "100%", 
                                 maxHeight: "70vh", 
                                 objectFit: "contain", 
-                                borderRadius: "8px" 
+                                borderRadius: "var(--radius)" 
                             }} 
                         />
                     )}

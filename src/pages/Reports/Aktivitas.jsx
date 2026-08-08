@@ -143,18 +143,16 @@ export default function Aktivitas() {
                     }}>
                         Aktivitas Sistem
                     </div>
-                    <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                        <Table 
-                            id="table-activity"
-                            columns={activityColumns}
-                            rows={activityData}
-                            rowKey="activity_id"
-                            size="sm"
-                            showNumber={true}
-                        />
-                    </div>
+                    <Table 
+                        id="table-activity"
+                        columns={activityColumns}
+                        rows={activityData}
+                        rowKey="activity_id"
+                        size="sm"
+                        showNumber={true}
+                    />
                     {activityData.length === 0 && !loading && (
-                        <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
+                        <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px dashed var(--border)" }}>
                             Tidak ada aktivitas pada rentang tanggal ini.
                         </div>
                     )}
@@ -172,7 +170,7 @@ export default function Aktivitas() {
                     </div>
 
                     {archiveData.length === 0 && !loading ? (
-                        <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
+                        <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px dashed var(--border)" }}>
                             Tidak ada arsip order terhapus pada rentang tanggal ini.
                         </div>
                     ) : (
@@ -183,7 +181,7 @@ export default function Aktivitas() {
                                 return (
                                     <div key={order.deleted_order_id} style={{ 
                                         background: "var(--background)", 
-                                        borderRadius: "12px", 
+                                        borderRadius: "var(--radius)", 
                                         border: "1px solid var(--border)",
                                         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                                         overflow: "hidden",
@@ -235,17 +233,14 @@ export default function Aktivitas() {
                                         </div>
 
                                         <div style={{ padding: "16px" }}>
-                                            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", color: "var(--text)" }}>Detail Item</div>
-                                            
-                                            <div style={{ border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
-                                                <Table 
-                                                    id={`table-items-${order.deleted_order_id}`}
-                                                    columns={itemColumns} 
-                                                    rows={items} 
-                                                    size="sm"
-                                                    rowKey="no"
-                                                />
-                                            </div>
+                                            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", color: "var(--text)" }}>Detail Item</div>                            
+                                            <Table 
+                                                id={`table-items-${order.deleted_order_id}`}
+                                                columns={itemColumns} 
+                                                rows={items} 
+                                                size="sm"
+                                                rowKey="no"
+                                            />
 
                                             <div style={{ 
                                                 display: "flex", 

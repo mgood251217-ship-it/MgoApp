@@ -4,7 +4,7 @@ export default function CardTrophy({ title, value, person, unit }) {
             flex: "1 1 200px",
             background: "var(--background)",
             border: "1px solid var(--border)",
-            borderRadius: "12px",
+            borderRadius: "var(--radius)",
             padding: "16px",
             display: "flex",
             flexDirection: "column",

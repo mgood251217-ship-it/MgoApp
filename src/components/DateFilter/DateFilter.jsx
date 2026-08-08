@@ -24,7 +24,7 @@ export default function DateFilter({
             marginBottom: "24px",
             padding: "16px",
             background: "var(--background)",
-            borderRadius: "12px",
+            borderRadius: "var(--radius)",
             border: "1px solid var(--border)",
             boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
         }}>

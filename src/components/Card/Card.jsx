@@ -5,7 +5,7 @@ export default function Card({ title, description1, description2, onClick, bgCol
             style={{ 
                 background: bgColor,
                 padding: "16px", 
-                borderRadius: "12px", 
+                borderRadius: "var(--radius)", 
                 cursor: "pointer",
                 display: "flex",
                 flexDirection: "column",

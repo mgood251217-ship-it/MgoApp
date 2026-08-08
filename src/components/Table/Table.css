@@ -1,7 +1,7 @@
 .table {
     width: 100%;
     border-collapse: collapse;
-    background: --background;
+    background: var(--background);
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: var(--shadow);
@@ -18,7 +18,6 @@
     white-space: nowrap;
 }
 
-/* ensure cells align vertically centered */
 .table th,
 .table td {
     vertical-align: middle;

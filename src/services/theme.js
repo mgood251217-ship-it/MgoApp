@@ -19,7 +19,11 @@ export const applyTheme = (settings) => {
         theme_text_secondary: ['--text-secondary'],
         theme_text_muted: ['--text-muted'],
         theme_border: ['--border'],
-        theme_active: ['--active']
+        theme_active: ['--active'],
+        theme_navbar_height: ['--navbar-height'],
+        theme_sidebar_width: ['--sidebar-width'],
+        theme_sidebar_width_hover: ['--sidebar-width-hover'],
+        theme_radius: ['--radius']
     };
 
     Object.keys(themeMapping).forEach(key => {

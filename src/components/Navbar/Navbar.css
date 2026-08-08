@@ -3,7 +3,7 @@
     top: 0;
     left: 60px;
     right: 0;
-    height: 56px;
+    height: var(--navbar-height);
     background: var(--bg-navbar);
     border-bottom: 1px solid var(--border);
     display: flex;

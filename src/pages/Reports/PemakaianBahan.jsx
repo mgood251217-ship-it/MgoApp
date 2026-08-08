@@ -100,19 +100,17 @@ export default function PemakaianBahan() {
             </div>
 
             <div style={{ padding: "0 24px", marginTop: "24px", display: "flex", flexDirection: "column", gap: "32px" }}>
-                <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                    <Table 
-                        id="table-pemakaian-bahan"
-                        columns={columns}
-                        rows={pemakaianBahanData}
-                        rowKey="product_id"
-                        size="md"
-                        showNumber={true}
-                    />
-                </div>
+                <Table 
+                    id="table-pemakaian-bahan"
+                    columns={columns}
+                    rows={pemakaianBahanData}
+                    rowKey="product_id"
+                    size="md"
+                    showNumber={true}
+                />
 
                 {pemakaianBahanData.length === 0 && !loading && (
-                    <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
+                    <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px dashed var(--border)" }}>
                         Tidak ada data pemakaian bahan pada rentang tanggal ini.
                     </div>
                 )}

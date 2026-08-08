@@ -223,7 +223,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                         marginBottom: 16,
                                         padding: 12,
                                         backgroundColor: "var(--bg-body)",
-                                        borderRadius: 8,
+                                        borderRadius: "var(--radius)",
                                         border: folder.dragOverCat === cat ? "2px dashed var(--primary)" : "1px solid var(--border)"
                                     }}
                                 >
@@ -397,7 +397,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                     </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, padding: "16px", backgroundColor: "var(--bg-content)", borderRadius: "8px", border: "1px solid var(--border)"}}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, padding: "16px", backgroundColor: "var(--bg-content)", borderRadius: "var(--radius)", border: "1px solid var(--border)"}}>
                     <div>
                         <h5 style={{ margin: "0 0 8px 0" }}>Diskon Produk:</h5>
                         {Object.keys(viewOrderData?.diskon_per_produk || {}).length > 0 ? (

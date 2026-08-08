@@ -45,7 +45,7 @@
     padding: 10px 12px;
     border: 1px solid;
     border-color: var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius);
     font-size: 14px;
     outline: none;
     transition: 0.2s;

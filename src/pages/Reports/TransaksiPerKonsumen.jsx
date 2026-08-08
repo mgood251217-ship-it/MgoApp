@@ -154,40 +154,38 @@ export default function TransaksiPerKonsumen() {
                             {namaKonsumen}
                         </div>
 
-                        <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                            <Table 
-                                id={`table-${namaKonsumen.replace(/\s+/g, '-').toLowerCase()}`}
-                                columns={columns}
-                                rows={daftarOrder}
-                                rowKey="order_item_id"
-                                size="sm"
-                                showNumber={true}
-                                actions={(row) => (
-                                    <div style={{ display: "flex", gap: "6px" }}>
-                                        <Button 
-                                            icon={<Icon name="next" />}
-                                            size="sm"
-                                            onClick={() => {
-                                                const params = new URLSearchParams({
-                                                    search: row.nomorator,
-                                                    start_date: row.date,
-                                                    end_date: row.date 
-                                                }).toString();
+                        <Table 
+                            id={`table-${namaKonsumen.replace(/\s+/g, '-').toLowerCase()}`}
+                            columns={columns}
+                            rows={daftarOrder}
+                            rowKey="order_item_id"
+                            size="sm"
+                            showNumber={true}
+                            actions={(row) => (
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                    <Button 
+                                        icon={<Icon name="next" />}
+                                        size="sm"
+                                        onClick={() => {
+                                            const params = new URLSearchParams({
+                                                search: row.nomorator,
+                                                start_date: row.date,
+                                                end_date: row.date 
+                                            }).toString();
 
-                                                navigate(`/reports/transaksi-detail?${params}`);
-                                            }}
-                                        >
-                                            Lihat
-                                        </Button>
-                                    </div>
-                                )}
-                            />
-                        </div>
+                                            navigate(`/reports/transaksi-detail?${params}`);
+                                        }}
+                                    >
+                                        Lihat
+                                    </Button>
+                                </div>
+                            )}
+                        />
                     </div>
                 ))}
 
                 {Object.keys(transaksiKonsumenData).length === 0 && !loading && (
-                    <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
+                    <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px dashed var(--border)" }}>
                         Tidak ada transaksi konsumen pada rentang tanggal ini.
                     </div>
                 )}

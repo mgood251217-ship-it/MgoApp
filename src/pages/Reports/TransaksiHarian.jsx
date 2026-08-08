@@ -141,7 +141,6 @@ export default function TransaksiHarian() {
             </div>
 
             <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
-                <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
                     <Table 
                         id="table-harian"
                         columns={columns}
@@ -167,12 +166,11 @@ export default function TransaksiHarian() {
                             </Button>
                         )}
                     />
-                </div>
 
                 <div style={{ 
                     padding: "20px", 
                     background: "var(--background)", 
-                    borderRadius: "12px", 
+                    borderRadius: "var(--radius)", 
                     border: "1px dashed var(--border)",
                     display: "flex",
                     flexWrap: "wrap",
@@ -181,7 +179,7 @@ export default function TransaksiHarian() {
                     alignItems: "center"
                 }}>
                     <div style={{ display: "flex", gap: "16px" }}>
-                        <div style={{ padding: "12px 16px", background: "rgba(33, 150, 243, 0.05)", borderRadius: "8px", border: "1px solid rgba(33, 150, 243, 0.1)" }}>
+                        <div style={{ padding: "12px 16px", background: "rgba(33, 150, 243, 0.05)", borderRadius: "var(--radius)", border: "1px solid rgba(33, 150, 243, 0.1)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Jml Transaksi</div>
                             <div style={{ fontWeight: "bold", fontSize: "18px", color: "var(--primary)" }}>
                                 {summary.total_transaksi} <span style={{ fontSize: "12px", fontWeight: "normal" }}>Trx</span>

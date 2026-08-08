@@ -148,38 +148,36 @@ export default function Piutang() {
             </div>
 
             <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
-                <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                    <Table 
-                        id="table-piutang"
-                        columns={columns}
-                        rows={piutangData}
-                        rowKey="order_id"
-                        size="md"
-                        showNumber={true}
-                        actions={(row) => (
-                                <Button 
-                                    icon={<Icon name="next" />}
-                                    size="sm"
-                                    onClick={() => {
-                                        const params = new URLSearchParams({
-                                            search: row.nomorator,
-                                            start_date: row.date,
-                                            end_date: row.date 
-                                        }).toString();
+                <Table 
+                    id="table-piutang"
+                    columns={columns}
+                    rows={piutangData}
+                    rowKey="order_id"
+                    size="md"
+                    showNumber={true}
+                    actions={(row) => (
+                            <Button 
+                                icon={<Icon name="next" />}
+                                size="sm"
+                                onClick={() => {
+                                    const params = new URLSearchParams({
+                                        search: row.nomorator,
+                                        start_date: row.date,
+                                        end_date: row.date 
+                                    }).toString();
 
-                                        navigate(`/reports/transaksi-detail?${params}`);
-                                    }}
-                                >
-                                    Detail
-                                </Button>
-                        )}
-                    />
-                </div>
+                                    navigate(`/reports/transaksi-detail?${params}`);
+                                }}
+                            >
+                                Detail
+                            </Button>
+                    )}
+                />
 
                 <div style={{ 
                     padding: "20px", 
                     background: "var(--background)", 
-                    borderRadius: "12px", 
+                    borderRadius: "var(--radius)", 
                     border: "1px dashed var(--border)",
                     display: "flex",
                     justifyContent: "flex-end",

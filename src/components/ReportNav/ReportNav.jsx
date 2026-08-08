@@ -40,7 +40,7 @@ export default function ReportNav() {
                             style={{
                                 whiteSpace: "nowrap",
                                 padding: "8px 16px",
-                                borderRadius: "20px",
+                                borderRadius: "var(--radius)",
                                 fontSize: "13px",
                                 fontWeight: "600",
                                 border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",

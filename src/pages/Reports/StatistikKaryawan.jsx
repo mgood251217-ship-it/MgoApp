@@ -188,19 +188,17 @@ export default function StatistikKaryawan() {
             </div>
 
             <div style={{ padding: "0 24px", marginTop: "24px", display: "flex", flexDirection: "column", gap: "32px" }}>
-                <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                    <Table 
-                        id="table-statistik-karyawan"
-                        columns={columns}
-                        rows={karyawanData}
-                        rowKey="id"
-                        size="md"
-                        showNumber={true}
-                    />
-                </div>
+                <Table 
+                    id="table-statistik-karyawan"
+                    columns={columns}
+                    rows={karyawanData}
+                    rowKey="id"
+                    size="md"
+                    showNumber={true}
+                />
 
                 {karyawanData.length === 0 && !loading && (
-                    <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
+                    <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px dashed var(--border)" }}>
                         Tidak ada data statistik karyawan pada rentang tanggal ini.
                     </div>
                 )}
