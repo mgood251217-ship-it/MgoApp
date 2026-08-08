@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import "./Table.css";
 
 export default function Table({
@@ -10,7 +11,47 @@ export default function Table({
     actions,
     onRowDoubleClick,
     showNumber = false,
+    sortable = false,
 }) {
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+    const handleSort = (key) => {
+        if (!sortable) return;
+        
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedRows = useMemo(() => {
+        if (!sortable || sortConfig.key === null) return rows;
+
+        const parseValue = (val) => {
+            if (val === null || val === undefined) return "";
+            if (typeof val === "string") {
+                if (/^(Rp\s*)?-?[\d.,]+$/i.test(val.trim())) {
+                    return parseFloat(val.replace(/\./g, "").replace(/,/g, ".").replace(/[^0-9.-]/g, ""));
+                }
+                return val.toLowerCase();
+            }
+            return val;
+        };
+
+        const sortableRows = [...rows];
+        sortableRows.sort((a, b) => {
+            const aValue = parseValue(a[sortConfig.key]);
+            const bValue = parseValue(b[sortConfig.key]);
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return sortableRows;
+    }, [rows, sortConfig, sortable]);
+
     return (
         <table
             id={id}
@@ -22,8 +63,19 @@ export default function Table({
                         <th className="table-number">No.</th>
                     )}
                     {columns.map(column => (
-                        <th key={column.key}>
-                            {column.title}
+                        <th 
+                            key={column.key}
+                            onClick={() => handleSort(column.key)}
+                            style={sortable ? { cursor: "pointer", userSelect: "none" } : {}}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span>{column.title}</span>
+                                {sortable && sortConfig.key === column.key && (
+                                    <span style={{ fontSize: "0.8em", opacity: 0.7, marginLeft: "4px" }}>
+                                        {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                                    </span>
+                                )}
+                            </div>
                         </th>
                     ))}
 
@@ -32,17 +84,17 @@ export default function Table({
             </thead>
 
             <tbody>
-                {rows.length === 0 ? (
+                {sortedRows.length === 0 ? (
                     <tr>
                         <td
-                            colSpan={columns.length + (actions ? 1 : 0)}
+                            colSpan={columns.length + (actions ? 1 : 0) + (showNumber ? 1 : 0)}
                             className="text-center"
                         >
                             Tidak ada data
                         </td>
                     </tr>
                 ) : (
-                    rows.map((row, index) => (
+                    sortedRows.map((row, index) => (
                         <tr
                             key={row[rowKey]}
                             data-id={row[rowDataKey]}
@@ -69,7 +121,7 @@ export default function Table({
                             ))}
 
                             {actions && (
-                                <td >
+                                <td>
                                     <div className="table-actions">
                                         {actions(row)}
                                     </div>
