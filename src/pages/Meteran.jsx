@@ -82,7 +82,7 @@ export default function Meteran() {
         return (
             <>
                 <div style={{ marginTop: 24, marginBottom: 24 }}>
-                    <div style={{ background: "var(--warning)", padding: "16px", borderRadius: "8px", border: "1px solid var(--warning-hover)", display: "inline-block" }}>
+                    <div style={{ background: "var(--warning)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--warning-hover)", display: "inline-block" }}>
                         <h3 style={{ margin: 0, color: "var(--text)" }}>
                             Total Keseluruhan: {rapihkanAngka(totalAllM2)} M²
                         </h3>
@@ -106,7 +106,7 @@ export default function Meteran() {
                             : product.rows.reduce((sum, r) => sum + (r.m2 || 0), 0);
 
                         return (
-                            <div key={index} style={{ background: "var(--background)", borderRadius: "8px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                            <div key={index} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                                 <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
                                     <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
                                 </div>
@@ -175,7 +175,7 @@ export default function Meteran() {
                                 const totalM2 = product.rows.reduce((acc, curr) => acc + (curr.m2 || 0), 0);
 
                                 return (
-                                    <div key={`met-${index}`} style={{ background: "var(--background)", borderRadius: "8px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                                    <div key={`met-${index}`} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                                         <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
                                             <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
                                         </div>
@@ -209,7 +209,7 @@ export default function Meteran() {
                                 const totalKg = product.rows.reduce((acc, curr) => acc + (curr.kg_total || 0), 0);
 
                                 return (
-                                    <div key={`kil-${index}`} style={{ background: "var(--background)", borderRadius: "8px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                                    <div key={`kil-${index}`} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                                         <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
                                             <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
                                         </div>
@@ -266,14 +266,14 @@ export default function Meteran() {
         return (
             <>
                 <div style={{ marginTop: 24, marginBottom: 24 }}>
-                    <div style={{ background: "var(--success)", padding: "16px", borderRadius: "8px", border: "1px solid var(--success-hover)", display: "inline-block" }}>
+                    <div style={{ background: "var(--success)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--success-hover)", display: "inline-block" }}>
                         <h3 style={{ margin: 0, color: "var(--text)" }}>
                             Total Keseluruhan Qty: {totalQty}
                         </h3>
                     </div>
                 </div>
 
-                <div style={{ background: "var(--background)", borderRadius: "8px", border: "1px solid var(--border)", overflow: "hidden" }}>
+                <div style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden" }}>
                     <Table
                         id="table-qty"
                         showNumber={true}
@@ -300,12 +300,12 @@ export default function Meteran() {
         return (
             <>
                 <div style={{ marginTop: 24, marginBottom: 24, display: "flex", gap: "16px" }}>
-                    <div style={{ background: "var(--info)", padding: "16px", borderRadius: "8px", border: "1px solid var(--info-hover)" }}>
+                    <div style={{ background: "var(--info)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--info-hover)" }}>
                         <h3 style={{ margin: 0, color: "var(--text)" }}>
                             Total Panjang DTF: {dataState.total_panjang_dtf || 0}
                         </h3>
                     </div>
-                    <div style={{ background: "var(--primary)", padding: "16px", borderRadius: "8px", border: "1px solid var(--primary-hover)" }}>
+                    <div style={{ background: "var(--primary)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--primary-hover)" }}>
                         <h3 style={{ margin: 0, color: "var(--background)" }}>
                             Total Panjang DTF UV: {dataState.total_panjang_dtf_uv || 0}
                         </h3>
@@ -326,7 +326,7 @@ export default function Meteran() {
                         const totalProduk = product.rows.reduce((acc, curr) => acc + (curr.total || 0), 0);
 
                         return (
-                            <div key={index} style={{ background: "var(--background)", borderRadius: "8px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                            <div key={index} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                                 <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
                                     <h4 style={{ margin: 0, fontSize: "14px" }}>
                                         {product.name} {product.isUV ? "(UV)" : ""}

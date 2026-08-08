@@ -331,7 +331,7 @@ export default function Failure() {
             <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", fontSize: "14px" }}>
                 {title}
             </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "6px", backgroundColor: "var(--bg-body)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", backgroundColor: "var(--bg-body)" }}>
                 {list.map((item) => (
                     <label key={item} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px", width: "calc(50% - 12px)" }}>
                         <input
@@ -398,18 +398,16 @@ export default function Failure() {
                     <h3 style={{ margin: 0, fontSize: "16px", color: "var(--text)", fontWeight: "600" }}>
                         Data Kegagalan
                     </h3>
-                    <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
                         <Table 
                             id="table-failure"
-                            columns={columns}
+                            columns={columns}   
                             rows={failures}
                             rowKey="failure_id"
                             size="sm"
                             showNumber={true}
                         />
-                    </div>
                     {failures.length === 0 && !loading && (
-                        <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
+                        <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px dashed var(--border)" }}>
                             Tidak ada data kegagalan produksi pada rentang tanggal ini.
                         </div>
                     )}

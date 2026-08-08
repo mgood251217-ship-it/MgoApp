@@ -437,33 +437,33 @@ export default function Store() {
             />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                     <small style={{ color: 'var(--text)' }}>Total Order 30 Hari</small>
                     <h3 style={{ margin: '8px 0 0' }}>{stats.summary?.total_30?.toLocaleString() ?? 0}</h3>
                 </div>
-                <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                     <small style={{ color: 'var(--text)' }}>Total Hari Ini</small>
                     <h3 style={{ margin: '8px 0 0' }}>{stats.summary?.total_today?.toLocaleString() ?? 0}</h3>
                 </div>
-                <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                     <small style={{ color: 'var(--text)' }}>Top Customer: {stats.summary?.top_customer}</small>
                     <h3 style={{ margin: '8px 0 0' }}>Rp {stats.summary?.top_total?.toLocaleString() ?? 0}</h3>
                 </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                     <h5 style={{ marginTop: 0 }}>Statistik 30 Hari Terakhir</h5>
                     <Line data={chart30Data} options={chartOptions} />
                 </div>
-                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                     <h5 style={{ marginTop: 0 }}>Statistik 1 Tahun Terakhir</h5>
                     <Bar data={chart365Data} options={chartOptions} />
                 </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '6.5fr 3.5fr', gap: '24px', marginBottom: '24px' }}>
-                <div style={{ background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div style={{ overflow: 'hidden' }}>
                     <Table 
                         id="tableUsers"
                         title="User Management"
@@ -475,7 +475,7 @@ export default function Store() {
                         actions={userActions}
                     />
                 </div>
-                <div style={{ background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div style={{ overflow: 'hidden' }}>
                     <Table 
                         id="tableMachines"
                         title="Data Mesin"
@@ -489,10 +489,10 @@ export default function Store() {
                 </div>
             </div>
 
-            <div style={{ background: 'var(--background)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', marginBottom: '24px' }}>
+            <div style={{ background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', width: '100%', marginBottom: '24px' }}>
                 <h4 style={{ marginTop: 0, marginBottom: '8px' }}>Lokasi Cabang</h4>
                 <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-muted)' }}>Klik di mana saja pada peta untuk menambahkan titik lokasi baru.</p>
-                <div style={{ height: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div style={{ height: '400px', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
                     <MapContainer 
                         center={mapCenter} 
                         zoom={13} 

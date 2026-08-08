@@ -382,14 +382,14 @@ export default function GlobalStocks() {
             <div style={{ padding: "24px 24px 0 24px", display: "flex", gap: "16px", alignItems: "flex-end" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     <label style={{ fontSize: "14px", fontWeight: "600", color: "var(--text)" }}>Bulan & Tahun</label>
-                    <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--bg-content)", color: "var(--text)", outline: "none", fontSize: "14px" }} />
+                    <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} style={{ padding: "10px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)", backgroundColor: "var(--bg-content)", color: "var(--text)", outline: "none", fontSize: "14px" }} />
                 </div>
                 {loading && <span style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "10px" }}><Icon name="sync" /> Memuat data...</span>}
             </div>
 
             <div style={{ padding: "24px", overflowX: "hidden" }}>
                 {Object.keys(groupedStocks).length === 0 && !loading ? (
-                    <div style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "12px" }}>
+                    <div style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                         Tidak ada data stok untuk bulan ini.
                     </div>
                 ) : (
@@ -403,16 +403,26 @@ export default function GlobalStocks() {
                             if (firstVariationKey) categoryId = categoryProducts[firstProductName][firstVariationKey].global_stock_category_id;
                         }
                         return (
-                            <div key={categoryName} style={{ marginBottom: "32px", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "12px", padding: "16px", overflowX: "auto" }}>
+                            <div key={categoryName} style={{ marginBottom: "32px", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px", overflowX: "auto" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                                     <h3 style={{ margin: 0, color: "var(--text)", fontWeight: "700" }}>
                                         Kategori: <span style={{ color: "var(--primary)" }}>{categoryName.toUpperCase()}</span>
                                     </h3>
                                     {categoryId && (
                                         <div style={{ display: "flex", gap: "8px" }}>
-                                            <button onClick={() => handleOpenAddProduct(categoryId)} style={{ padding: "6px 12px", background: "var(--success)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}><Icon name="add" /> Produk</button>
-                                            <button onClick={() => handleOpenEditCategory(categoryId, categoryName)} style={{ padding: "6px 12px", background: "var(--warning)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}><Icon name="edit" /> Edit Kategori</button>
-                                            <button onClick={() => handleDeleteCategory(categoryId, categoryName)} style={{ padding: "6px 12px", background: "var(--danger)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}><Icon name="delete" /> Hapus Kategori</button>
+                                            <Button
+                                                onClick={() => handleOpenAddProduct(categoryId)}>
+                                                    <Icon name="add"/>Produk
+                                            </Button>
+                                            <Button
+                                                variant="warning"
+                                                onClick={() => handleOpenEditCategory(categoryId, categoryName)}>
+                                                    <Icon name="edit"/> Edit Kategori
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleDeleteCategory(categoryId, categoryName)}>
+                                                    <Icon name="delete" /> Hapus Kategori
+                                            </Button>
                                         </div>
                                     )}
                                 </div>

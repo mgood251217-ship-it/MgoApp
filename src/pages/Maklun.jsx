@@ -118,16 +118,14 @@ export default function Maklun() {
                             📥 Maklun Masuk
                         </h3>
                     </div>
-                    <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                        <Table 
-                            id="table-maklun-masuk"
-                            columns={kolomMaklunMasuk}
-                            rows={maklunMasuk}
-                            rowKey={(row, index) => row.order_item_id || index}
-                            size="sm"
-                            showNumber={true}
-                        />
-                    </div>
+                    <Table 
+                        id="table-maklun-masuk"
+                        columns={kolomMaklunMasuk}
+                        rows={maklunMasuk}
+                        rowKey={(row, index) => row.order_item_id || index}
+                        size="sm"
+                        showNumber={true}
+                    />
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -136,16 +134,14 @@ export default function Maklun() {
                             📤 Maklun Keluar
                         </h3>
                     </div>
-                    <div style={{ background: "var(--background)", borderRadius: "12px", border: "1px solid var(--border)", overflow: "hidden" }}>
-                        <Table 
-                            id="table-maklun-keluar"
-                            columns={kolomMaklunKeluar}
-                            rows={maklunKeluar}
-                            rowKey={(row, index) => row.order_item_id || index}
-                            size="sm"
-                            showNumber={true}
-                        />
-                    </div>
+                    <Table 
+                        id="table-maklun-keluar"
+                        columns={kolomMaklunKeluar}
+                        rows={maklunKeluar}
+                        rowKey={(row, index) => row.order_item_id || index}
+                        size="sm"
+                        showNumber={true}
+                    />
                 </div>
             </div>
         </div>

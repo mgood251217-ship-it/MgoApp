@@ -352,7 +352,7 @@ export default function Order() {
             />
 
             <div style={{ display: "flex", gap: "24px", marginTop: "24px", alignItems: "flex-start" }}>
-                <div style={{ width: "40%", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                <div style={{ width: "40%", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                     <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
                     <OrderItemForm 
                         initialData={initialFormItem}
@@ -368,7 +368,7 @@ export default function Order() {
                             qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
                         })}
                     >
-                        <div style={{ padding: "12px", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", borderRadius: "6px", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ padding: "12px", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", borderRadius: "var(--radius)", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--text)" }}>Estimasi Harga:</span>
                             <span style={{ fontWeight: "bold", color: "var(--success)", fontSize: "16px" }}>
                                 {formatRupiah(previewPrice)}
@@ -378,7 +378,7 @@ export default function Order() {
                 </div>
 
                 <div style={{ width: "60%" }}>
-                    <div style={{ backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                    <div style={{ backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                         <h3 style={{ marginBottom: "16px" }}>Daftar Item</h3>
                         <Table
                             id="tableOrderItems"
@@ -392,7 +392,7 @@ export default function Order() {
                             onRowDoubleClick={handleRowDoubleClick}
                         />
 
-                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", padding: "16px", borderRadius: "8px", border: "1px solid var(--border)", alignItems: "center"}}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)", alignItems: "center"}}>
                             <div>
                                 <h4 style={{ margin: "0 0 8px 0" }}>Diskon Produk:</h4>
                                 {Object.keys(orderInfo.diskon_per_produk || {}).length > 0 ? (
@@ -415,9 +415,9 @@ export default function Order() {
                             </div>
                         </div>
 
-                        <div style={{ marginTop: "24px", padding: "16px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                        <div style={{ marginTop: "24px", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             {orderInfo.note && (
-                                <div style={{ marginBottom: "16px", padding: "12px", backgroundColor: "rgba(var(--warning-rgb), 0.1)", color: "var(--warning)", borderRadius: "6px", borderLeft: "4px solid var(--warning)" }}>
+                                <div style={{ marginBottom: "16px", padding: "12px", backgroundColor: "rgba(var(--warning-rgb), 0.1)", color: "var(--warning)", borderRadius: "var(--radius)", borderLeft: "4px solid var(--warning)" }}>
                                     {orderInfo.note}
                                 </div>
                             )}
