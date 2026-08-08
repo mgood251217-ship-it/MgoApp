@@ -227,6 +227,17 @@ ipcMain.handle("buka-link-eksternal", async (event, url) => {
     }
 });
 
+ipcMain.handle("pilih-file-order", async () => {
+    const result = await dialog.showOpenDialog({
+        properties: ["openFile", "multiSelections"],
+        filters: [
+            { name: "File Desain", extensions: ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"] }
+        ]
+    });
+    if (result.canceled) return [];
+    return result.filePaths;
+});
+
 ipcMain.handle("pilih-folder", async () => {
     const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
     if (result.canceled) return null;
@@ -524,11 +535,6 @@ ipcMain.handle("set-icon-folder-order", async (event, { folderPath, status }) =>
     } catch (err) {
         return { success: false, message: err.message };
     }
-});
-
-ipcMain.on('restart-app', () => {
-    app.relaunch();
-    app.exit(0);
 });
 
 app.whenReady().then(async () => {

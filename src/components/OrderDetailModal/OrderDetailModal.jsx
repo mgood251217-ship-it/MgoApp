@@ -6,13 +6,13 @@ import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
 import Select from "../Select/Select";
 import Form from "../Form/Form";
-import { formatRupiah } from "../../services/helpers";
+import { formatRupiah, formatTime } from "../../services/helpers";
 import { FOLDER_STATUS_LABEL, formatUkuran, buildRenamedFilenameWithQuantity } from "../../services/folderHelper";
 import useOrderFolderStatus from "../../hooks/useOrderFolderStatus";
 import ChangeFolderIconModal from "../ChangeFolderIconModal/ChangeFolderIconModal";
 import { getCachedStoreNames } from "../../services/apiCache";
 
-export default function OrderDetailModal({ open, onClose, viewOrderDetails, viewOrderData, setAlertConfig }) {
+export default function OrderDetailModal({ open, onClose, viewOrderDetails, viewOrderData, setAlertConfig, onRefresh }) {
     const folder = useOrderFolderStatus(setAlertConfig);
     const [stores, setStores] = useState([]);
 
@@ -102,6 +102,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
             setMaklunModalOpen(false);
             setAlertConfig({ type: "success", message: "Maklun berhasil diperbarui" });
             loadStores();
+            onRefresh?.();
         } catch (err) {
             setAlertConfig({ type: "error", message: "Gagal memperbarui maklun" });
         }
@@ -187,16 +188,8 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                 size="lg"
                 headerColor="info"
             >
-                <div style={{ display: "flex", gap: "8px", marginBottom: 16, flexWrap: "nowrap" }}>
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        icon={<Icon name="content_copy" />}
-                        style={{ whiteSpace: "nowrap" }}
-                        onClick={() => viewOrderDetails && folder.handleCopyFolderName(viewOrderDetails)}
-                    >
-                        {viewOrderDetails && folder.copyFeedbackId === viewOrderDetails.order_id ? "Tersalin!" : "Salin Nama Folder"}
-                    </Button>
+                <div style={{ fontSize: 13, color: "var(--secondary)", marginBottom: 16 }}>
+                    Dibuat: {viewOrderData?.order?.date ? formatTime(viewOrderData.order.date) : "-"}
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
@@ -236,32 +229,65 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                 >
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                                         <div style={{ fontWeight: "bold" }}>{cat}</div>
-                                        {info.status === "ada" ? (
+                                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                             <Button
                                                 size="sm"
                                                 variant="secondary"
-                                                icon={<Icon name="folder" />}
+                                                icon={<Icon name="content_copy" />}
                                                 style={{ whiteSpace: "nowrap" }}
-                                                onClick={() => folder.handleOpenIconModalForCategory(cat, info.path, viewOrderDetails)}
+                                                onClick={() => viewOrderDetails && folder.handleCopyFolderName(viewOrderDetails)}
                                             >
-                                                Ganti Icon
+                                                {viewOrderDetails && folder.copyFeedbackId === viewOrderDetails.order_id ? "Tersalin!" : "Salin Nama Folder"}
                                             </Button>
-                                        ) : (
-                                            <Button
-                                                size="sm"
-                                                variant="primary"
-                                                icon={<Icon name="create_new_folder" />}
-                                                style={{ whiteSpace: "nowrap" }}
-                                                disabled={folder.creatingFolderFor === cat}
-                                                onClick={() => folder.handleBuatFolder(cat, info.createInfo, viewOrderDetails, viewOrderData.items)}
-                                            >
-                                                {folder.creatingFolderFor === cat ? "Membuat..." : "Buat Folder"}
-                                            </Button>
-                                        )}
+                                            {info.status === "ada" ? (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        icon={<Icon name="folder" />}
+                                                        style={{ whiteSpace: "nowrap" }}
+                                                        onClick={() => folder.handleOpenIconModalForCategory(cat, info.path, viewOrderDetails)}
+                                                    >
+                                                        Ganti Icon
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="primary"
+                                                        icon={<Icon name="upload_file" />}
+                                                        style={{ whiteSpace: "nowrap" }}
+                                                        onClick={() => folder.handlePilihFile(cat, info, viewOrderDetails, viewOrderData.items)}
+                                                    >
+                                                        Pilih File
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="primary"
+                                                        icon={<Icon name="create_new_folder" />}
+                                                        style={{ whiteSpace: "nowrap" }}
+                                                        disabled={folder.creatingFolderFor === cat}
+                                                        onClick={() => folder.handleBuatFolder(cat, info.createInfo, viewOrderDetails, viewOrderData.items)}
+                                                    >
+                                                        {folder.creatingFolderFor === cat ? "Membuat..." : "Buat Folder"}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        icon={<Icon name="upload_file" />}
+                                                        style={{ whiteSpace: "nowrap" }}
+                                                        onClick={() => folder.handlePilihFile(cat, info, viewOrderDetails, viewOrderData.items)}
+                                                    >
+                                                        Pilih File
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div style={{ fontSize: 12, color: "var(--secondary)", marginBottom: 8 }}>
-                                        Seret file JPG/PNG/PDF/TIFF ke sini untuk memindahkan ke folder ini.
+                                        Seret file JPG/PNG/PDF/TIFF/CDR ke sini, atau klik "Pilih File" untuk memindahkan ke folder ini.
                                     </div>
 
                                     {info.status === "tidak-ada" ? (
@@ -271,7 +297,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                     ) : isLoading ? (
                                         <div style={{ color: "var(--secondary)", fontSize: 13 }}>Membaca isi folder...</div>
                                     ) : files.length === 0 ? (
-                                        <div style={{ color: "var(--secondary)", fontSize: 13 }}>Tidak ada file JPG/PNG/PDF/TIFF di folder ini.</div>
+                                        <div style={{ color: "var(--secondary)", fontSize: 13 }}>Tidak ada file JPG/PNG/PDF/TIFF/CDR di folder ini.</div>
                                     ) : (
                                         <>
                                             <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>

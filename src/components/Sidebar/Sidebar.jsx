@@ -16,9 +16,9 @@ const menus = [
     { title: "Products", path: "/products", icon: <FiShoppingBag />, restrict: true },
     { title: "Global Stocks", path: "/global-stocks", icon: <FaBoxes /> },
     { title: "Meteran", path: "/meteran", icon: <TbRulerMeasure />, restrict: true },
-    { title: "Failure", path: "/failure", icon: <MdOutlineErrorOutline /> },
+    { title: "Failures", path: "/failure", icon: <MdOutlineErrorOutline /> },
     { title: "Maklun", path: "/maklun", icon: <LiaWindowRestore /> },
-    { title: "Report", path: "/report", icon: <FiFileText />, restrict: true },
+    { title: "Reports", path: "/report", icon: <FiFileText />, restrict: true },
     { title: "Settings", path: "/settings", icon: <MdOutlineSettings /> }
 ];
 

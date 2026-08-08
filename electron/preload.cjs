@@ -20,11 +20,13 @@ contextBridge.exposeInMainWorld("electron", {
         return () => ipcRenderer.removeListener('download-update-progress', listener);
     },
     pilihFolder: () => ipcRenderer.invoke('pilih-folder'),
+    pilihFileOrder: () => ipcRenderer.invoke('pilih-file-order'),
     cekFolderOrder: (folderPath) => ipcRenderer.invoke('cek-folder-order', folderPath),
     cariFolderOrder: (data) => ipcRenderer.invoke('cari-folder-order', data),
     getPathForFile: (file) => webUtils.getPathForFile(file),
 
     getSettings: () => ipcRenderer.invoke('get-settings'),
+    restartApp: () => ipcRenderer.send('restart-app'),
+    showMainWindow: () => ipcRenderer.send('show-main-window'),
     saveSettings: (data) => ipcRenderer.invoke('save-settings', data),
-    restartApp: () => ipcRenderer.send('restart-app')
 });

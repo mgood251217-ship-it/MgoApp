@@ -109,12 +109,8 @@ export default function useOrderFolderStatus(setAlertConfig) {
         }
     }, [setAlertConfig, checkFolders]);
 
-    const handleDropFile = useCallback(async (e, category, info, orderRow, itemsList) => {
-        e.preventDefault();
-        setDragOverCat(null);
-
-        const filePaths = Array.from(e.dataTransfer.files).map(f => window.electron.getPathForFile(f)).filter(Boolean);
-        if (filePaths.length === 0) return;
+    const moveFilesToCategory = useCallback(async (filePaths, info, orderRow, itemsList) => {
+        if (!filePaths || filePaths.length === 0) return;
 
         try {
             let targetPath = info.path;
@@ -140,6 +136,19 @@ export default function useOrderFolderStatus(setAlertConfig) {
             setAlertConfig({ show: true, type: "error", message: "Gagal memindahkan file." });
         }
     }, [setAlertConfig, checkFolders]);
+
+    const handleDropFile = useCallback(async (e, category, info, orderRow, itemsList) => {
+        e.preventDefault();
+        setDragOverCat(null);
+
+        const filePaths = Array.from(e.dataTransfer.files).map(f => window.electron.getPathForFile(f)).filter(Boolean);
+        moveFilesToCategory(filePaths, info, orderRow, itemsList);
+    }, [moveFilesToCategory]);
+
+    const handlePilihFile = useCallback(async (category, info, orderRow, itemsList) => {
+        const filePaths = await window.electron.pilihFileOrder();
+        moveFilesToCategory(filePaths, info, orderRow, itemsList);
+    }, [moveFilesToCategory]);
 
     const handleOpenIconModalForCategory = useCallback((category, folderPath, orderRow) => {
         setIconModalOrder({ ...orderRow, kategori: category });
@@ -199,6 +208,7 @@ export default function useOrderFolderStatus(setAlertConfig) {
         handleCopyFolderName,
         handleBuatFolder,
         handleDropFile,
+        handlePilihFile,
         iconModalOpen,
         iconModalOrder,
         folderIconTarget,

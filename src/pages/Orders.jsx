@@ -544,6 +544,7 @@ export default function Orders() {
                 viewOrderDetails={viewOrderDetails}
                 viewOrderData={viewOrderData}
                 setAlertConfig={setAlertConfig}
+                onRefresh={() => handleViewOrder(viewOrderDetails)}
             />
 
             <Modal
