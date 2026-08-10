@@ -55,6 +55,27 @@ const getServerDataset = async () => {
     return datasetPromise;
 };
 
+
+export const validateStoreCache = (newStoreName) => {
+    const oldStoreName = localStorage.getItem("last_store_name");
+
+    if (oldStoreName && oldStoreName !== newStoreName) {
+        const recaptchaBackup = localStorage.getItem("_grecaptcha");
+
+        localStorage.clear();
+
+        if (recaptchaBackup !== null) {
+            localStorage.setItem("_grecaptcha", recaptchaBackup);
+        }
+
+        console.log(`Cache dibersihkan karena pindah dari toko "${oldStoreName}" ke "${newStoreName}"`);
+    }
+
+    if (newStoreName) {
+        localStorage.setItem("last_store_name", newStoreName);
+    }
+};
+
 export const getCachedStoreData = async () => {
     const dataset = await getServerDataset();
     const serverTime = dataset.store_data_updated_at || 0;

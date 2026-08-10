@@ -2,7 +2,7 @@
     margin-bottom: 20px;
     background-color: var(--bg-content);
     padding: 16px;
-    border-radius: 8px;
+    border-radius: var(--radius);
     border: 1px solid var(--border);
 }
 
@@ -15,7 +15,7 @@
 .payment-modal-row.danger {
     color: #fff;
     background-color: var(--danger);
-    border-radius: 8px;
+    border-radius: var(--radius);
     padding: 8px;
 }
 

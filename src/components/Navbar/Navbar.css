@@ -21,7 +21,7 @@
 
 .navbar-logo {
     height: 36px;
-    border-radius: 8px;
+    border-radius: var(--radius);
     object-fit: cover;
 }
 
@@ -54,7 +54,7 @@
     height: 38px;
     border: none;
     background: transparent;
-    border-radius: 8px;
+    border-radius: var(--radius);
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -92,7 +92,7 @@
     border: none;
     background: var(--danger);
     color: #ffffff;
-    border-radius: 8px;
+    border-radius: var(--radius);
     padding: 0 14px;
     display: flex;
     align-items: center;

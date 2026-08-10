@@ -1,4 +1,5 @@
 import api from "../api/axios";
+import { validateStoreCache } from "./apiCache";
 
 const KEY = "mgo_session";
 let currentUser = readLocalSession();
@@ -16,7 +17,6 @@ function readLocalSession() {
     return null;
   }
 }
-
 
 function writeLocalSession(data) {
     localStorage.setItem(KEY, JSON.stringify(data));
@@ -40,6 +40,11 @@ export const authStore = {
 
     login: async (data) => {
         const response = await api.post("/index.php?action=session", data);
+        
+        if (response.data.data?.store?.name) {
+            validateStoreCache(response.data.data.store.name);
+        }
+
         currentUser = response.data.data;
         writeLocalSession(currentUser);
         notify();

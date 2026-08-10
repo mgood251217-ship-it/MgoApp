@@ -87,7 +87,7 @@ function LoginInternal() {
                 authStore.login(response.data);
             }
 
-            navigate("/store", { replace: true });
+            navigate("/orders", { replace: true });
         } catch (err) {
             setError("Server tidak dapat dihubungi.");
         } finally {
