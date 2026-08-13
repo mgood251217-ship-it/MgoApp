@@ -25,10 +25,12 @@ export async function checkUpdate() {
 
         const latestVersion = data.data.version;
         const downloadUrl = data.data.download_url;
-        const forceUpdate = !!data.data.force_update;
-        const hasUpdate = compareVersions(config.version, latestVersion) < 0;
+        const minRequiredVersion = data.data.min_required_version || latestVersion;
 
-        return { hasUpdate, latestVersion, downloadUrl, forceUpdate };
+        const hasUpdate = compareVersions(config.version, latestVersion) < 0;
+        const forceUpdate = compareVersions(config.version, minRequiredVersion) < 0;
+
+        return { hasUpdate, latestVersion, downloadUrl, forceUpdate, minRequiredVersion };
     } catch (err) {
         return { hasUpdate: false, latestVersion: config.version };
     }
