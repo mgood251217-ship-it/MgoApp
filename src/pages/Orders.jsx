@@ -19,9 +19,15 @@ import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
 import { getCachedInitials, getCachedOrders, getCachedOrderDetail } from "../services/apiCache";
 import config from "../services/config";
+import { authStore } from "../services/session";
 
 export default function Orders() {
     const navigate = useNavigate();
+    const session = authStore.getUser();
+    const role = session?.user?.role ?? "";
+    const isPrivileged = role == "ADMIN" || role == "MANAGER";
+    const isOnlineRole = role == "ONLINE";
+
     const [ordersOnline, setOrdersOnline] = useState([]);
     const [ordersOffline, setOrdersOffline] = useState([]);
     const [operators, setOperators] = useState([]);
@@ -384,54 +390,68 @@ export default function Orders() {
         { key: "op_initial", title: "CS" }
     ], []);
 
-    const tableActions = useCallback((row) => (
-        <div style={{ display: "flex", gap: "4px", flexWrap: "nowrap" }}>
-            <Button
-                size="sm"
-                variant="success"
-                icon={<Icon name="payments" />}
-                disabled={row.is_lunas}
-                onClick={(e) => { e.stopPropagation(); handlePayClick(row); }}
-            />
-            <Button
-                size="sm"
-                variant="info"
-                icon={<Icon name="visibility" />}
-                onClick={(e) => { e.stopPropagation(); handleViewOrder(row); }}
-            />
-            <Button
-                size="sm"
-                variant="warning"
-                icon={<Icon name="edit" />}
-                onClick={(e) => { e.stopPropagation(); handleEditOrder(row); }}
-            />
-            <Button
-                size="sm"
-                variant="primary"
-                icon={<Icon name="print" />}
-                onClick={(e) => { e.stopPropagation(); setPrintStrukOrderId(row.order_id); }}
-            />
-            <Button
-                size="sm"
-                variant="danger"
-                icon={<Icon name="picture_as_pdf" />}
-                onClick={(e) => { e.stopPropagation(); setPrintPdfOrderId( row.order_id); }}
-            />
-            <Button
-                size="sm"
-                variant="secondary"
-                icon={<Icon name="engineering" />}
-                disabled={row.project_initial !== ""}
-                onClick={(e) => { e.stopPropagation(); handleProcessClick(row); }}
-            />
-            <Button
-                size="sm"
-                variant="secondary"
-                icon={<Icon name="next" />}
-                onClick={() => { handleNavigate(`/reports/transaksi-detail?search=${row.nomorator}&start_date=${row.date}&end_date=${row.date}`) }}
-            />
-        </div>
-    ), [handlePayClick, handleViewOrder, handleEditOrder, handleProcessClick, handleNavigate]);
+    const tableActions = useCallback((row) => {
+        return (
+            <div style={{ display: "flex", gap: "4px", flexWrap: "nowrap" }}>
+                {(isPrivileged || isOnlineRole) && (
+                    <Button
+                        size="sm"
+                        variant="success"
+                        icon={<Icon name="payments" />}
+                        disabled={row.is_lunas}
+                        onClick={(e) => { e.stopPropagation(); handlePayClick(row); }}
+                    />
+                )}
+                
+                <Button
+                    size="sm"
+                    variant="info"
+                    icon={<Icon name="visibility" />}
+                    onClick={(e) => { e.stopPropagation(); handleViewOrder(row); }}
+                />
+                
+                {(isPrivileged || isOnlineRole) && (
+                    <>
+                        <Button
+                            size="sm"
+                            variant="warning"
+                            icon={<Icon name="edit" />}
+                            onClick={(e) => { e.stopPropagation(); handleEditOrder(row); }}
+                        />
+                        <Button
+                            size="sm"
+                            variant="primary"
+                            icon={<Icon name="print" />}
+                            onClick={(e) => { e.stopPropagation(); setPrintStrukOrderId(row.order_id); }}
+                        />
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            icon={<Icon name="picture_as_pdf" />}
+                            onClick={(e) => { e.stopPropagation(); setPrintPdfOrderId(row.order_id); }}
+                        />
+                    </>
+                )}
+                
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={<Icon name="engineering" />}
+                    disabled={row.project_initial !== ""}
+                    onClick={(e) => { e.stopPropagation(); handleProcessClick(row); }}
+                />
+                
+                {isPrivileged && (
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<Icon name="next" />}
+                        onClick={() => { handleNavigate(`/reports/transaksi-detail?search=${row.nomorator}&start_date=${row.date}&end_date=${row.date}`) }}
+                    />
+                )}
+            </div>
+        );
+    }, [role, handlePayClick, handleViewOrder, handleEditOrder, handleProcessClick, handleNavigate, setPrintStrukOrderId, setPrintPdfOrderId]);
 
     const operatorOptions = useMemo(() => {
         return Object.entries(operators).map(([id, name]) => ({
@@ -480,7 +500,7 @@ export default function Orders() {
                 onEndDateChange={setEndDate}
                 onFilter={loadData}
             />
-
+            {!isOnlineRole && (
             <div style={{ marginTop: 24, marginBottom: 16 }}>
                 <h3 style={{ marginBottom: 12 }}>Pesanan Offline</h3>
                 <Table
@@ -505,7 +525,7 @@ export default function Orders() {
                     }}
                 />
             </div>
-
+            )}
             <div style={{ marginTop: 32 }}>
                 <h3 style={{ marginBottom: 12 }}>Pesanan Online</h3>
                 <Table
@@ -651,7 +671,7 @@ export default function Orders() {
                         labelWidth={130}
                         name="system"
                         label="System"
-                        value={formOrder.system}
+                        value={isOnlineRole ? "ONLINE" : "OFFLINE"}
                         onChange={handleFormChange}
                         options={systemOptions}
                         required
