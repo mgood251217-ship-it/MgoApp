@@ -19,6 +19,10 @@
     background: var(--primary);
 }
 
+.btn-primary:hover {
+    background: var(--primary-hover);
+}
+
 .btn-secondary {
     background: var(--secondary);
 }
@@ -33,10 +37,6 @@
 
 .btn-info:hover {
     background: var(--info-hover);
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
 }
 
 .btn-danger {
@@ -57,11 +57,19 @@
 
 .btn-success {
     background: var(--success);
-}
+}   
 
 .btn-success:hover {
     background: var(--success-hover);
 }
+
+.btn-brown {
+    background: brown;
+}  
+
+.btn-brown:hover {
+    background: rgb(175, 61, 61);
+}  
 
 .btn-sm {
     padding: 3px 8px;

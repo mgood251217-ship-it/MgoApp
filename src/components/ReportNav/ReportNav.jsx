@@ -25,7 +25,7 @@ export default function ReportNav() {
                 display: "flex",
                 gap: "12px",
                 overflowX: "auto",
-                padding: "0 24px 16px 24px",
+                padding: "0 24px 16px 0",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
                 WebkitOverflowScrolling: "touch",

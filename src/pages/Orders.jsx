@@ -27,6 +27,7 @@ export default function Orders() {
     const role = session?.user?.role ?? "";
     const isPrivileged = role == "ADMIN" || role == "MANAGER";
     const isOnlineRole = role == "ONLINE";
+    const isProductionRole = role == "PRODUKSI";
 
     const [ordersOnline, setOrdersOnline] = useState([]);
     const [ordersOffline, setOrdersOffline] = useState([]);
@@ -444,7 +445,7 @@ export default function Orders() {
                 {isPrivileged && (
                     <Button
                         size="sm"
-                        variant="secondary"
+                        variant="brown"
                         icon={<Icon name="next" />}
                         onClick={() => { handleNavigate(`/reports/transaksi-detail?search=${row.nomorator}&start_date=${row.date}&end_date=${row.date}`) }}
                     />
@@ -478,7 +479,7 @@ export default function Orders() {
             <Header
                 title="Orders"
                 subtitle="Data pesanan masuk."
-                actions={
+                actions={!isProductionRole && (
                     <Button 
                         variant="success" 
                         size="lg"
@@ -487,7 +488,7 @@ export default function Orders() {
                     >
                         Tambah
                     </Button>
-                }
+                )}
             />
             
             <DateFilter 
@@ -513,7 +514,7 @@ export default function Orders() {
                     rows={ordersOffline}
                     actions={tableActions}
                     onRowDoubleClick={(row) => {
-                        if (row.total > 0) {
+                        if (row.total > 0 || isProductionRole) {
                             setAlertConfig({
                                             show: true,
                                             type: "warning",

@@ -93,20 +93,17 @@ export default function Maklun() {
         }}>
             <Header title="Laporan Maklun" subtitle="Pantau rincian pekerjaan maklun masuk dan maklun keluar antar cabang." />
             
-            <div style={{ padding: "24px 24px 0 24px" }}>
-                <DateFilter 
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchMaklun}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchMaklun}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
             <div style={{ 
-                padding: "24px", 
                 display: "grid", 
                 gridTemplateColumns: "repeat(auto-fit, minmax(450px, 1fr))", 
                 gap: "24px",

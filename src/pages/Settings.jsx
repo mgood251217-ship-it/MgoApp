@@ -306,130 +306,128 @@ export default function Settings() {
                 subtitle="Konfigurasi sistem, path folder, dan personalisasi tampilan aplikasi."
             />
 
-            <div style={{ padding: "32px", flex: 1, overflowY: "auto" }}>
-                {loading ? (
-                    <div style={{ color: "var(--secondary)", textAlign: "center", padding: "40px" }}>
-                        Memuat pengaturan...
-                    </div>
-                ) : (
-                    <Form id="formSettings" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "32px", maxWidth: "1600px" }}>
+            {loading ? (
+                <div style={{ color: "var(--secondary)", textAlign: "center", padding: "40px" }}>
+                    Memuat pengaturan...
+                </div>
+            ) : (
+                <Form id="formSettings" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "32px", maxWidth: "1600px" }}>
+                    
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", gap: "32px", alignItems: "start" }}>
                         
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", gap: "32px", alignItems: "start" }}>
+                        <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
+                            <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
+                                <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Path Folder Produksi</h3>
+                            </div>
                             
-                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
-                                <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
-                                    <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Path Folder Produksi</h3>
-                                </div>
-                                
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "20px" }}>
-                                    {PATH_FIELDS.map(({ key, label }) => (
-                                        <div key={key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                            <label style={{ fontWeight: "600", fontSize: 13, color: "var(--text-secondary)" }}>
-                                                {label}
-                                            </label>
-                                            <div style={{ display: "flex", gap: "12px" }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <Input
-                                                        name={key}
-                                                        value={settings[key] || ""}
-                                                        onChange={(e) => handleInputChange(key, e.target.value)}
-                                                        placeholder="Belum diatur..."
-                                                        margin="0"
-                                                    />
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    variant="secondary"
-                                                    icon={<Icon name="folder" />}
-                                                    onClick={() => handlePilihPath(key)}
-                                                >
-                                                    Pilih
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="danger"
-                                                    icon={<Icon name="refresh" />}
-                                                    onClick={() => handleResetField(key)}
-                                                >
-                                                    Reset
-                                                </Button>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "20px" }}>
+                                {PATH_FIELDS.map(({ key, label }) => (
+                                    <div key={key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <label style={{ fontWeight: "600", fontSize: 13, color: "var(--text-secondary)" }}>
+                                            {label}
+                                        </label>
+                                        <div style={{ display: "flex", gap: "12px" }}>
+                                            <div style={{ flex: 1 }}>
+                                                <Input
+                                                    name={key}
+                                                    value={settings[key] || ""}
+                                                    onChange={(e) => handleInputChange(key, e.target.value)}
+                                                    placeholder="Belum diatur..."
+                                                    margin="0"
+                                                />
                                             </div>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                icon={<Icon name="folder" />}
+                                                onClick={() => handlePilihPath(key)}
+                                            >
+                                                Pilih
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="danger"
+                                                icon={<Icon name="refresh" />}
+                                                onClick={() => handleResetField(key)}
+                                            >
+                                                Reset
+                                            </Button>
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
                             </div>
+                        </div>
 
-                            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
-                                <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
-                                    <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Pengaturan Tata Letak & Tabel</h3>
-                                </div>
-                                
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
-                                    <Input
-                                        labelPosition="top"
-                                        label="Tinggi Navbar (px/rem)"
-                                        name="theme_navbar_height"
-                                        value={settings.theme_navbar_height || defaultColors.theme_navbar_height || ""}
-                                        onChange={(e) => handleInputChange("theme_navbar_height", e.target.value)}
-                                        placeholder="Contoh: 60px"
-                                    />
-                                    <Input
-                                        labelPosition="top"
-                                        label="Lebar Sidebar (px/rem)"
-                                        name="theme_sidebar_width"
-                                        value={settings.theme_sidebar_width || defaultColors.theme_sidebar_width || ""}
-                                        onChange={(e) => handleInputChange("theme_sidebar_width", e.target.value)}
-                                        placeholder="Contoh: 80px"
-                                    />
-                                    <Input
-                                        labelPosition="top"
-                                        label="Lebar Sidebar Saat Hover (px/rem)"
-                                        name="theme_sidebar_width_hover"
-                                        value={settings.theme_sidebar_width_hover || defaultColors.theme_sidebar_width_hover || ""}
-                                        onChange={(e) => handleInputChange("theme_sidebar_width_hover", e.target.value)}
-                                        placeholder="Contoh: 250px"
-                                    />
-                                    <Input
-                                        labelPosition="top"
-                                        label="Lengkungan Sudut / Radius (px/rem)"
-                                        name="theme_radius"
-                                        value={settings.theme_radius || defaultColors.theme_radius || ""}
-                                        onChange={(e) => handleInputChange("theme_radius", e.target.value)}
-                                        placeholder="Contoh: 8px"
-                                    />
-                                </div>
+                        <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
+                            <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
+                                <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Pengaturan Tata Letak & Tabel</h3>
                             </div>
-
-                            {renderColorGroup("Warna Layout & Latar", LAYOUT_COLORS)}
-                            {renderColorGroup("Warna Aksen & Status (Termasuk Hover)", ACCENT_COLORS)}
-                            {renderColorGroup("Warna Teks", TEXT_COLORS)}
-                            {renderColorGroup("Warna Elemen Lainnya", OTHER_COLORS)}
                             
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
+                                <Input
+                                    labelPosition="top"
+                                    label="Tinggi Navbar (px/rem)"
+                                    name="theme_navbar_height"
+                                    value={settings.theme_navbar_height || defaultColors.theme_navbar_height || ""}
+                                    onChange={(e) => handleInputChange("theme_navbar_height", e.target.value)}
+                                    placeholder="Contoh: 60px"
+                                />
+                                <Input
+                                    labelPosition="top"
+                                    label="Lebar Sidebar (px/rem)"
+                                    name="theme_sidebar_width"
+                                    value={settings.theme_sidebar_width || defaultColors.theme_sidebar_width || ""}
+                                    onChange={(e) => handleInputChange("theme_sidebar_width", e.target.value)}
+                                    placeholder="Contoh: 80px"
+                                />
+                                <Input
+                                    labelPosition="top"
+                                    label="Lebar Sidebar Saat Hover (px/rem)"
+                                    name="theme_sidebar_width_hover"
+                                    value={settings.theme_sidebar_width_hover || defaultColors.theme_sidebar_width_hover || ""}
+                                    onChange={(e) => handleInputChange("theme_sidebar_width_hover", e.target.value)}
+                                    placeholder="Contoh: 250px"
+                                />
+                                <Input
+                                    labelPosition="top"
+                                    label="Lengkungan Sudut / Radius (px/rem)"
+                                    name="theme_radius"
+                                    value={settings.theme_radius || defaultColors.theme_radius || ""}
+                                    onChange={(e) => handleInputChange("theme_radius", e.target.value)}
+                                    placeholder="Contoh: 8px"
+                                />
+                            </div>
                         </div>
 
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "16px", marginTop: "16px", paddingBottom: "24px" }}>
-                            <Button
-                                type="button"
-                                size="lg"
-                                variant="warning"
-                                onClick={handleRestart}
-                                icon={<Icon name="refresh" />}
-                            >
-                                Restart Aplikasi
-                            </Button>
-                            <Button
-                                type="submit"
-                                size="lg"
-                                variant="success"
-                                disabled={saving}
-                                icon={<Icon name={saving ? "hourglass_empty" : "save"} />}
-                            >
-                                {saving ? "Menyimpan Pengaturan..." : "Simpan Pengaturan"}
-                            </Button>
-                        </div>
-                    </Form>
-                )}
-            </div>
+                        {renderColorGroup("Warna Layout & Latar", LAYOUT_COLORS)}
+                        {renderColorGroup("Warna Aksen & Status (Termasuk Hover)", ACCENT_COLORS)}
+                        {renderColorGroup("Warna Teks", TEXT_COLORS)}
+                        {renderColorGroup("Warna Elemen Lainnya", OTHER_COLORS)}
+                        
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "16px", marginTop: "16px", paddingBottom: "24px" }}>
+                        <Button
+                            type="button"
+                            size="lg"
+                            variant="warning"
+                            onClick={handleRestart}
+                            icon={<Icon name="refresh" />}
+                        >
+                            Restart Aplikasi
+                        </Button>
+                        <Button
+                            type="submit"
+                            size="lg"
+                            variant="success"
+                            disabled={saving}
+                            icon={<Icon name={saving ? "hourglass_empty" : "save"} />}
+                        >
+                            {saving ? "Menyimpan Pengaturan..." : "Simpan Pengaturan"}
+                        </Button>
+                    </div>
+                </Form>
+            )}
         </div>
     );
 }

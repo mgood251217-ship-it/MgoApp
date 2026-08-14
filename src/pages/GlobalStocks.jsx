@@ -379,7 +379,7 @@ export default function GlobalStocks() {
                 </div>
             )}
 
-            <div style={{ padding: "24px 24px 0 24px", display: "flex", gap: "16px", alignItems: "flex-end" }}>
+            <div style={{ display: "flex", gap: "16px", alignItems: "flex-end" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     <label style={{ fontSize: "14px", fontWeight: "600", color: "var(--text)" }}>Bulan & Tahun</label>
                     <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} style={{ padding: "10px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)", backgroundColor: "var(--bg-content)", color: "var(--text)", outline: "none", fontSize: "14px" }} />
@@ -387,9 +387,9 @@ export default function GlobalStocks() {
                 {loading && <span style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "10px" }}><Icon name="sync" /> Memuat data...</span>}
             </div>
 
-            <div style={{ padding: "24px", overflowX: "hidden" }}>
+            <div style={{ padding: "24px 0", overflowX: "hidden" }}>
                 {Object.keys(groupedStocks).length === 0 && !loading ? (
-                    <div style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+                    <div style={{ textAlign: "center", color: "var(--text-muted)", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                         Tidak ada data stok untuk bulan ini.
                     </div>
                 ) : (

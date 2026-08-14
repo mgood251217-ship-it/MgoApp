@@ -463,7 +463,7 @@ export default function Products() {
                 }
             />
 
-            <div style={{ padding: "0 16px" }}>
+            <>
                 <div style={{ marginBottom: "2.5rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                         <h3 style={{ margin: 0 }}>Daftar Produk</h3>
@@ -527,7 +527,7 @@ export default function Products() {
                         actions={categoryActions}
                     />
                 </div>
-            </div>
+            </>
 
             <Modal
                 open={openProduct}
