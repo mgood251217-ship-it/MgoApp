@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("electron", {
     cekFolderOrder: (folderPath) => ipcRenderer.invoke('cek-folder-order', folderPath),
     cariFolderOrder: (data) => ipcRenderer.invoke('cari-folder-order', data),
     getPathForFile: (file) => webUtils.getPathForFile(file),
+    savePdfData: (data) => ipcRenderer.invoke("save-pdf-data", data),
 
     getSettings: () => ipcRenderer.invoke('get-settings'),
     restartApp: () => ipcRenderer.send('restart-app'),

@@ -102,6 +102,18 @@ export default function PrintPdf({ orderId, onClose }) {
         const safeName = (str) => (str || "File").toString().replace(/[^a-z0-9]/gi, '_');
         const fileName = `${safeName(orderData.customer_name)}_${orderData.operator_initial || 'OP'}_${safeName(orderData.date)}_${safeName(orderData.nomorator)}.pdf`;
 
+        if (window.electron && window.electron.savePdfData) {
+            try {
+                const base64Data = pdf.output("datauristring").split(',')[1];
+                await window.electron.savePdfData({
+                    filename: fileName,
+                    base64Data: base64Data
+                });
+            } catch (error) {
+                console.error("Gagal melakukan backup PDF ke Program Data:", error);
+            }
+        }
+
         pdf.save(fileName);
     };
 

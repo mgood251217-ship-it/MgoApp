@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import api from "../../api/axios";
 import { formatRupiah, formatTime, titleCase } from "../../services/helpers";
 import config from "../../services/config";
@@ -55,13 +57,11 @@ export default function PrintStruk({ orderId, onClose }) {
     const storeAddress = store.address || "";
     const storePhone = store.nomor || "";
     
-    const baseUrl = config.serverUrl || "";
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const baseUrl = isLocalhost ? config.serverUrl : window.location.origin;
+    
     const preferredLogo = store.logo_print || store.logo;
-    const logoImg = preferredLogo
-        ? preferredLogo.startsWith("http")
-            ? preferredLogo
-            : `${baseUrl}/assets/img/store/${preferredLogo}`
-        : "";
+    const logoImg = preferredLogo ? (preferredLogo.startsWith("http") ? preferredLogo : `${baseUrl}/api/middleware/serve_image.php?path=store/${preferredLogo}`) : "";
 
     const orderData = data.order || {};
     const items = data.items || [];
@@ -104,11 +104,51 @@ export default function PrintStruk({ orderId, onClose }) {
 
     const printedPriceFor = [];
 
+    const handlePrint = async () => {
+        try {
+            if (window.electron && window.electron.savePdfData) {
+                const element = document.querySelector(".receipt");
+                if (element) {
+                    const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: "#ffffff"
+                    });
+
+                    const imgData = canvas.toDataURL("image/jpeg", 1.0);
+                    
+                    const tempPdf = new jsPDF("p", "mm", [80, 200]);
+                    const imgProps = tempPdf.getImageProperties(imgData);
+                    const pdfWidth = tempPdf.internal.pageSize.getWidth();
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                    const finalPdf = new jsPDF("p", "mm", [80, pdfHeight > 200 ? pdfHeight : 200]);
+                    finalPdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+
+                    const safeName = (str) => (str || "File").toString().replace(/[^a-z0-9]/gi, '_');
+                    const fileName = `Struk_${safeName(orderData.customer_name)}_${orderData.operator_initial || 'OP'}_${safeName(orderData.date)}_${safeName(orderData.nomorator)}.pdf`;
+
+                    const base64Data = finalPdf.output("datauristring").split(',')[1];
+
+                    await window.electron.savePdfData({
+                        filename: fileName,
+                        base64Data: base64Data
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Gagal menyimpan backup struk PDF:", error);
+        }
+        
+        window.print();
+    };
+
     return (
         <div className="print-preview-overlay">
             <div className="print-preview-box">
                 <div className="print-actions">
-                    <button className="btn-print" onClick={() => window.print()}>
+                    <button className="btn-print" onClick={handlePrint}>
                         Cetak Struk
                     </button>
                     <button className="btn-cancel" onClick={onClose}>
@@ -121,6 +161,7 @@ export default function PrintStruk({ orderId, onClose }) {
                         {logoImg && (
                             <img 
                                 src={logoImg} 
+                                crossOrigin="anonymous" 
                                 style={{ maxHeight: "30px", marginBottom: "2px", maxWidth: "70px" }} 
                                 alt="Logo"
                             />

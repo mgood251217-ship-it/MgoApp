@@ -560,3 +560,24 @@ app.whenReady().then(async () => {
 }).catch((err) => {
     dialog.showErrorBox("Gagal menjalankan aplikasi", err.stack || String(err));
 });
+
+ipcMain.handle("save-pdf-data", async (event, data) => {
+    try {
+        const { filename, base64Data } = data;
+        
+        const programData = process.env.ProgramData || "C:\\ProgramData";
+        const strukDir = path.join(programData, "MgoDesktop", "StrukBackup");
+        
+        await fs.mkdir(strukDir, { recursive: true });
+        
+        const filePath = path.join(strukDir, filename);
+        
+        const buffer = Buffer.from(base64Data, "base64");
+        await fs.writeFile(filePath, buffer);
+        
+        return { success: true, filePath };
+    } catch (err) {
+        console.error("Gagal menyimpan backup PDF:", err);
+        return { success: false, message: err.message };
+    }
+});
