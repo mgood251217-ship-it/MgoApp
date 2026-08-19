@@ -566,7 +566,14 @@ ipcMain.handle("save-pdf-data", async (event, data) => {
         const { filename, base64Data } = data;
         
         const programData = process.env.ProgramData || "C:\\ProgramData";
-        const strukDir = path.join(programData, "MgoDesktop", "StrukBackup");
+        const baseStrukDir = path.join(programData, "MgoDesktop", "StrukBackup");
+        
+        const today = new Date();
+        const year = today.getFullYear().toString();
+        const month = String(today.getMonth() + 1).padStart(2, "0"); 
+        const day = String(today.getDate()).padStart(2, "0");
+        
+        const strukDir = path.join(baseStrukDir, year, month, day);
         
         await fs.mkdir(strukDir, { recursive: true });
         
