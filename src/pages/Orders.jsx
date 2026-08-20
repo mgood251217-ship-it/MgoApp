@@ -18,7 +18,6 @@ import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
 import { getCachedInitials, getCachedOrders, getCachedOrderDetail } from "../services/apiCache";
-import config from "../services/config";
 import { authStore } from "../services/session";
 
 export default function Orders() {
@@ -35,7 +34,6 @@ export default function Orders() {
     const [operators, setOperators] = useState([]);
     
     const initialLoadRef = useRef(false);
-    const lastOrderUpdateRef = useRef(0);
     const debounceTimerRef = useRef(null);
     const isNameFocusedRef = useRef(false);
     const nameInputWrapperRef = useRef(null);
@@ -121,45 +119,6 @@ export default function Orders() {
             window.clearTimeout(timeoutId);
         };
     }, [loadData, getOperators]);
-
-    useEffect(() => {
-        const sseUrl = config.serverUrl + `/api/sse.php?modules=dataset`;
-        let eventSource = null;
-
-        const connectSSE = () => {
-            eventSource = new EventSource(sseUrl, { withCredentials: true });
-
-            eventSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    
-                    if (data.orders_updated_at && data.orders_updated_at > lastOrderUpdateRef.current) {
-                        if (lastOrderUpdateRef.current !== 0) {
-                            loadData();
-                        }
-                        lastOrderUpdateRef.current = data.orders_updated_at;
-                    }
-                } catch (err) {
-                    console.log("Error parsing SSE data:", err);
-                }
-            };
-
-            eventSource.onerror = (error) => {
-                eventSource.close(); 
-                setTimeout(() => {
-                    connectSSE();
-                }, 3000);
-            };
-        };
-
-        connectSSE();
-
-        return () => {
-            if (eventSource) {
-                eventSource.close();
-            }
-        };
-    }, [loadData]);
 
     const updateDropdownPosition = useCallback(() => {
         if (nameInputWrapperRef.current) {
@@ -483,16 +442,26 @@ export default function Orders() {
             <Header
                 title="Orders"
                 subtitle="Data pesanan masuk."
-                actions={!isProductionRole && (
-                    <Button 
-                        variant="success" 
-                        size="lg"
-                        icon={<Icon name="add" />} 
-                        onClick={handleAddOrder}
-                    >
-                        Tambah
-                    </Button>
-                )}
+                actions={
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        <Button
+                            variant="secondary"
+                            size="lg"
+                            icon={<Icon name="refresh" />}
+                            onClick={loadData}
+                        />
+                        {!isProductionRole && (
+                            <Button 
+                                variant="success" 
+                                size="lg"
+                                icon={<Icon name="add" />} 
+                                onClick={handleAddOrder}
+                            >
+                                Tambah
+                            </Button>
+                        )}
+                    </div>
+                }
             />
             
             <DateFilter 

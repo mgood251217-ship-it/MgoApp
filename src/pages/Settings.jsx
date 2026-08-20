@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
 import Button from "../components/Button/Button";
@@ -98,6 +98,7 @@ export default function Settings() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
+    const fileInputRef = useRef(null);
 
     const loadSettings = useCallback(async () => {
         setLoading(true);
@@ -159,6 +160,48 @@ export default function Settings() {
             }
         } catch (err) {
             setAlertConfig({ show: true, type: "error", message: "Gagal melakukan restart." });
+        }
+    };
+
+    const handleExportSettings = () => {
+        try {
+            const dataStr = JSON.stringify(settings, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `mgo_settings_${new Date().getTime()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setAlertConfig({ show: true, type: "success", message: "Pengaturan berhasil diekspor." });
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: "Gagal mengekspor pengaturan." });
+        }
+    };
+
+    const handleImportSettings = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importedSettings = JSON.parse(event.target.result);
+                setSettings(importedSettings);
+                setAlertConfig({ show: true, type: "success", message: "Pengaturan berhasil diimpor. Jangan lupa klik 'Simpan Pengaturan'." });
+            } catch (err) {
+                setAlertConfig({ show: true, type: "error", message: "File konfigurasi tidak valid." });
+            }
+            e.target.value = ""; 
+        };
+        reader.readAsText(file);
+    };
+
+    const triggerImport = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
         }
     };
 
@@ -406,7 +449,33 @@ export default function Settings() {
                         
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "16px", marginTop: "16px", paddingBottom: "24px" }}>
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "16px", marginTop: "16px", paddingBottom: "24px", flexWrap: "wrap" }}>
+                        <input 
+                            type="file" 
+                            accept=".json" 
+                            style={{ display: 'none' }} 
+                            ref={fileInputRef} 
+                            onChange={handleImportSettings} 
+                        />
+                        
+                        <Button
+                            type="button"
+                            size="lg"
+                            variant="secondary"
+                            onClick={triggerImport}
+                            icon={<Icon name="upload" />}
+                        >
+                            Import Tema
+                        </Button>
+                        <Button
+                            type="button"
+                            size="lg"
+                            variant="info"
+                            onClick={handleExportSettings}
+                            icon={<Icon name="download" />}
+                        >
+                            Export Tema
+                        </Button>
                         <Button
                             type="button"
                             size="lg"
