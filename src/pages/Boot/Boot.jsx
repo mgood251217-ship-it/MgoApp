@@ -97,6 +97,7 @@ export default function Boot() {
                 downloading={downloading}
                 progress={progress}
                 mandatory={updateInfo.forceUpdate}
+                releaseNotes={updateInfo.releaseNotes}
                 onContinueOld={handleContinueOld}
                 onUpdateNow={handleUpdateNow}
             />

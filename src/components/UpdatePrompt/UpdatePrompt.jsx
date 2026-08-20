@@ -1,7 +1,7 @@
 import "./UpdatePrompt.css";
 import logo from "/logo.png";
 
-export default function UpdatePrompt({ latestVersion, downloading, progress, mandatory, onContinueOld, onUpdateNow }) {
+export default function UpdatePrompt({ latestVersion, downloading, progress, mandatory, releaseNotes, onContinueOld, onUpdateNow }) {
     return (
         <div className="update-prompt">
             <div className="update-prompt-container">
@@ -16,6 +16,17 @@ export default function UpdatePrompt({ latestVersion, downloading, progress, man
                         ? `Versi baru (${latestVersion}) wajib diinstall untuk melanjutkan menggunakan aplikasi.`
                         : `Versi baru (${latestVersion}) sudah tersedia. Update sekarang atau lanjutkan dengan versi yang ada?`}
                 </p>
+
+                {releaseNotes?.length > 0 && (
+                    <div className="update-prompt-notes">
+                        <p className="update-prompt-notes-title">Apa yang baru:</p>
+                        <ul className="update-prompt-notes-list">
+                            {releaseNotes.map((note, idx) => (
+                                <li key={idx}>{note}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 {downloading ? (
                     <div className="update-prompt-progress">
