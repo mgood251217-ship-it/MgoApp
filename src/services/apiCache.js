@@ -313,7 +313,9 @@ export const getCachedFinishings = async () => {
 
 export const getCachedOrdersAnalysis = async () => {
     const dataset = await getServerDataset();
-    const serverTime = dataset.orders_updated_at || 0;
+    const orderTime = dataset.orders_updated_at || 0;
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, paymentTime);
     const cachedData = getStorage("ordersAnalysis", null);
     const cachedTime = getStorage("ordersAnalysis_time", 0);
     if (cachedData && cachedTime >= serverTime) {
@@ -657,7 +659,8 @@ export const getCachedFinance = async (startDate, endDate) => {
     const dataset = await getServerDataset();
     const orderTime = dataset.orders_updated_at || 0;
     const financeTime = dataset.finance_updated_at || 0;
-    const serverTime = Math.max(orderTime, financeTime);
+    const paymentTime = dataset.payments_updated_at || 0;
+    const serverTime = Math.max(orderTime, financeTime, paymentTime);
     const financeMap = getCleanedDailyMap("finance");
 
     if (financeMap[cacheKey] && financeMap[cacheKey].updatedAt >= serverTime) {

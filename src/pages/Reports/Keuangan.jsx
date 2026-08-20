@@ -35,6 +35,7 @@ export default function Keuangan() {
         setLoading(true);
         try {
             const res = await getCachedFinance(startDate, endDate);
+            console.log(res);
 
             if (res) {
                 setFinanceData(res.finance || []);
@@ -76,7 +77,11 @@ export default function Keuangan() {
         if (!window.confirm("Sinkronisasi data keuangan akan menghitung ulang data pada periode ini. Lanjutkan?")) return;
         
         try {
-            const res = await api.post("", new FormData(), {
+            const payload = new FormData();
+            payload.append("start_date", startDate);
+            payload.append("end_date", endDate);
+
+            const res = await api.post("", payload, {
                 params: {
                     action: "sync_finance",
                     start_date: startDate,

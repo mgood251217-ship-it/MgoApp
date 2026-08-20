@@ -25,6 +25,7 @@ export default function Orders() {
     const navigate = useNavigate();
     const session = authStore.getUser();
     const role = session?.user?.role ?? "";
+    const initial = session?.user?.initial ?? "";
     const isPrivileged = role == "ADMIN" || role == "MANAGER";
     const isOnlineRole = role == "ONLINE";
     const isProductionRole = role == "PRODUKSI";
@@ -144,9 +145,7 @@ export default function Orders() {
             };
 
             eventSource.onerror = (error) => {
-                console.warn("Koneksi SSE terputus. Mencoba menyambung kembali dalam 3 detik...");
                 eventSource.close(); 
-                
                 setTimeout(() => {
                     connectSSE();
                 }, 3000);
@@ -272,9 +271,8 @@ export default function Orders() {
     };
 
     const handleAddOrder = () => {
-        let defaultSystem = "OFFLINE";
-        const sessionRole = localStorage.getItem("role") || "";
-        if (sessionRole === "ONLINE") defaultSystem = "ONLINE";
+        const matchedOp = Object.entries(operators).find(([id, name]) => name === initial);
+        const defaultOpId = (isOnlineRole && matchedOp) ? matchedOp[0] : "";
 
         setFormOrder({
             order_id: "",
@@ -283,8 +281,8 @@ export default function Orders() {
             nomor: "",
             deadline: getOneHourAhead(),
             date: "",
-            user_id: "",
-            system: defaultSystem
+            user_id: defaultOpId, 
+            system: isOnlineRole ? "ONLINE" : "OFFLINE"
         });
         setCustomerSuggestions([]);
         setShowSuggestions(false);
@@ -300,10 +298,10 @@ export default function Orders() {
             deadline: formatDateTime(row.deadline),
             date: formatDateTime(row.date),
             user_id: row.user_id,
-            system: row.system || "ONLINE"
+            system: row.system || (isOnlineRole ? "ONLINE" : "OFFLINE")
         });
         setEditModalOpen(true);
-    }, []);
+    }, [isOnlineRole]);
 
     const handleAddSubmit = async (e) => {
         e.preventDefault();
@@ -455,11 +453,17 @@ export default function Orders() {
     }, [role, handlePayClick, handleViewOrder, handleEditOrder, handleProcessClick, handleNavigate, setPrintStrukOrderId, setPrintPdfOrderId]);
 
     const operatorOptions = useMemo(() => {
-        return Object.entries(operators).map(([id, name]) => ({
+        let options = Object.entries(operators).map(([id, name]) => ({
             value: id,
             label: name
         }));
-    }, [operators]);
+
+        if (isOnlineRole && initial) {
+            options = options.filter(op => op.label === initial);
+        }
+
+        return options;
+    }, [operators, isOnlineRole, initial]);
 
     const systemOptions = [
         { value: "ONLINE", label: "ONLINE" },
@@ -516,10 +520,10 @@ export default function Orders() {
                     onRowDoubleClick={(row) => {
                         if (row.total > 0 || isProductionRole) {
                             setAlertConfig({
-                                            show: true,
-                                            type: "warning",
-                                            message: "Tidak dapat membuka nota" 
-                                        });
+                                show: true,
+                                type: "warning",
+                                message: "Tidak dapat membuka nota" 
+                            });
                         }else{
                             navigate(`/order/${row.order_id}`)
                         } 
@@ -541,10 +545,10 @@ export default function Orders() {
                     onRowDoubleClick={(row) => {    
                         if (row.total > 0) {
                             setAlertConfig({
-                                            show: true,
-                                            type: "warning",
-                                            message: "Tidak dapat membuka nota" 
-                                        });
+                                show: true,
+                                type: "warning",
+                                message: "Tidak dapat membuka nota" 
+                            });
                         }else{
                             navigate(`/order/${row.order_id}`)
                         } 
@@ -672,7 +676,7 @@ export default function Orders() {
                         labelWidth={130}
                         name="system"
                         label="System"
-                        value={isOnlineRole ? "ONLINE" : "OFFLINE"}
+                        value={formOrder.system}
                         onChange={handleFormChange}
                         options={systemOptions}
                         required

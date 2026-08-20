@@ -1,7 +1,7 @@
 {
   "name": "MgoDesktop",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.5",
   "main": "electron/main.cjs",
   "type": "module",
   "author": {
