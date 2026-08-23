@@ -248,6 +248,27 @@ export const getCachedProductsByCategory = async (categoryId) => {
     }
 };
 
+export const getCachedGlobalStocks = async (month) => {
+    if (!month) return {};
+    const dataset = await getServerDataset();
+    const serverTime = dataset.global_stocks_updated_at || 0;
+    const stocksMap = getStorage("globalStocksByMonth", {});
+    if (stocksMap[month] && stocksMap[month].updatedAt >= serverTime) {
+        return stocksMap[month].data;
+    }
+    try {
+        const res = await api.get("", { 
+            params: { action: "grouped_stock_global_stock", month: month } 
+        });
+        const result = res.data?.success ? (res.data.data.grouped_stocks || {}) : {};
+        stocksMap[month] = { data: result, updatedAt: serverTime };
+        setStorage("globalStocksByMonth", stocksMap);
+        return result;
+    } catch (err) {
+        return stocksMap[month]?.data || {};
+    }
+};
+
 export const getCachedFinishingsByCategory = async (categoryId) => {
     if (!categoryId) return [];
     const dataset = await getServerDataset();

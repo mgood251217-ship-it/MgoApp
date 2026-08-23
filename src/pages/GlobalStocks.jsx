@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, memo } from "react";
 import api from "../api/axios";
 import Header from "../components/Header/Header";
 import Icon from "../components/Icon/Icon";
@@ -10,7 +10,61 @@ import Alert from "../components/Alert/Alert";
 import Table from "../components/Table/Table";
 import { formatRupiah } from "../services/helpers"; 
 import { exportGlobalStocksToExcel } from "../services/excelService";
-import { getCachedStoreNames } from "../services/apiCache";
+import { getCachedStoreNames, getCachedGlobalStocks } from "../services/apiCache";
+
+const StockRow = memo(({ productDetails, index, daysInMonth, onEdit, onDelete, onCellClick }) => {
+    const isEven = index % 2 === 0;
+    const rowBg = isEven ? "rgba(0,0,0,0.02)" : "var(--bg-content)";
+
+    return (
+        <tr style={{ borderBottom: "1px solid var(--border)", backgroundColor: rowBg }}>
+            <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>{index}</td>
+            <td style={{ padding: "8px 12px", borderRight: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                    <span><strong>{productDetails.name}</strong> {productDetails.size && productDetails.size !== "-" ? `(${productDetails.size})` : ""}</span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)", backgroundColor: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                        {formatRupiah(productDetails.price || 0)}
+                    </span>
+                </div>
+            </td>
+            <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
+                <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                    <Button size="sm" icon={<Icon name="edit" />} onClick={() => onEdit(productDetails)} title="Edit Produk" variant="warning" />
+                    <Button size="sm" icon={<Icon name="delete" />} onClick={() => onDelete(productDetails)} title="Hapus Produk" variant="danger" />
+                </div>
+            </td>
+            <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>
+                {productDetails.sa_awal || 0}
+            </td>
+            {daysInMonth.map(day => {
+                const dailyData = productDetails.daily?.[day];
+                const stockIn = dailyData?.sm || '';
+                const stockOut = dailyData?.sk || '';
+                return (
+                    <td key={day} style={{ padding: "0", borderRight: "1px solid var(--border)", minWidth: "40px" }}>
+                        <div style={{ display: "flex", width: "100%", height: "100%", cursor: "pointer" }}>
+                            <div 
+                                onClick={() => onCellClick(productDetails, day, stockIn, stockOut, 'in')} 
+                                style={{ flex: 1, textAlign: "center", padding: "8px 2px", borderRight: "1px dotted var(--border)", color: stockIn > 0 ? "var(--success)" : "inherit", fontWeight: stockIn > 0 ? "bold" : "normal" }}>
+                                {stockIn}
+                            </div>
+                            <div 
+                                onClick={() => onCellClick(productDetails, day, stockIn, stockOut, 'out')} 
+                                style={{ flex: 1, textAlign: "center", padding: "8px 2px", color: stockOut > 0 ? "var(--danger)" : "inherit", fontWeight: stockOut > 0 ? "bold" : "normal" }}>
+                                {stockOut}
+                            </div>
+                        </div>
+                    </td>
+                );
+            })}
+            <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--border)", backgroundColor: "rgba(var(--warning-rgb), 0.1)" }}>
+                {productDetails.sa_akhir || 0}
+            </td>
+        </tr>
+    );
+}, (prevProps, nextProps) => {
+    return prevProps.productDetails === nextProps.productDetails && prevProps.index === nextProps.index;
+});
 
 export default function GlobalStocks() {
     const todayStr = new Date().toISOString().split("T")[0];
@@ -170,11 +224,13 @@ export default function GlobalStocks() {
     const fetchGlobalStocks = async () => {
         setLoading(true);
         try {
-            const res = await api.get("", { params: { action: "grouped_stock_global_stock", month: monthFilter } });
-            if (res.data?.success) setGroupedStocks(res.data.data.grouped_stocks || {});
-            else setGroupedStocks({});
-        } catch (error) { setGroupedStocks({}); } 
-        finally { setLoading(false); }
+            const data = await getCachedGlobalStocks(monthFilter);
+            setGroupedStocks(data || {});
+        } catch (error) { 
+            setGroupedStocks({}); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const fetchStores = async () => {
@@ -286,55 +342,6 @@ export default function GlobalStocks() {
         </thead>
     );
 
-    const renderRow = (productDetails, index) => {
-        const isEven = index % 2 === 0;
-        const rowBg = isEven ? "rgba(0,0,0,0.02)" : "var(--bg-content)";
-        return (
-            <tr key={productDetails.id} style={{ borderBottom: "1px solid var(--border)", backgroundColor: rowBg, transition: "background 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(var(--primary-rgb), 0.15)"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = rowBg}>
-                <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>{index}</td>
-                <td style={{ padding: "8px 12px", borderRight: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-                        <span><strong>{productDetails.name}</strong> {productDetails.size && productDetails.size !== "-" ? `(${productDetails.size})` : ""}</span>
-                        <span style={{ fontSize: "12px", color: "var(--text-muted)", backgroundColor: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>{formatRupiah(productDetails.price || 0)}</span>
-                    </div>
-                </td>
-                <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
-                    <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                        <Button
-                            size="sm"
-                            icon={<Icon name="edit" />}
-                            onClick={() => handleOpenEditProduct(productDetails)}
-                            title="Edit Produk"
-                            variant="warning">
-                        </Button>
-                        <Button
-                            size="sm"
-                            icon={<Icon name="delete" />}
-                            onClick={() => handleDeleteProduct(productDetails)}
-                            title="Hapus Produk"
-                            variant="danger">
-                        </Button>
-                    </div>
-                </td>
-                <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>{productDetails.sa_awal || 0}</td>
-                {daysInMonth.map(day => {
-                    const dailyData = productDetails.daily?.[day];
-                    const stockIn = dailyData?.sm || '';
-                    const stockOut = dailyData?.sk || '';
-                    return (
-                        <td key={day} style={{ padding: "0", borderRight: "1px solid var(--border)", minWidth: "40px", transition: "background 0.2s" }} title={`Edit tanggal ${day}`} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(var(--primary-rgb), 0.3)"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                            <div style={{ display: "flex", width: "100%", height: "100%", cursor: "pointer" }}>
-                                <div onClick={() => handleCellClick(productDetails, day, stockIn, stockOut, 'in')} style={{ flex: 1, textAlign: "center", padding: "8px 2px", borderRight: "1px dotted var(--border)", color: stockIn > 0 ? "var(--success)" : "inherit", fontWeight: stockIn > 0 ? "bold" : "normal" }}>{stockIn}</div>
-                                <div onClick={() => handleCellClick(productDetails, day, stockIn, stockOut, 'out')} style={{ flex: 1, textAlign: "center", padding: "8px 2px", color: stockOut > 0 ? "var(--danger)" : "inherit", fontWeight: stockOut > 0 ? "bold" : "normal" }}>{stockOut}</div>
-                            </div>
-                        </td>
-                    );
-                })}
-                <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--border)", backgroundColor: "rgba(var(--warning-rgb), 0.1)" }}>{productDetails.sa_akhir || 0}</td>
-            </tr>
-        );
-    };
-
     return (
         <div style={{ display: "flex", flexDirection: "column", width: "100%", maxWidth: "100vw", boxSizing: "border-box", paddingBottom: "40px" }}>
             <Header 
@@ -364,7 +371,6 @@ export default function GlobalStocks() {
                 }
             />
 
-            {/* Hidden File Input untuk Import CSV */}
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -412,16 +418,16 @@ export default function GlobalStocks() {
                                         <div style={{ display: "flex", gap: "8px" }}>
                                             <Button
                                                 onClick={() => handleOpenAddProduct(categoryId)}>
-                                                    <Icon name="add"/>Produk
+                                                <Icon name="add"/>Produk
                                             </Button>
                                             <Button
                                                 variant="warning"
                                                 onClick={() => handleOpenEditCategory(categoryId, categoryName)}>
-                                                    <Icon name="edit"/> Edit Kategori
+                                                <Icon name="edit"/> Edit Kategori
                                             </Button>
                                             <Button
                                                 onClick={() => handleDeleteCategory(categoryId, categoryName)}>
-                                                    <Icon name="delete" /> Hapus Kategori
+                                                <Icon name="delete" /> Hapus Kategori
                                             </Button>
                                         </div>
                                     )}
@@ -431,7 +437,18 @@ export default function GlobalStocks() {
                                     <tbody>
                                         {Object.keys(categoryProducts).map((productName) => {
                                             return Object.keys(categoryProducts[productName]).map((idKey) => {
-                                                return renderRow(categoryProducts[productName][idKey], globalIndex++);
+                                                const productDetails = categoryProducts[productName][idKey];
+                                                return (
+                                                    <StockRow 
+                                                        key={productDetails.id}
+                                                        productDetails={productDetails}
+                                                        index={globalIndex++}
+                                                        daysInMonth={daysInMonth}
+                                                        onEdit={handleOpenEditProduct}
+                                                        onDelete={handleDeleteProduct}
+                                                        onCellClick={handleCellClick}
+                                                    />
+                                                );
                                             });
                                         })}
                                     </tbody>
@@ -442,7 +459,6 @@ export default function GlobalStocks() {
                 )}
             </div>
 
-            {/* MODAL KIRIM BARANG */}
             <Modal open={sendModalOpen} onClose={() => setSendModalOpen(false)} title="Kirim Barang ke Toko Lain" size="md">
                 <form onSubmit={handleSubmitSendStock} style={{ padding: "16px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" }}>
@@ -524,7 +540,6 @@ export default function GlobalStocks() {
                 </form>
             </Modal>
 
-            {/* MODAL RIWAYAT */}
             <Modal open={historyModalOpen} onClose={() => setHistoryModalOpen(false)} title="Riwayat Pengiriman & Penerimaan Stok" size="lg">
                 <div style={{ padding: "16px" }}>
                     {historyLoading ? (
@@ -548,7 +563,6 @@ export default function GlobalStocks() {
                 </div>
             </Modal>
 
-            {/* MODAL LAINNYA (Update, Kategori, Produk) */}
             <Modal open={categoryModalOpen} onClose={() => setCategoryModalOpen(false)} title={categoryForm.id ? "Edit Kategori" : "Tambah Kategori Baru"} size="sm">
                 <form onSubmit={handleSubmitCategory} style={{ padding: "16px" }}><div style={{ marginBottom: "24px" }}><Input labelPosition="top" name="name" type="text" label="Nama Kategori" placeholder="Contoh: ATEXCO..." value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} required /></div><div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}><Button type="button" variant="secondary" onClick={() => setCategoryModalOpen(false)}>Batal</Button><Button type="submit" variant="primary" disabled={isCategorySubmitting} icon={<Icon name={isCategorySubmitting ? "hourglass_empty" : "save"} />}>Simpan Kategori</Button></div></form>
             </Modal>
