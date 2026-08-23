@@ -151,7 +151,7 @@ export default function OrderItemForm({
     const isSublim = selectedCategoryName === "SUBLIM";
     const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
     
-    const isSetting = selectedProductName === "SETTING";
+    const isWaktu = selectedProductName === "SETTING" || selectedProductName === "POTONG AKRILIK";
     const isBahan = selectedProductName.includes("BAHAN");
     const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
 
@@ -212,7 +212,7 @@ export default function OrderItemForm({
                         const pUnit = prod?.unit_type?.toUpperCase();
                         const noSizeCheck = pUnit === "PCS" || pUnit === "~";
 
-                        if (pName === "SETTING") {
+                        if (pName === "SETTING" || pName === "POTONG AKRILIK") {
                             document.querySelector('input[name="waktu"]')?.focus();
                         } else if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN")) {
                             document.querySelector('input[name="kiloan"]')?.focus();
@@ -244,7 +244,7 @@ export default function OrderItemForm({
             )}
             
             <div style={{ marginBottom: "16px" }}>
-                {isSetting ? (
+                {isWaktu ? (
                     <Input
                         labelPosition="left"
                         labelWidth={110}
