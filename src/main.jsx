@@ -12,17 +12,34 @@ import "./styles/animation.css";
 
 async function initApp() {
   try {
-    const settings = await window.electron.getSettings();
-    applyTheme(settings);
+    if (window.electron && window.electron.getSettings) {
+      const settings = await window.electron.getSettings();
+      applyTheme(settings || {});
+    } else {
+      console.warn("API Electron belum tersedia saat inisialisasi.");
+    }
   } catch (error) {
     console.error("Gagal memuat pengaturan tema awal:", error);
   }
 
-  createRoot(document.getElementById('root')).render(
-    <StrictMode>
-      <App />
-    </StrictMode>
-  )
+  const startReact = () => {
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      createRoot(rootElement).render(
+        <StrictMode>
+          <App />
+        </StrictMode>
+      );
+    } else {
+      console.error("Elemen root tidak ditemukan di DOM.");
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startReact);
+  } else {
+    startReact();
+  }
 }
 
 initApp();

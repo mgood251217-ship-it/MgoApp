@@ -55,7 +55,6 @@ const getServerDataset = async () => {
     return datasetPromise;
 };
 
-
 export const validateStoreCache = (newStoreName) => {
     const oldStoreName = localStorage.getItem("last_store_name");
 

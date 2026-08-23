@@ -53,8 +53,8 @@
 }
 
 .select option {
-    background-color: #111827;
-    color: #f8fafc;
+    background-color: var(--background);
+    color: var(--text);
     padding: 10px;
 }
 
