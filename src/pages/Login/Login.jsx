@@ -6,7 +6,7 @@ import Input from "../../components/Input/Input";
 import PasswordInput from "../../components/PasswordInput/PasswordInput";
 import Button from "../../components/Button/Button";
 import Alert from "../../components/Alert/Alert";
-import { authStore, getSession as fetchSession } from "../../services/session";
+import { authStore } from "../../services/session";
 import api from "../../api/axios";
 import "./Login.css";
 
@@ -16,10 +16,9 @@ async function login(payload) {
     formData.append("password", payload.password);
     formData.append("g-recaptcha-response", payload["g-recaptcha-response"] ?? "");
 
-    const { data } = await api.post("/index.php?action=login", formData);
+    const { data } = await api.post("", formData, {params: {action : "login" } });
     return data;
 }
-
 function LoginInternal() {
     const navigate = useNavigate();
     const [username, setUsername] = useState("");
@@ -80,12 +79,7 @@ function LoginInternal() {
                 return;
             }
 
-            const sessionResp = await fetchSession();
-            if (sessionResp?.success) {
-                authStore.login(sessionResp.data);
-            } else {
-                authStore.login(response.data);
-            }
+            authStore.setSession(response.data);
 
             navigate("/orders", { replace: true });
         } catch (err) {

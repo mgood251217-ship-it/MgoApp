@@ -40,7 +40,7 @@ const getServerDataset = async () => {
         return datasetPromise;
     }
 
-    datasetPromise = api.get("/check_update_dataset.php")
+    datasetPromise = api.get("", { params: { action: "check_update_dataset" } })
         .then(res => {
             datasetCache = res.data?.data || {};
             lastFetchTime = Date.now();

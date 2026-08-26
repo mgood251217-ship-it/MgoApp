@@ -38,9 +38,16 @@ export const authStore = {
         return () => listeners.delete(callback);
     },
 
+    setSession: (data) => {
+        currentUser = data;
+        writeLocalSession(currentUser);
+        notify();
+        return currentUser;
+    },
+
     login: async (data) => {
-        const response = await api.post("/index.php?action=session", data);
-        
+        const response = await api.post("/?action=login", data);
+
         if (response.data.data?.store?.name) {
             validateStoreCache(response.data.data.store.name);
         }
@@ -69,7 +76,7 @@ export const authStore = {
     },
 
     refreshSession: async () => {
-        const { data } = await api.get("/index.php?action=session");
+        const { data } = await api.get("/?action=session");
         currentUser = data.data;
         writeLocalSession(data.data);
         notify();

@@ -8,7 +8,7 @@ export async function login(username, password, recaptcha = "") {
 	formData.append("g-recaptcha-response", recaptcha);
 
 	const { data } = await api.post(
-		"/index.php?action=login",
+		"/?action=login",
 		formData
 	);
 

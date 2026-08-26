@@ -10,4 +10,22 @@ const api = axios.create({
 	}
 });
 
+api.interceptors.request.use((requestConfig) => {
+	const raw = localStorage.getItem("mgo_session");
+
+	if (raw) {
+		try {
+			const session = JSON.parse(raw);
+
+			if (session?.token) {
+				requestConfig.headers.Authorization = `Bearer ${session.token}`;
+			}
+		} catch (e) {
+			localStorage.removeItem("mgo_session");
+		}
+	}
+
+	return requestConfig;
+});
+
 export default api;
