@@ -1,7 +1,9 @@
 import "./Splash.css";
 import logo from "/logo.png";
+import config from "../../services/config";
 
 export default function Splash({ message = "Initializing application...", error = false, onRetry }) {
+    const version = config?.version || '1.0.0';
     return (
         <div className="splash">
             <div className="splash-container">
@@ -30,7 +32,7 @@ export default function Splash({ message = "Initializing application...", error 
                 )}
 
                 <span className="splash-version">
-                    Version 1.0.0
+                    Version {version}
                 </span>
             </div>
         </div>
