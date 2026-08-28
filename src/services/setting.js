@@ -6,7 +6,7 @@ export async function changeTheme({ user_id, mode }) {
     formData.append("user_id", user_id);
     formData.append("mode", mode);
 
-    const { data } = await api.post("/index.php?action=theme", formData);
+    const { data } = await api.post("/?action=theme", formData);
 
     return data;
 }
