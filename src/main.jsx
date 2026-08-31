@@ -1,4 +1,5 @@
-﻿import { StrictMode } from 'react'
+﻿import "./lib/tauriApi.js";
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import { applyTheme } from './services/theme'

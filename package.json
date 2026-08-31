@@ -2,7 +2,6 @@
   "name": "MgoDesktop",
   "private": true,
   "version": "1.0.8",
-  "main": "electron/main.cjs",
   "type": "module",
   "author": {
     "name": "Viki Alvian Riyadi",
@@ -10,53 +9,32 @@
     "url": "https://mgood.my.id"
   },
   "description": "Aplikasi POS internal Mgo Desktop untuk transaksi cepat, praktis, dan akurat.",
-  "icon": "src/assets/mgo.ico",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "dev:vite": "vite",
+    "dev": "tauri dev",
     "build": "vite build",
-    "dist": "vite build && electron-builder",
-    "start": "electron ."
-  },
-  "build": {
-    "compression": "maximum",
-    "asarUnpack": [
-      "node_modules/sharp/**",
-      "node_modules/express/**"
-    ],
-    "extraResources": [
-      {
-        "from": "src/assets/icons",
-        "to": "icons"
-      }
-    ],
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
-    "asar": true,
-    "win": {
-      "icon": "src/assets/mgo.ico"
-    }
+    "tauri": "tauri",
+    "dist": "tauri build"
   },
   "dependencies": {
-    "express": "^5.2.1",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-shell": "^2",
+    "@tauri-apps/plugin-fs": "^2",
+    "@tauri-apps/plugin-store": "^2",
+    "@tauri-apps/plugin-global-shortcut": "^2",
     "leaflet": "^1.9.4",
-    "react-leaflet": "^5.0.0",
-    "sharp": "^0.35.3"
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.1",
+    "@tauri-apps/cli": "^2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "axios": "^1.18.1",
     "chart.js": "^4.5.1",
-    "concurrently": "^10.0.3",
-    "cross-env": "^10.1.0",
-    "electron": "^42.5.1",
-    "electron-builder": "^26.15.3",
     "eslint": "^10.5.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
@@ -74,7 +52,6 @@
     "sweetalert2": "^11.26.25",
     "tailwindcss": "^4.3.1",
     "vite": "^8.1.0",
-    "wait-on": "^9.0.10",
     "xlsx": "^0.18.5"
   }
 }
