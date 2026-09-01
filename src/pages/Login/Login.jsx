@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleReCaptchaProvider, useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
@@ -19,14 +19,26 @@ async function login(payload) {
     const { data } = await api.post("", formData, {params: {action : "login" } });
     return data;
 }
+
 function LoginInternal() {
     const navigate = useNavigate();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     const { executeRecaptcha } = useGoogleReCaptcha();
+
+    useEffect(() => {
+        const savedUsername = localStorage.getItem("mgo_remember_username");
+        const savedPassword = localStorage.getItem("mgo_remember_password");
+        if (savedUsername && savedPassword) {
+            setUsername(savedUsername);
+            setPassword(savedPassword);
+            setRememberMe(true);
+        }
+    }, []);
 
     const handleFormSubmit = (e) => {
         e.preventDefault();
@@ -69,7 +81,9 @@ function LoginInternal() {
 
             if (!response.success) {
                 setError(response.message || "Login gagal.");
-                setPassword(""); 
+                if (!rememberMe) {
+                    setPassword(""); 
+                }
                 
                 setTimeout(() => {
                     const passInput = document.querySelector('.login-form input[type="password"]');
@@ -77,6 +91,14 @@ function LoginInternal() {
                 }, 100);
                 
                 return;
+            }
+
+            if (rememberMe) {
+                localStorage.setItem("mgo_remember_username", username);
+                localStorage.setItem("mgo_remember_password", password);
+            } else {
+                localStorage.removeItem("mgo_remember_username");
+                localStorage.removeItem("mgo_remember_password");
             }
 
             authStore.setSession(response.data);
@@ -115,6 +137,20 @@ function LoginInternal() {
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={loading}
                     />
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                        <input
+                            type="checkbox"
+                            id="rememberMe"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            disabled={loading}
+                            style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                        />
+                        <label htmlFor="rememberMe" style={{ cursor: "pointer", fontSize: "14px", color: "var(--text)", userSelect: "none" }}>
+                            Remember me
+                        </label>
+                    </div>
 
                     <Button
                         type="submit"
