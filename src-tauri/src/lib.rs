@@ -62,6 +62,7 @@ pub fn run() {
             misc::buka_link_eksternal,
             misc::save_pdf_data,
             misc::simpan_file_dialog,
+            misc::print_window,
             settings::get_settings,
             settings::save_settings,
             settings::restart_app,

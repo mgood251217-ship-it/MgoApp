@@ -4,7 +4,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_shell::ShellExt;
 
@@ -75,6 +75,17 @@ pub async fn simpan_file_dialog(app: AppHandle, args: SimpanFileArgs) -> Value {
     match fs::write(&dest_path, buffer) {
         Ok(_) => serde_json::json!({ "success": true, "filePath": dest_path.to_string_lossy() }),
         Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
+    }
+}
+
+#[tauri::command]
+pub fn print_window(app: AppHandle) -> Value {
+    match app.get_webview_window("main") {
+        Some(window) => match window.print() {
+            Ok(_) => serde_json::json!({ "success": true }),
+            Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
+        },
+        None => serde_json::json!({ "success": false, "message": "Window utama tidak ditemukan." }),
     }
 }
 

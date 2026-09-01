@@ -53,6 +53,8 @@ export const tauriApi = {
         });
     },
 
+    cetakStruk: () => invoke("print_window"),
+
 };
 
 if (typeof window !== "undefined") {
