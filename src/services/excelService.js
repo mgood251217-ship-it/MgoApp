@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
+import { tauriApi } from "../lib/tauriApi";
 import { authStore } from "./session";
 import { formatTanggalId } from "./helpers";
 
@@ -218,7 +218,7 @@ export const exportMeteranExcel = async ({
 
     const fileName = `Laporan_Meteran_${formattedCategory}_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportTransaksiDetailExcel = async ({
@@ -313,7 +313,7 @@ export const exportTransaksiDetailExcel = async ({
 
     const fileName = `Laporan_Detail_Transaksi_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportTransaksiHarianExcel = async ({
@@ -390,7 +390,7 @@ export const exportTransaksiHarianExcel = async ({
 
     const fileName = `Laporan_Harian_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportTransaksiBulananExcel = async ({
@@ -471,7 +471,7 @@ export const exportTransaksiBulananExcel = async ({
 
     const fileName = `Laporan_Bulanan_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportTransaksiPerItemExcel = async ({
@@ -566,7 +566,7 @@ export const exportTransaksiPerItemExcel = async ({
 
     const fileName = `Laporan_Per_Item_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportTransaksiPerKonsumenExcel = async ({
@@ -668,7 +668,7 @@ export const exportTransaksiPerKonsumenExcel = async ({
 
     const fileName = `Laporan_Per_Konsumen_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportStatistikKaryawanExcel = async ({
@@ -761,7 +761,7 @@ export const exportStatistikKaryawanExcel = async ({
 
     const fileName = `Laporan_Statistik_Karyawan_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportPiutangExcel = async ({
@@ -840,7 +840,7 @@ export const exportPiutangExcel = async ({
 
     const fileName = `Laporan_Piutang_${today}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportPemakaianBahanExcel = async ({
@@ -899,7 +899,7 @@ export const exportPemakaianBahanExcel = async ({
 
     const fileName = `Laporan_Pemakaian_Bahan_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportPelunasanExcel = async ({
@@ -1006,7 +1006,7 @@ export const exportPelunasanExcel = async ({
 
     const fileName = `Laporan_Pelunasan_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportOmsetPerItemExcel = async ({
@@ -1085,7 +1085,7 @@ export const exportOmsetPerItemExcel = async ({
 
     const fileName = `Laporan_Omset_Per_Item_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportKeuanganExcel = async ({
@@ -1276,7 +1276,7 @@ export const exportKeuanganExcel = async ({
 
     const fileName = `Laporan_Keuangan_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportAktivitasExcel = async ({
@@ -1435,7 +1435,7 @@ export const exportAktivitasExcel = async ({
 
     const fileName = `Laporan_Aktivitas_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportMaklunExcel = async ({
@@ -1777,7 +1777,7 @@ export const exportMaklunExcel = async ({
 
     const fileName = `Laporan_Maklun_Per_Cabang_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportFailureExcel = async ({
@@ -1899,7 +1899,7 @@ export const exportFailureExcel = async ({
 
     const fileName = `Laporan_Kegagalan_Produksi_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
 export const exportGlobalStocksToExcel = async ({
@@ -2051,5 +2051,5 @@ export const exportGlobalStocksToExcel = async ({
 
     const fileName = `Laporan_Global_Stock_${month}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), fileName);
+    await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };

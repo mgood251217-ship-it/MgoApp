@@ -8,7 +8,6 @@ use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_shell::ShellExt;
 
-/// Padanan ipcMain.handle("pilih-file-order")
 #[tauri::command]
 pub async fn pilih_file_order(app: AppHandle) -> Vec<String> {
     let files = app
@@ -22,7 +21,6 @@ pub async fn pilih_file_order(app: AppHandle) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Padanan ipcMain.handle("pilih-folder")
 #[tauri::command]
 pub async fn pilih_folder(app: AppHandle) -> Option<String> {
     app.dialog()
@@ -31,11 +29,51 @@ pub async fn pilih_folder(app: AppHandle) -> Option<String> {
         .map(|f| f.to_string())
 }
 
-/// Padanan ipcMain.handle("buka-link-eksternal")
 #[tauri::command]
 pub async fn buka_link_eksternal(app: AppHandle, url: String) -> Value {
     match app.shell().open(&url, None) {
         Ok(_) => serde_json::json!({ "success": true }),
+        Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct SimpanFileArgs {
+    #[serde(rename = "base64Data")]
+    pub base64_data: String,
+    #[serde(rename = "defaultFileName")]
+    pub default_file_name: String,
+    pub filters: Option<Vec<(String, Vec<String>)>>,
+}
+
+#[tauri::command]
+pub async fn simpan_file_dialog(app: AppHandle, args: SimpanFileArgs) -> Value {
+    let mut dialog = app.dialog().file().set_file_name(&args.default_file_name);
+
+    if let Some(filters) = &args.filters {
+        for (label, extensions) in filters {
+            let ext_refs: Vec<&str> = extensions.iter().map(|s| s.as_str()).collect();
+            dialog = dialog.add_filter(label, &ext_refs);
+        }
+    }
+
+    let picked_path = dialog.blocking_save_file();
+
+    let dest_path = match picked_path {
+        Some(p) => match p.into_path() {
+            Ok(path) => path,
+            Err(e) => return serde_json::json!({ "success": false, "message": e.to_string() }),
+        },
+        None => return serde_json::json!({ "success": false, "cancelled": true }),
+    };
+
+    let buffer = match base64::engine::general_purpose::STANDARD.decode(&args.base64_data) {
+        Ok(b) => b,
+        Err(e) => return serde_json::json!({ "success": false, "message": e.to_string() }),
+    };
+
+    match fs::write(&dest_path, buffer) {
+        Ok(_) => serde_json::json!({ "success": true, "filePath": dest_path.to_string_lossy() }),
         Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
     }
 }
@@ -47,7 +85,6 @@ pub struct SavePdfArgs {
     pub base64_data: String,
 }
 
-/// Padanan ipcMain.handle("save-pdf-data")
 #[tauri::command]
 pub fn save_pdf_data(args: SavePdfArgs) -> Value {
     let program_data = std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());

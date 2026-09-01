@@ -6,17 +6,10 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 
 fn toggle_devtools(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
-        #[cfg(debug_assertions)]
-        {
-            if window.is_devtools_open() {
-                window.close_devtools();
-            } else {
-                window.open_devtools();
-            }
-        }
-        // #[cfg(not(debug_assertions))]
-        {
-            let _ = window;
+        if window.is_devtools_open() {
+            window.close_devtools();
+        } else {
+            window.open_devtools();
         }
     }
 }
@@ -64,16 +57,14 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            // misc.rs
             misc::pilih_file_order,
             misc::pilih_folder,
             misc::buka_link_eksternal,
             misc::save_pdf_data,
-            // settings.rs
+            misc::simpan_file_dialog,
             settings::get_settings,
             settings::save_settings,
             settings::restart_app,
-            // folder_order.rs
             folder_order::cek_folder_order,
             folder_order::cari_folder_order,
             folder_order::buat_folder_order,
@@ -81,9 +72,7 @@ pub fn run() {
             folder_order::pindah_file_ke_folder,
             folder_order::rename_file_order,
             folder_order::delete_file_order,
-            // icon_folder.rs
             icon_folder::set_icon_folder_order,
-            // updater_custom.rs
             updater_custom::download_update,
             updater_custom::jalankan_installer,
         ])

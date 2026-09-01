@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { tauriApi } from "../../lib/tauriApi";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import api from "../../api/axios";
@@ -81,25 +82,25 @@ export default function PrintPdf({ orderId, onClose }) {
 
     const handleDownloadPdf = async () => {
         const element = document.getElementById("pdf-content");
-        
+
         const canvas = await html2canvas(element, {
             scale: 2,
             useCORS: true,
             logging: false,
             backgroundColor: "#ffffff"
         });
-
         const imgData = canvas.toDataURL("image/jpeg", 1.0);
-        
+
         const pdf = new jsPDF("p", "mm", [80, 200]);
         const imgProps = pdf.getImageProperties(imgData);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
         pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
 
         const safeName = (str) => (str || "File").toString().replace(/[^a-z0-9]/gi, '_');
         const fileName = `${safeName(orderData.customer_name)}_${orderData.operator_initial || 'OP'}_${safeName(orderData.date)}_${safeName(orderData.nomorator)}.pdf`;
+
+        const pdfBlob = pdf.output("blob");
 
         if (window.electron && window.electron.savePdfData) {
             try {
@@ -113,7 +114,7 @@ export default function PrintPdf({ orderId, onClose }) {
             }
         }
 
-        pdf.save(fileName);
+        await tauriApi.simpanFile(pdfBlob, fileName, [["PDF", ["pdf"]]]);
     };
 
     return (

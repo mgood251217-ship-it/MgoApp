@@ -1,10 +1,22 @@
+
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64 = reader.result.split(",")[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
 
 export const tauriApi = {
     version: () => "1.0.8",
 
-    // --- folder order ---
     analisisFolderOrder: (folderPath) => invoke("analisis_folder_order", { folderPath }),
     buatFolderOrder: (args) => invoke("buat_folder_order", { args }),
     pindahFileKeFolder: (args) => invoke("pindah_file_ke_folder", { args }),
@@ -14,12 +26,10 @@ export const tauriApi = {
     cekFolderOrder: (folderPath) => invoke("cek_folder_order", { folderPath }),
     cariFolderOrder: (args) => invoke("cari_folder_order", { args }),
 
-    // --- dialog & shell ---
     pilihFolder: () => invoke("pilih_folder"),
     pilihFileOrder: () => invoke("pilih_file_order"),
     bukaLinkEksternal: (url) => invoke("buka_link_eksternal", { url }),
 
-    // --- updater ---
     downloadUpdate: (url) => invoke("download_update", { url }),
     jalankanInstaller: (filePath) => invoke("jalankan_installer", { filePath }),
     onDownloadProgress: (callback) => {
@@ -30,13 +40,18 @@ export const tauriApi = {
         return () => unlisten();
     },
 
-    // --- settings ---
     getSettings: () => invoke("get_settings"),
     saveSettings: (newSettings) => invoke("save_settings", { newSettings }),
     restartApp: () => invoke("restart_app"),
 
-    // --- pdf backup ---
     savePdfData: (args) => invoke("save_pdf_data", { args }),
+
+    simpanFile: async (blob, defaultFileName, filters = null) => {
+        const base64Data = await blobToBase64(blob);
+        return invoke("simpan_file_dialog", {
+            args: { base64Data, defaultFileName, filters },
+        });
+    },
 
 };
 
