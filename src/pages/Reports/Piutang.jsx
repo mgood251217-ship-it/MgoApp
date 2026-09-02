@@ -125,7 +125,6 @@ export default function Piutang() {
             <ReportNav />
             
             <div style={{ 
-                padding: "0 24px", 
                 display: "flex", 
                 justifyContent: "space-between", 
                 alignItems: "center",
@@ -147,7 +146,7 @@ export default function Piutang() {
                 </Button>
             </div>
 
-            <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                 <Table 
                     id="table-piutang"
                     columns={columns}

@@ -133,19 +133,17 @@ export default function TransaksiBulanan() {
             <Header title="Transaksi Bulanan" subtitle="Rekapitulasi total transaksi per tanggal." />
             <ReportNav />
             
-            <div style={{ padding: "0 24px" }}>
-                <DateFilter 
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchBulanan}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchBulanan}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
-            <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                     <Table 
                         id="table-bulanan"
                         columns={columns}

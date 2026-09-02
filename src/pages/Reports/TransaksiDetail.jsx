@@ -251,7 +251,7 @@ export default function TransaksiDetail() {
     return (
         <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", paddingBottom: "40px" }}>
             
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Header 
                     title="Laporan Detail Transaksi" 
                     subtitle="Pantau rincian setiap transaksi beserta item, pembayaran, dan catatan." 
@@ -292,23 +292,20 @@ export default function TransaksiDetail() {
 
             <ReportNav />
 
-            <div style={{ padding: "0 24px" }}>
-                <DateFilter 
-                    search={search}
-                    onSearchChange={setSearch}
-                    searchPlaceholder="Cari data ...."
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchTransactions}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Cari data ...."
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchTransactions}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
             <div style={{ 
-                padding: "0 24px",
                 display: "flex",
                 flexDirection: "column",
                 gap: "24px"

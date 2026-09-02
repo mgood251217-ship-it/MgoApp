@@ -129,19 +129,17 @@ export default function TransaksiPerKonsumen() {
             <Header title="Transaksi Per Konsumen" subtitle="Ringkasan transaksi berdasarkan nama konsumen." />
             <ReportNav />
             
-            <div style={{ padding: "0 24px" }}>
-                <DateFilter 
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchTransaksiKonsumen}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchTransaksiKonsumen}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
-            <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "32px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
                 {Object.entries(transaksiKonsumenData).map(([namaKonsumen, daftarOrder]) => (
                     <div key={namaKonsumen} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                         <div style={{ 

@@ -151,17 +151,15 @@ export default function Pelunasan() {
             <Header title="Laporan Pelunasan" subtitle="Daftar transaksi yang telah dilunasi beserta data DP." />
             <ReportNav />
             
-            <div style={{ padding: "0 24px" }}>
-                <DateFilter 
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchPelunasan}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchPelunasan}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
             <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
                 <Table 

@@ -119,19 +119,17 @@ export default function Aktivitas() {
             <Header title="Aktivitas & Arsip" subtitle="Riwayat perubahan data dan log order yang telah dihapus." />
             <ReportNav />
             
-            <div style={{ padding: "0 24px" }}>
-                <DateFilter 
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchData}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchData}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
-            <div style={{ padding: "0 24px", marginTop: "24px", display: "flex", flexDirection: "column", gap: "40px" }}>
+            <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "40px" }}>
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div style={{ 

@@ -87,7 +87,6 @@ export default function PemakaianBahan() {
             <Header title="Pemakaian Bahan" subtitle="Ringkasan total pemakaian bahan atau produk." />
             <ReportNav />
             
-            <div style={{ padding: "0 24px" }}>
                 <DateFilter 
                     startDate={startDate}
                     endDate={endDate}
@@ -97,9 +96,8 @@ export default function PemakaianBahan() {
                     onExport={handleExportExcel}
                     loading={loading}
                 />
-            </div>
 
-            <div style={{ padding: "0 24px", marginTop: "24px", display: "flex", flexDirection: "column", gap: "32px" }}>
+            <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "32px" }}>
                 <Table 
                     id="table-pemakaian-bahan"
                     columns={columns}

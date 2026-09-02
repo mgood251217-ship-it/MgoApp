@@ -142,21 +142,17 @@ export default function StatistikKaryawan() {
             <Header title="Statistik Karyawan" subtitle="Performa kinerja karyawan berdasarkan transaksi dan aktivitas." />
             <ReportNav />
             
-            <div style={{ padding: "0 24px" }}>
-                <DateFilter 
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchStatistik}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchStatistik}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
             <div style={{ 
-                padding: "0 24px", 
-                marginTop: "24px", 
                 display: "flex", 
                 gap: "16px", 
                 flexWrap: "wrap" 
@@ -187,7 +183,7 @@ export default function StatistikKaryawan() {
                 />
             </div>
 
-            <div style={{ padding: "0 24px", marginTop: "24px", display: "flex", flexDirection: "column", gap: "32px" }}>
+            <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "32px" }}>
                 <Table 
                     id="table-statistik-karyawan"
                     columns={columns}
