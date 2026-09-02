@@ -350,7 +350,7 @@ export default function OrderItemForm({
                     <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", fontSize: "14px" }}>
                         Finishing
                     </label>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "6px", backgroundColor: "var(--bg-body)" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "6px" }}>
                         {finishings.map((f) => (
                             <label key={f.finishing_id} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px" }}>
                                 <input

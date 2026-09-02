@@ -19,6 +19,7 @@ export default function Order() {
     const navigate = useNavigate();
 
     const [items, setItems] = useState([]);
+    const [orderMeta, setOrderMeta] = useState({});
     const [orderInfo, setOrderInfo] = useState({
         total: 0,
         diskon_per_produk: {},
@@ -83,6 +84,7 @@ export default function Order() {
             const loadedItems = data.items || [];
             
             setItems(loadedItems);
+            setOrderMeta(data.order || {});
             setOrderInfo({
                 total: data.total || 0,
                 diskon_per_produk: data.diskon_per_produk || {},
@@ -351,39 +353,87 @@ export default function Order() {
                 }
             />
 
-            <div style={{ display: "flex", gap: "24px", marginTop: "24px", alignItems: "flex-start" }}>
-                <div style={{ width: "40%", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
-                    <OrderItemForm 
-                        initialData={initialFormItem}
-                        isSubmitting={isSubmitting}
-                        onSubmit={handleAddItem}
-                        onChange={(currentFormItem) => setActiveFormItem(currentFormItem)}
-                        submitText={initialFormItem.order_item_id ? "Update Item" : "Tambah Item"}
-                        submitIcon={initialFormItem.order_item_id ? "edit" : "add"}
-                        submitVariant={initialFormItem.order_item_id ? "warning" : "success"}
-                        showCancel={!!initialFormItem.order_item_id}
-                        onCancel={() => setInitialFormItem({
-                            order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
-                            qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
-                        })}
-                    >
-                        <div style={{ padding: "12px", backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", borderRadius: "var(--radius)", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--text)" }}>Estimasi Harga:</span>
-                            <span style={{ fontWeight: "bold", color: "var(--success)", fontSize: "16px" }}>
-                                {formatRupiah(previewPrice)}
-                            </span>
-                        </div>
-                    </OrderItemForm>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginTop: "20px" }}>
+                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomorator</div>
+                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.nomorator || "-"}</div>
+                </div>
+                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nama Customer</div>
+                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.customer_name || "-"}</div>
+                </div>
+                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Dibuat</div>
+                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.date || "-"}</div>
+                </div>
+                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Deadline</div>
+                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--warning)" }}>{orderMeta.deadline || "-"}</div>
+                </div>
+                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Operator</div>
+                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--primary)" }}>{orderMeta.operator_initial || "-"}</div>
+                </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "24px", marginTop: "20px", alignItems: "flex-start" }}>
+                <div style={{ width: "30%", display: "flex", flexDirection: "column", gap: "20px" }}>
+                    <div style={{ background: "color-mix(in srgb, var(--background) 10%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                        <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
+                        <OrderItemForm 
+                            initialData={initialFormItem}
+                            isSubmitting={isSubmitting}
+                            onSubmit={handleAddItem}
+                            onChange={(currentFormItem) => setActiveFormItem(currentFormItem)}
+                            submitText={initialFormItem.order_item_id ? "Update Item" : "Tambah Item"}
+                            submitIcon={initialFormItem.order_item_id ? "edit" : "add"}
+                            submitVariant={initialFormItem.order_item_id ? "warning" : "success"}
+                            showCancel={!!initialFormItem.order_item_id}
+                            onCancel={() => setInitialFormItem({
+                                order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
+                                qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
+                            })} 
+                        >
+                            <div style={{ padding: "12px", background: "color-mix(in srgb, var(--background) 30%, transparent)", borderRadius: "var(--radius)", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--text)" }}>Estimasi Harga:</span>
+                                <span style={{ fontWeight: "bold", color: "var(--success)", fontSize: "16px" }}>
+                                    {formatRupiah(previewPrice)}
+                                </span>
+                            </div>
+                        </OrderItemForm>
+                    </div>
+
+                    <div style={{ backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                        <h3 style={{ marginBottom: "16px" }}>Catatan Pesanan</h3>
+                        {orderInfo.note && (
+                            <div style={{ marginBottom: "16px", padding: "12px", backgroundColor: "rgba(var(--warning-rgb), 0.1)", color: "var(--warning)", borderRadius: "var(--radius)", borderLeft: "4px solid var(--warning)" }}>
+                                {orderInfo.note}
+                            </div>
+                        )}
+                        <Form id="formUpdateNote" onSubmit={handleUpdateNote}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                <Input
+                                    name="noteInput"
+                                    placeholder="Tulis catatan pesanan di sini..."
+                                    value={noteInput}
+                                    onChange={(e) => setNoteInput(e.target.value)}
+                                />
+                                <Button type="submit" size="full-lg" variant="primary" icon={<Icon name="save" />}>
+                                    Simpan Catatan
+                                </Button>
+                            </div>
+                        </Form>
+                    </div>
                 </div>
 
-                <div style={{ width: "60%" }}>
+                {/* Kolom Kanan: Tabel Daftar Item & Total */}
+                <div style={{ width: "70%" }}>
                     <div style={{ backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                         <h3 style={{ marginBottom: "16px" }}>Daftar Item</h3>
                         <Table
                             id="tableOrderItems"
                             showNumber
-                            size="sm"
+                            size="md    "
                             rowKey="order_item_id"
                             rowDataKey="order_item_id"
                             columns={tableColumns}
@@ -413,29 +463,6 @@ export default function Order() {
                                     {formatRupiah(orderInfo.total)}
                                 </h2>
                             </div>
-                        </div>
-
-                        <div style={{ marginTop: "24px", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                            {orderInfo.note && (
-                                <div style={{ marginBottom: "16px", padding: "12px", backgroundColor: "rgba(var(--warning-rgb), 0.1)", color: "var(--warning)", borderRadius: "var(--radius)", borderLeft: "4px solid var(--warning)" }}>
-                                    {orderInfo.note}
-                                </div>
-                            )}
-                            <Form id="formUpdateNote" onSubmit={handleUpdateNote}>
-                                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                                    <div style={{ flex: 1 }}>
-                                        <Input
-                                            name="noteInput"
-                                            placeholder="Tulis catatan pesanan di sini..."
-                                            value={noteInput}
-                                            onChange={(e) => setNoteInput(e.target.value)}
-                                        />
-                                    </div>
-                                    <Button type="submit" size="md" variant="primary" icon={<Icon name="save" />}>
-                                        Simpan
-                                    </Button>
-                                </div>
-                            </Form>
                         </div>
                     </div>
                 </div>
