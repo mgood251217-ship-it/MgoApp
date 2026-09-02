@@ -1,21 +1,21 @@
 import api from "../api/axios";
 import { validateStoreCache } from "./apiCache";
+import { useState, useEffect } from "react";
 
 const KEY = "mgo_session";
 let currentUser = readLocalSession();
 const listeners = new Set();
 
 function readLocalSession() {
-  const data = localStorage.getItem(KEY);
-  if (!data) return null;
+    const data = localStorage.getItem(KEY);
+    if (!data) return null;
 
-  try {
-    return JSON.parse(data);
-  } catch (e) {
-    console.error("Data rusak, menghapus dari localStorage:", KEY);
-    removeLocalSession();
-    return null;
-  }
+    try {
+        return JSON.parse(data);
+    } catch (e) {
+        removeLocalSession();
+        return null;
+    }
 }
 
 function writeLocalSession(data) {
@@ -67,7 +67,9 @@ export const authStore = {
     checkSession: async () => {
         try {
             const response = await api.get("?action=session");
-            await writeLocalSession(response.data.data);
+            currentUser = response.data.data;
+            writeLocalSession(currentUser);
+            notify();
             return response.data.success;
         } catch (err) {
             if (err.response?.status === 401) return false;
@@ -83,6 +85,17 @@ export const authStore = {
         return data.data;
     },
 };
+
+export function useSession() {
+    const [session, setSession] = useState(authStore.getUser());
+
+    useEffect(() => {
+        const unsubscribe = authStore.subscribe(setSession);
+        return () => unsubscribe();
+    }, []);
+
+    return session;
+}
 
 export async function hasSession() {
     return authStore.checkSession();

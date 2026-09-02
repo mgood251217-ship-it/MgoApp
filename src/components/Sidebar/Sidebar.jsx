@@ -8,7 +8,7 @@ import { TbRulerMeasure } from "react-icons/tb";
 import { MdOutlineErrorOutline } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 import { LiaWindowRestore } from "react-icons/lia";
-import { authStore } from "../../services/session";
+import { authStore, useSession } from "../../services/session";
 
 const menus = [
     { title: "Store", path: "/store", icon: <RiStore2Line />, restrict: true },
@@ -23,7 +23,7 @@ const menus = [
 ];
 
 export default function Sidebar() {
-    const session = authStore.getUser();
+    const session = useSession();
     
     const role = (session?.user?.role || "GUEST").toUpperCase();
     const name = session?.user?.name ?? "Guest";

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import { FiBell, FiLogOut, FiMoon, FiSun, FiHelpCircle, FiInfo } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { authStore } from "../../services/session";
+import { authStore, useSession } from "../../services/session";
 import { changeTheme } from "../../services/setting";
 import Modal from "../Modal/Modal";
 import Input from "../Input/Input";
@@ -48,7 +48,7 @@ async function logout() {
 
 export default function Navbar() {
     const navigate = useNavigate();
-    const session = authStore.getUser();
+    const session = useSession();
     const [theme, setTheme] = useState(() => getInitialTheme(null));
     const [themeLoading, setThemeLoading] = useState(false);
     const storeName = session?.store?.name ?? "MGO Store";

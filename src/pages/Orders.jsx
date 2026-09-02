@@ -18,11 +18,11 @@ import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
 import { getCachedInitials, getCachedOrders, getCachedOrderDetail } from "../services/apiCache";
-import { authStore } from "../services/session";
+import { authStore, useSession } from "../services/session";
 
 export default function Orders() {
     const navigate = useNavigate();
-    const session = authStore.getUser();
+    const session = useSession();
     const role = session?.user?.role ?? "";
     const initial = session?.user?.initial ?? "";
     const isPrivileged = role == "ADMIN" || role == "MANAGER";
