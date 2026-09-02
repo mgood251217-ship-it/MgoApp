@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import "./ReportNav.css";
 
 export default function ReportNav() {
     const navigate = useNavigate();
@@ -20,36 +21,15 @@ export default function ReportNav() {
     ];
 
     return (
-        <div style={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
-            <div style={{
-                display: "flex",
-                gap: "12px",
-                overflowX: "auto",
-                padding: "0 24px 16px 0",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                WebkitOverflowScrolling: "touch",
-                boxSizing: "border-box"
-            }}>
+        <div className="report-nav-wrapper">
+            <div className="report-nav-scroll">
                 {navItems.map((item, index) => {
                     const isActive = location.pathname === item.path;
                     return (
                         <button
                             key={index}
                             onClick={() => navigate(item.path)}
-                            style={{
-                                whiteSpace: "nowrap",
-                                padding: "8px 16px",
-                                borderRadius: "var(--radius)",
-                                fontSize: "13px",
-                                fontWeight: "600",
-                                border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",
-                                background: isActive ? "var(--primary)" : "var(--surface)",
-                                color: isActive ? "#ffffff" : "var(--text)",
-                                cursor: "pointer",
-                                transition: "all 0.2s",
-                                flexShrink: 0
-                            }}
+                            className={`report-nav-item${isActive ? " active" : ""}`}
                         >
                             {item.label}
                         </button>

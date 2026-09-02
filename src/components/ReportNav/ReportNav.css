@@ -1,0 +1,46 @@
+.report-nav-wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.report-nav-scroll {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-width: 0;
+    padding-bottom: 12px;
+    box-sizing: border-box;
+}
+
+.report-nav-item {
+    white-space: nowrap;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.report-nav-item.active {
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+}
+
+@media (max-width: 768px) {
+    .report-nav-scroll {
+        gap: 8px;
+        padding-bottom: 12px;
+    }
+
+    .report-nav-item {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+}
