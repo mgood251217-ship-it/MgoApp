@@ -255,6 +255,8 @@ export default function Settings() {
                 display: "flex", 
                 justifyContent: "space-between", 
                 alignItems: "center", 
+                flexWrap: "wrap",
+                gap: "12px",
                 padding: "16px 20px", 
                 backgroundColor: "var(--background)", 
                 border: "1px solid var(--border)", 
@@ -264,7 +266,7 @@ export default function Settings() {
                     {label}
                 </label>
                 
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                     <select
                         value={type}
                         onChange={e => updateColor(e.target.value, c1, c2, angle)}
@@ -335,7 +337,7 @@ export default function Settings() {
     );
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
             {alertConfig.show && (
                 <Alert
                     type={alertConfig.type}
@@ -356,21 +358,21 @@ export default function Settings() {
             ) : (
                 <Form id="formSettings" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "32px", maxWidth: "1600px" }}>
                     
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", gap: "32px", alignItems: "start" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "32px", alignItems: "start" }}>
                         
                         <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
                             <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
                                 <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Path Folder Produksi</h3>
                             </div>
                             
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "20px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
                                 {PATH_FIELDS.map(({ key, label }) => (
                                     <div key={key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                                         <label style={{ fontWeight: "600", fontSize: 13, color: "var(--text-secondary)" }}>
                                             {label}
                                         </label>
-                                        <div style={{ display: "flex", gap: "12px" }}>
-                                            <div style={{ flex: 1 }}>
+                                        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                                            <div style={{ flex: "1 1 180px" }}>
                                                 <Input
                                                     name={key}
                                                     value={settings[key] || ""}
@@ -379,22 +381,24 @@ export default function Settings() {
                                                     margin="0"
                                                 />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                icon={<Icon name="folder" />}
-                                                onClick={() => handlePilihPath(key)}
-                                            >
-                                                Pilih
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="danger"
-                                                icon={<Icon name="refresh" />}
-                                                onClick={() => handleResetField(key)}
-                                            >
-                                                Reset
-                                            </Button>
+                                            <div style={{ display: "flex", gap: "8px" }}>
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    icon={<Icon name="folder" />}
+                                                    onClick={() => handlePilihPath(key)}
+                                                >
+                                                    Pilih
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="danger"
+                                                    icon={<Icon name="refresh" />}
+                                                    onClick={() => handleResetField(key)}
+                                                >
+                                                    Reset
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -406,7 +410,7 @@ export default function Settings() {
                                 <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Pengaturan Tata Letak & Tabel</h3>
                             </div>
                             
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "20px" }}>
                                 <Input
                                     labelPosition="top"
                                     label="Tinggi Navbar (px/rem)"
