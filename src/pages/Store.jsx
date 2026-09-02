@@ -417,7 +417,7 @@ export default function Store() {
                 title="Store Dashboard" 
                 subtitle="Ringkasan data toko dan statistik." 
                 actions={
-                    <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                         <Button 
                             variant="primary" 
                             icon={<Icon name="add" />}

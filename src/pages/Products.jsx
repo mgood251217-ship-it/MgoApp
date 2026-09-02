@@ -140,7 +140,7 @@ export default function Products() {
                 title="Manajemen Produk"
                 subtitle="Kelola data produk, finishing, dan kategori."
                 actions={
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                         <Input
                             name="search"
                             value={search}

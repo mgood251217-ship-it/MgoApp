@@ -443,7 +443,7 @@ export default function Orders() {
                 title="Orders"
                 subtitle="Data pesanan masuk."
                 actions={
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <>
                         <Button
                             variant="secondary"
                             size="lg"
@@ -460,7 +460,7 @@ export default function Orders() {
                                 Tambah
                             </Button>
                         )}
-                    </div>
+                    </>
                 }
             />
             
