@@ -75,3 +75,41 @@
     text-align: center;
     white-space: nowrap;
 }
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive .table {
+    min-width: 600px;
+}
+
+@media (max-width: 768px) {
+    .table-sm th,
+    .table-sm td {
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+
+    .table-md th,
+    .table-md td {
+        padding: 7px 10px;
+        font-size: 12px;
+    }
+
+    .table-lg th,
+    .table-lg td {
+        padding: 9px 12px;
+        font-size: 13px;
+    }
+
+    .table-actions {
+        gap: 4px;
+    }
+
+    .hide-mobile {
+        display: none;
+    }
+}
