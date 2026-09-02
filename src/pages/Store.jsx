@@ -313,6 +313,7 @@ export default function Store() {
 
     const chartOptions = useMemo(() => ({
         responsive: true,
+        maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
             y: { type: 'linear', display: true, position: 'left' },
@@ -412,7 +413,7 @@ export default function Store() {
         : [-6.9175, 107.6191];
 
     return (
-        <>
+        <div style={{ paddingBottom: "32px" }}>
             <Header 
                 title="Store Dashboard" 
                 subtitle="Ringkasan data toko dan statistik." 
@@ -436,33 +437,37 @@ export default function Store() {
                 }
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--background)' }}>
                     <small style={{ color: 'var(--text)' }}>Total Order 30 Hari</small>
                     <h3 style={{ margin: '8px 0 0' }}>{stats.summary?.total_30?.toLocaleString() ?? 0}</h3>
                 </div>
-                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--background)' }}>
                     <small style={{ color: 'var(--text)' }}>Total Hari Ini</small>
                     <h3 style={{ margin: '8px 0 0' }}>{stats.summary?.total_today?.toLocaleString() ?? 0}</h3>
                 </div>
-                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <div style={{ padding: '20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--background)' }}>
                     <small style={{ color: 'var(--text)' }}>Top Customer: {stats.summary?.top_customer}</small>
                     <h3 style={{ margin: '8px 0 0' }}>Rp {stats.summary?.top_total?.toLocaleString() ?? 0}</h3>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                    <h5 style={{ marginTop: 0 }}>Statistik 30 Hari Terakhir</h5>
-                    <Line data={chart30Data} options={chartOptions} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', height: '320px', display: 'flex', flexDirection: 'column' }}>
+                    <h5 style={{ marginTop: 0, marginBottom: '12px' }}>Statistik 30 Hari Terakhir</h5>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        <Line data={chart30Data} options={chartOptions} />
+                    </div>
                 </div>
-                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                    <h5 style={{ marginTop: 0 }}>Statistik 1 Tahun Terakhir</h5>
-                    <Bar data={chart365Data} options={chartOptions} />
+                <div style={{ background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', height: '320px', display: 'flex', flexDirection: 'column' }}>
+                    <h5 style={{ marginTop: 0, marginBottom: '12px' }}>Statistik 1 Tahun Terakhir</h5>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        <Bar data={chart365Data} options={chartOptions} />
+                    </div>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '6.5fr 3.5fr', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginBottom: '24px' }}>
                 <div style={{ overflow: 'hidden' }}>
                     <Table 
                         id="tableUsers"
@@ -664,6 +669,6 @@ export default function Store() {
                 </form>
             </Modal>
             )}
-        </>
+        </div>
     );
 }
