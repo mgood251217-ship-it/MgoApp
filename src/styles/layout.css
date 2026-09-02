@@ -58,3 +58,24 @@ body,
     overflow-x: hidden;
     padding: 20px;
 }
+
+@media (max-width: 768px) {
+    .navbar {
+        left: 0;
+    }
+
+    .footer {
+        display: none;
+    }
+
+    .main {
+        margin-left: 0;
+        margin-top: 56px;
+        margin-bottom: var(--sidebar-mobile-height, 64px);
+        height: calc(100vh - 56px - var(--sidebar-mobile-height, 64px));
+    }
+
+    .content {
+        padding: 12px;
+    }
+}
