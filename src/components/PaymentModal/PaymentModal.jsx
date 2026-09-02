@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import Modal from "../Modal/Modal";
-import Form from "../Form/Form";
 import Input from "../Input/Input";
-import Select from "../Select/Select";
 import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
 import { formatRupiah } from "../../services/helpers";
@@ -11,38 +9,38 @@ import "./PaymentModal.css";
 
 export default function PaymentModal({ open, onClose, order, onSuccess }) {
     const [nominal, setNominal] = useState("");
-    const [method, setMethod] = useState("CASH");
-
-    const paymentOptions = [
-        { value: "CASH", label: "CASH" },
-        { value: "TF", label: "TRANSFER (TF)" }
-    ];
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (open) {
             setNominal("");
-            setMethod("CASH");
+            setLoading(false);
         }
     }, [open]);
 
     const sisaTagihan = (order?.total || 0) - (order?.total_paid || 0);
+    const isNominalFilled = Number(nominal) > 0;
 
-    const handlePartialPay = async (e) => {
-        e.preventDefault();
+    const handlePartialPay = async (payMethod) => {
+        if (!isNominalFilled) return;
+        setLoading(true);
         try {
             const payload = new FormData();
             payload.append("order_id", order.order_id);
             payload.append("nominal", nominal);
-            payload.append("payment_method", method);
+            payload.append("payment_method", payMethod);
 
             await api.post("", payload, { params: { action: "create_payment" } });
             onSuccess();
         } catch (err) {
             console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleLunas = async (lunasMethod) => {
+        setLoading(true);
         try {
             const payload = new FormData();
             payload.append("order_id", order.order_id);
@@ -52,6 +50,8 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
             onSuccess();
         } catch (err) {
             console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -78,12 +78,25 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
                 </div>
             </div>
 
-            <div className="payment-modal-quick-actions">
+            <div style={{ marginBottom: "16px" }}>
+                <Input
+                    name="nominal"
+                    value={nominal}
+                    onChange={(e) => setNominal(e.target.value)}
+                    type="number"
+                    placeholder="Masukkan nominal bayar sebagian..."
+                    disabled={loading}
+                />
+            </div>
+
+            <div className="payment-modal-quick-actions" style={{ marginBottom: "16px" }}>
                 <Button
                     size="full-lg"
                     variant="success"
                     icon={<Icon name="payments" />}
                     onClick={() => handleLunas("CASH")}
+                    disabled={loading || isNominalFilled}
+                    loading={loading && !isNominalFilled}
                 >
                     Lunas Cash
                 </Button>
@@ -92,42 +105,35 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
                     variant="info"
                     icon={<Icon name="account_balance" />}
                     onClick={() => handleLunas("TF")}
+                    disabled={loading || isNominalFilled}
+                    loading={loading && !isNominalFilled}
                 >
                     Lunas TF
                 </Button>
             </div>
 
-            <Form id="paymentForm" onSubmit={handlePartialPay}>
-                <Input
-                    labelPosition="left"
-                    labelWidth={130}
-                    name="nominal"
-                    value={nominal}
-                    onChange={(e) => setNominal(e.target.value)}
-                    label="Nominal Bayar"
-                    type="number"
-                    placeholder="Masukkan nominal"
-                    required
-                />
-                <Select
-                    labelPosition="left"
-                    labelWidth={130}
-                    name="method"
-                    label="Metode"
-                    value={method}
-                    onChange={(e) => setMethod(e.target.value)}
-                    options={paymentOptions}
-                    required
-                />
+            <div style={{ display: "flex", gap: "8px" }}>
                 <Button
-                    type="submit"
                     size="full-lg"
-                    variant="primary"
+                    variant="success"
                     icon={<Icon name="add" />}
+                    onClick={() => handlePartialPay("CASH")}
+                    disabled={loading || !isNominalFilled}
+                    loading={loading && isNominalFilled}
                 >
-                    Bayar Sebagian
+                    Sebagian Cash
                 </Button>
-            </Form>
+                <Button
+                    size="full-lg"
+                    variant="info"
+                    icon={<Icon name="add" />}
+                    onClick={() => handlePartialPay("TF")}
+                    disabled={loading || !isNominalFilled}
+                    loading={loading && isNominalFilled}
+                >
+                    Sebagian TF
+                </Button>
+            </div>
         </Modal>
     );
 }
