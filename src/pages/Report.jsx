@@ -130,20 +130,38 @@ export default function Report() {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%", maxHeight: "100vh", overflow: "hidden" }}>
+            <style>
+                {`
+                .report-grid-container {
+                    flex: 1;
+                    display: grid;
+                    gap: 16px;
+                    min-height: 0;
+                    padding-bottom: 16px;
+                }
+                @media (min-width: 769px) {
+                    .report-grid-container {
+                        grid-template-columns: repeat(4, 1fr);
+                        grid-template-rows: repeat(3, minmax(0, 1fr));
+                        overflow-y: hidden;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .report-grid-container {
+                        grid-template-columns: 1fr;
+                        grid-auto-rows: minmax(120px, 1fr);
+                        overflow-y: auto;
+                    }
+                }
+                `}
+            </style>
+            
             <Header 
                 title="Pusat Laporan" 
                 subtitle="Ringkasan data laporan, statistik, dan riwayat transaksi toko." 
             />
 
-            <div style={{ 
-                flex: 1,
-                display: "grid", 
-                gridTemplateColumns: "repeat(4, 1fr)", 
-                gridTemplateRows: "repeat(3, minmax(0, 1fr))",
-                gap: "16px", 
-                minHeight: 0,
-                paddingBottom: "16px"
-            }}>
+            <div className="report-grid-container">
                 {reportCards.map((card, index) => (
                     <Card 
                         key={index}

@@ -4,7 +4,7 @@ export default function Card({ title, description1, description2, onClick, bgCol
             onClick={onClick} 
             style={{ 
                 background: bgColor,
-                padding: "16px", 
+                padding: "20px 16px", 
                 borderRadius: "var(--radius)", 
                 cursor: "pointer",
                 display: "flex",
@@ -14,8 +14,8 @@ export default function Card({ title, description1, description2, onClick, bgCol
                 transition: "all 0.3s ease",
                 boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
                 overflow: "hidden",
-                height: "100%",
-                position: "relative"
+                position: "relative",
+                minHeight: "120px"
             }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
@@ -28,10 +28,10 @@ export default function Card({ title, description1, description2, onClick, bgCol
         >
             <div style={{
                 position: "absolute",
-                right: "-10%",
-                bottom: "-20%",
-                width: "20vw",
-                height: "30vh",
+                right: "-10px",
+                bottom: "-15px",
+                width: "120px",
+                height: "120px",
                 opacity: 0.15,
                 pointerEvents: "none",
                 zIndex: 0
@@ -40,15 +40,15 @@ export default function Card({ title, description1, description2, onClick, bgCol
             </div>
 
             <div style={{ position: "relative", zIndex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
+                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", textShadow: "0 1px 2px rgba(0,0,0,0.2)", lineHeight: "1.4" }}>
                     {title}
                 </h3>
                 
                 <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <p style={{ margin: 0, fontSize: "13px", fontWeight: "500", textShadow: "0 1px 2px rgba(0,0,0,0.2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <p style={{ margin: 0, fontSize: "13px", fontWeight: "500", textShadow: "0 1px 2px rgba(0,0,0,0.2)", lineHeight: "1.4" }}>
                         {description1}
                     </p>
-                    <p style={{ margin: 0, fontSize: "13px", fontWeight: "500", textShadow: "0 1px 2px rgba(0,0,0,0.2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <p style={{ margin: 0, fontSize: "13px", fontWeight: "500", textShadow: "0 1px 2px rgba(0,0,0,0.2)", lineHeight: "1.4" }}>
                         {description2}
                     </p>
                 </div>
