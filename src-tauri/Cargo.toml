@@ -1,6 +1,6 @@
 [package]
 name = "mgo-desktop"
-version = "2.0.0"
+version = "2.0.1"
 description = "Aplikasi POS internal Mgo Desktop untuk transaksi cepat, praktis, dan akurat."
 authors = ["Viki Alvian Riyadi <mgood251217@gmail.com>"]
 edition = "2021"

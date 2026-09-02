@@ -301,7 +301,7 @@ export default function OrderItemForm({
                                     }}
                                 />
                             </div>
-                            <span style={{ fontWeight: "bold", color: "var(--secondary)" }}>X</span>
+                            <span style={{ fontWeight: "bold", color: "var(--text)", marginBottom: "12px" }}>X</span>
                             <div style={{ flex: 1 }}>
                                 {(isSublim && isTransferPaperOrPrintPres) ? (
                                     <Select
