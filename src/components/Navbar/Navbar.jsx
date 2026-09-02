@@ -12,6 +12,8 @@ import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
 import Alert from "../Alert/Alert";
 import Table from "../Table/Table";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const THEME_KEY = "theme";
 const GITHUB_OWNER = "mgood251217-ship-it";
@@ -452,15 +454,16 @@ export default function Navbar() {
                                     <div style={{ 
                                         fontSize: "14px", 
                                         color: "var(--text)", 
-                                        whiteSpace: "pre-wrap", 
                                         lineHeight: "1.6",
                                         backgroundColor: "var(--bg-content)",
-                                        padding: "16px",
+                                        padding: "14px 30px",
                                         borderRadius: "var(--radius)",
                                         border: "1px solid var(--border)",
-                                        fontFamily: "monospace"
+                                        overflowWrap: "break-word"
                                     }}>
-                                        {release.body}
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {release.body}
+                                        </ReactMarkdown>
                                     </div>
                                 </div>
                             ))}
