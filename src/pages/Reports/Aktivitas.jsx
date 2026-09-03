@@ -113,7 +113,6 @@ export default function Aktivitas() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Aktivitas & Arsip" subtitle="Riwayat perubahan data dan log order yang telah dihapus." />
@@ -182,7 +181,6 @@ export default function Aktivitas() {
                                         borderRadius: "var(--radius)", 
                                         border: "1px solid var(--border)",
                                         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                                        overflow: "hidden",
                                         display: "flex",
                                         flexDirection: "column"
                                     }}>

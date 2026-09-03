@@ -146,7 +146,6 @@ export default function Pelunasan() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Laporan Pelunasan" subtitle="Daftar transaksi yang telah dilunasi beserta data DP." />

@@ -136,7 +136,6 @@ export default function StatistikKaryawan() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Statistik Karyawan" subtitle="Performa kinerja karyawan berdasarkan transaksi dan aktivitas." />

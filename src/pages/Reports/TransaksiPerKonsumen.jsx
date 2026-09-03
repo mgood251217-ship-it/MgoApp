@@ -123,7 +123,6 @@ export default function TransaksiPerKonsumen() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Transaksi Per Konsumen" subtitle="Ringkasan transaksi berdasarkan nama konsumen." />

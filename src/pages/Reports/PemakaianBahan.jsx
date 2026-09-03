@@ -81,7 +81,6 @@ export default function PemakaianBahan() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Pemakaian Bahan" subtitle="Ringkasan total pemakaian bahan atau produk." />

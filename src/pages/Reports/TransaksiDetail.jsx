@@ -341,7 +341,6 @@ export default function TransaksiDetail() {
                                 borderRadius: "var(--radius)", 
                                 border: "1px solid var(--border)",
                                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                                overflow: "hidden",
                                 display: "flex",
                                 flexDirection: "column"
                             }}>

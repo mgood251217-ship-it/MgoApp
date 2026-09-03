@@ -127,7 +127,6 @@ export default function TransaksiBulanan() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Transaksi Bulanan" subtitle="Rekapitulasi total transaksi per tanggal." />

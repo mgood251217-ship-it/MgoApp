@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
 import Header from "../components/Header/Header";
 import Card from "../components/Card/Card";
 import { formatRupiah } from "../services/helpers";

@@ -88,7 +88,6 @@ export default function Maklun() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Laporan Maklun" subtitle="Pantau rincian pekerjaan maklun masuk dan maklun keluar antar cabang." />

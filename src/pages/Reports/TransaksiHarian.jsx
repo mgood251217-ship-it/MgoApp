@@ -122,7 +122,6 @@ export default function TransaksiHarian() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Transaksi Harian" subtitle="Ringkasan transaksi harian toko." />

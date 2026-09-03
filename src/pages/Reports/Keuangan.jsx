@@ -275,7 +275,6 @@ export default function Keuangan() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Laporan Keuangan" subtitle="Pantau arus kas, omset, pendapatan, dan pengeluaran toko." />

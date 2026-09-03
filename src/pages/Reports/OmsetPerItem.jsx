@@ -94,7 +94,6 @@ export default function OmsetPerItem() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Omset Per Item" subtitle="Ringkasan total penjualan dan omset berdasarkan barang." />

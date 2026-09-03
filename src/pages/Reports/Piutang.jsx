@@ -118,7 +118,6 @@ export default function Piutang() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Laporan Piutang" subtitle="Daftar tagihan konsumen yang belum lunas." />

@@ -5,7 +5,6 @@ import Button from "../components/Button/Button";
 import Form from "../components/Form/Form";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
-import Select from "../components/Select/Select";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },

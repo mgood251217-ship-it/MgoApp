@@ -3,7 +3,6 @@
     border-collapse: collapse;
     background: var(--background);
     border-radius: var(--radius);
-    overflow: hidden;
     box-shadow: var(--shadow);
 }
 
@@ -12,10 +11,14 @@
 }
 
 .table thead th {
+    position: sticky;
+    top: -20px;
+    z-index: 2;
     color: #fff;
     text-align: left;
     font-weight: 600;
     white-space: nowrap;
+    background: var(--primary);
 }
 
 .table th,
@@ -78,8 +81,8 @@
 
 .table-responsive {
     width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    position: relative;
+    border-radius: var(--radius);
 }
 
 .table-responsive .table {
@@ -87,6 +90,10 @@
 }
 
 @media (max-width: 768px) {
+    .table thead th {
+        top: -12px;
+    }
+
     .table-sm th,
     .table-sm td {
         padding: 5px 8px;

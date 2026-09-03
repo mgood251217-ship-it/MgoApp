@@ -115,7 +115,6 @@ export default function TransaksiPerItem() {
             width: "100%", 
             maxWidth: "100vw", 
             boxSizing: "border-box",
-            overflowX: "hidden",
             paddingBottom: "40px"
         }}>
             <Header title="Transaksi Per Item" subtitle="Ringkasan transaksi berdasarkan produk dan item." />
