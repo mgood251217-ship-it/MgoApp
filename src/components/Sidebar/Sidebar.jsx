@@ -14,7 +14,7 @@ const menus = [
     { title: "Store", path: "/store", icon: <RiStore2Line />, restrict: true },
     { title: "Orders", path: "/orders", icon: <LuPackage /> },
     { title: "Products", path: "/products", icon: <FiShoppingBag /> },
-    { title: "Global Stocks", path: "/global-stocks", icon: <FaBoxes /> },
+    { title: "G Stocks", path: "/global-stocks", icon: <FaBoxes /> },
     { title: "Meteran", path: "/meteran", icon: <TbRulerMeasure />, restrict: true },
     { title: "Failures", path: "/failure", icon: <MdOutlineErrorOutline /> },
     { title: "Maklun", path: "/maklun", icon: <LiaWindowRestore /> },
