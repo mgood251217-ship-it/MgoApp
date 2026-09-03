@@ -8,18 +8,19 @@ import Select from "../components/Select/Select";
 import Button from "../components/Button/Button";
 import Alert from "../components/Alert/Alert";
 import Table from "../components/Table/Table";
+import "./GlobalStocks.css";
 import { formatRupiah } from "../services/helpers"; 
 import { exportGlobalStocksToExcel } from "../services/excelService";
 import { getCachedStoreNames, getCachedGlobalStocks } from "../services/apiCache";
 
-const StockRow = memo(({ productDetails, index, daysInMonth, onEdit, onDelete, onCellClick }) => {
+const StockRow = memo(({ productDetails, index, daysInMonth, monthFilter, hoveredCell, onHover, onEdit, onDelete, onCellClick }) => {
     const isEven = index % 2 === 0;
     const rowBg = isEven ? "rgba(0,0,0,0.02)" : "var(--bg-content)";
 
     return (
-        <tr style={{ borderBottom: "1px solid var(--border)", backgroundColor: rowBg }}>
-            <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>{index}</td>
-            <td style={{ padding: "8px 12px", borderRight: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+        <tr className={hoveredCell?.rowIndex === index ? "global-stock-row-active" : ""} style={{ borderBottom: "1px solid var(--border)", backgroundColor: rowBg }}>
+            <td className="global-stock-sticky global-stock-sticky-no" style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>{index}</td>
+            <td className="global-stock-sticky global-stock-sticky-item" style={{ padding: "8px 12px", borderRight: "1px solid var(--border)", whiteSpace: "nowrap" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                     <span><strong>{productDetails.name}</strong> {productDetails.size && productDetails.size !== "-" ? `(${productDetails.size})` : ""}</span>
                     <span style={{ fontSize: "12px", color: "var(--text-muted)", backgroundColor: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
@@ -27,13 +28,13 @@ const StockRow = memo(({ productDetails, index, daysInMonth, onEdit, onDelete, o
                     </span>
                 </div>
             </td>
-            <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
+            <td className="global-stock-sticky global-stock-sticky-action" style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
                 <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                     <Button size="sm" icon={<Icon name="edit" />} onClick={() => onEdit(productDetails)} title="Edit Produk" variant="warning" />
                     <Button size="sm" icon={<Icon name="delete" />} onClick={() => onDelete(productDetails)} title="Hapus Produk" variant="danger" />
                 </div>
             </td>
-            <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>
+            <td className="global-stock-sticky global-stock-sticky-opening" style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>
                 {productDetails.sa_awal || 0}
             </td>
             {daysInMonth.map(day => {
@@ -41,14 +42,22 @@ const StockRow = memo(({ productDetails, index, daysInMonth, onEdit, onDelete, o
                 const stockIn = dailyData?.sm || '';
                 const stockOut = dailyData?.sk || '';
                 return (
-                    <td key={day} style={{ padding: "0", borderRight: "1px solid var(--border)", minWidth: "40px" }}>
+                    <td key={day} className={hoveredCell?.day === day ? "global-stock-column-active" : ""} style={{ padding: "0", borderRight: "1px solid var(--border)", minWidth: "40px" }}>
                         <div style={{ display: "flex", width: "100%", height: "100%", cursor: "pointer" }}>
                             <div 
+                                className="global-stock-value"
+                                data-tooltip={`Tanggal ${String(day).padStart(2, "0")} ${monthFilter}: M (Masuk)`}
+                                onMouseEnter={() => onHover(index, day, "M")}
+                                onFocus={() => onHover(index, day, "M")}
                                 onClick={() => onCellClick(productDetails, day, stockIn, stockOut, 'in')} 
                                 style={{ flex: 1, textAlign: "center", padding: "8px 2px", borderRight: "1px dotted var(--border)", color: stockIn > 0 ? "var(--success)" : "inherit", fontWeight: stockIn > 0 ? "bold" : "normal" }}>
                                 {stockIn}
                             </div>
                             <div 
+                                className="global-stock-value"
+                                data-tooltip={`Tanggal ${String(day).padStart(2, "0")} ${monthFilter}: K (Keluar)`}
+                                onMouseEnter={() => onHover(index, day, "K")}
+                                onFocus={() => onHover(index, day, "K")}
                                 onClick={() => onCellClick(productDetails, day, stockIn, stockOut, 'out')} 
                                 style={{ flex: 1, textAlign: "center", padding: "8px 2px", color: stockOut > 0 ? "var(--danger)" : "inherit", fontWeight: stockOut > 0 ? "bold" : "normal" }}>
                                 {stockOut}
@@ -63,7 +72,7 @@ const StockRow = memo(({ productDetails, index, daysInMonth, onEdit, onDelete, o
         </tr>
     );
 }, (prevProps, nextProps) => {
-    return prevProps.productDetails === nextProps.productDetails && prevProps.index === nextProps.index;
+    return prevProps.productDetails === nextProps.productDetails && prevProps.index === nextProps.index && prevProps.hoveredCell === nextProps.hoveredCell;
 });
 
 export default function GlobalStocks() {
@@ -73,6 +82,7 @@ export default function GlobalStocks() {
     const [monthFilter, setMonthFilter] = useState(defaultMonth);
     const [loading, setLoading] = useState(false);
     const [groupedStocks, setGroupedStocks] = useState({});
+    const [hoveredCell, setHoveredCell] = useState(null);
 
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
     const [stores, setStores] = useState([]); 
@@ -321,16 +331,16 @@ export default function GlobalStocks() {
     const renderTableHeaders = () => (
         <thead>
             <tr>
-                <th rowSpan={2} style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "40px" }}>No</th>
-                <th rowSpan={2} style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "200px" }}>Item & Harga</th>
-                <th rowSpan={2} style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "70px" }}>Aksi</th>
-                <th rowSpan={2} style={{ padding: "12px 6px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", whiteSpace: "normal", width: "60px", lineHeight: "1.2" }}>Stok<br/>Awal</th>
+                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-no" style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "40px" }}>No</th>
+                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-item" style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "200px" }}>Item & Harga</th>
+                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-action" style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "70px" }}>Aksi</th>
+                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-opening" style={{ padding: "12px 6px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", whiteSpace: "normal", width: "60px", lineHeight: "1.2" }}>Stok<br/>Awal</th>
                 <th colSpan={31} style={{ padding: "8px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", textAlign: "center" }}>Tanggal (M: Masuk, K: Keluar)</th>
                 <th rowSpan={2} style={{ padding: "12px 6px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", whiteSpace: "normal", width: "60px", lineHeight: "1.2" }}>Stok<br/>Akhir</th>
             </tr>
             <tr>
                 {daysInMonth.map(day => (
-                    <th key={day} style={{ padding: "0", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "40px" }}>
+                    <th key={day} className={hoveredCell?.day === day ? "global-stock-day-active" : ""} style={{ padding: "0", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "40px" }}>
                         <div style={{ textAlign: "center", borderBottom: "1px solid var(--border)", padding: "4px", backgroundColor: "rgba(0,0,0,0.02)" }}>{day}</div>
                         <div style={{ display: "flex", fontSize: "11px" }}>
                             <div style={{ flex: 1, padding: "4px 2px", borderRight: "1px solid var(--border)", color: "var(--success)" }}>M</div>
@@ -393,7 +403,7 @@ export default function GlobalStocks() {
                 {loading && <span style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "10px" }}><Icon name="sync" /> Memuat data...</span>}
             </div>
 
-            <div style={{ padding: "24px 0", overflowX: "hidden" }}>
+            <div style={{ padding: "24px 0" }}>
                 {Object.keys(groupedStocks).length === 0 && !loading ? (
                     <div style={{ textAlign: "center", color: "var(--text-muted)", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                         Tidak ada data stok untuk bulan ini.
@@ -432,7 +442,7 @@ export default function GlobalStocks() {
                                         </div>
                                     )}
                                 </div>
-                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                                <table className="global-stocks-table">
                                     {renderTableHeaders()}
                                     <tbody>
                                         {Object.keys(categoryProducts).map((productName) => {
@@ -444,6 +454,9 @@ export default function GlobalStocks() {
                                                         productDetails={productDetails}
                                                         index={globalIndex++}
                                                         daysInMonth={daysInMonth}
+                                                        monthFilter={monthFilter}
+                                                        hoveredCell={hoveredCell}
+                                                        onHover={(rowIndex, day, type) => setHoveredCell({ rowIndex, day, type })}
                                                         onEdit={handleOpenEditProduct}
                                                         onDelete={handleDeleteProduct}
                                                         onCellClick={handleCellClick}

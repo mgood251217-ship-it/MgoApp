@@ -1,0 +1,143 @@
+.global-stocks-table {
+    min-width: 1670px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.global-stocks-table .global-stock-sticky {
+    position: sticky;
+    background: var(--bg-content);
+}
+
+.global-stocks-table .global-stock-sticky-no {
+    left: 0;
+    width: 40px;
+    min-width: 40px;
+    z-index: 7;
+}
+
+.global-stocks-table .global-stock-sticky-item {
+    left: 40px;
+    width: 200px;
+    min-width: 200px;
+    z-index: 6;
+}
+
+.global-stocks-table .global-stock-sticky-action {
+    left: 240px;
+    width: 70px;
+    min-width: 70px;
+    z-index: 5;
+}
+
+.global-stocks-table .global-stock-sticky-opening {
+    left: 310px;
+    width: 60px;
+    min-width: 60px;
+    z-index: 4;
+}
+
+.global-stocks-table tbody .global-stock-sticky {
+    z-index: 2;
+}
+
+.global-stocks-table tbody tr.global-stock-row-active .global-stock-sticky {
+    background-color: color-mix(in srgb, var(--primary) 7%, var(--bg-content));
+}
+
+.global-stocks-table tbody tr.global-stock-row-active .global-stock-sticky-no {
+    background-color: color-mix(in srgb, var(--primary) 18%, var(--bg-content));
+}
+
+.global-stocks-table thead th {
+    position: sticky;
+    top: -20px;
+    z-index: 4;
+    color: var(--text);
+    transition: background-color .15s ease, box-shadow .15s ease;
+}
+
+.global-stocks-table thead .global-stock-sticky {
+    background-color: var(--bg-body);
+}
+
+.global-stocks-table thead tr:nth-child(2) th {
+    top: 24px;
+    z-index: 3;
+}
+
+.global-stocks-table thead th.global-stock-day-active,
+.global-stocks-table thead th.global-stock-day-active > div {
+    background-color: color-mix(in srgb, var(--primary) 18%, var(--bg-body)) !important;
+    box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+.global-stocks-table tbody td {
+    transition: background-color .15s ease, box-shadow .15s ease;
+}
+
+.global-stocks-table tbody tr.global-stock-row-active > td:first-child,
+.global-stocks-table tbody tr:hover > td:first-child {
+    background-color: color-mix(in srgb, var(--primary) 18%, var(--bg-content));
+    color: var(--primary);
+    box-shadow: inset -3px 0 0 var(--primary);
+    font-weight: 700;
+}
+
+.global-stocks-table tbody tr.global-stock-row-active > td {
+    background-color: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+
+.global-stocks-table tbody tr.global-stock-row-active > td:first-child {
+    background-color: color-mix(in srgb, var(--primary) 18%, var(--bg-content));
+}
+
+.global-stocks-table tbody td.global-stock-column-active {
+    background-color: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+
+.global-stock-value {
+    position: relative;
+    isolation: isolate;
+}
+
+.global-stock-value::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+    transform: translateX(-50%) translateY(4px);
+    z-index: 100;
+    width: max-content;
+    max-width: 240px;
+    padding: 9px 12px;
+    border-radius: 5px;
+    background: var(--text);
+    color: var(--bg-content);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s ease, transform .15s ease;
+}
+
+.global-stock-value:hover::after,
+.global-stock-value:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 768px) {
+    .global-stocks-table thead th {
+        top: -12px;
+    }
+
+    .global-stocks-table thead tr:nth-child(2) th {
+        top: 20px;
+    }
+}
