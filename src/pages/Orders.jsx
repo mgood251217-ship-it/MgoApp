@@ -18,7 +18,8 @@ import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
 import { getCachedInitials, getCachedOrders, getCachedOrderDetail } from "../services/apiCache";
-import { authStore, useSession } from "../services/session";
+import { useSession } from "../services/session";
+import { isDesktop } from "../services/platform";
 
 export default function Orders() {
     const navigate = useNavigate();
@@ -369,26 +370,30 @@ export default function Orders() {
                 />
                 
                 {(isPrivileged || isOnlineRole) && (
-                    <>
-                        <Button
-                            size="sm"
-                            variant="warning"
-                            icon={<Icon name="edit" />}
-                            onClick={(e) => { e.stopPropagation(); handleEditOrder(row); }}
-                        />
-                        <Button
-                            size="sm"
-                            variant="primary"
-                            icon={<Icon name="print" />}
-                            onClick={(e) => { e.stopPropagation(); setPrintStrukOrderId(row.order_id); }}
-                        />
-                        <Button
-                            size="sm"
-                            variant="danger"
-                            icon={<Icon name="picture_as_pdf" />}
-                            onClick={(e) => { e.stopPropagation(); setPrintPdfOrderId(row.order_id); }}
-                        />
-                    </>
+                    <Button
+                        size="sm"
+                        variant="warning"
+                        icon={<Icon name="edit" />}
+                        onClick={(e) => { e.stopPropagation(); handleEditOrder(row); }}
+                    />
+                )}
+
+                {((isPrivileged || isOnlineRole) && isDesktop) && (
+                    <Button
+                        size="sm"
+                        variant="primary"
+                        icon={<Icon name="print" />}
+                        onClick={(e) => { e.stopPropagation(); setPrintStrukOrderId(row.order_id); }}
+                    />
+                )}
+
+                {(isPrivileged || isOnlineRole) && (
+                    <Button
+                        size="sm"
+                        variant="danger"
+                        icon={<Icon name="picture_as_pdf" />}
+                        onClick={(e) => { e.stopPropagation(); setPrintPdfOrderId(row.order_id); }}
+                    />
                 )}
                 
                 <Button
@@ -487,7 +492,7 @@ export default function Orders() {
                     rows={ordersOffline}
                     actions={tableActions}
                     onRowDoubleClick={(row) => {
-                        if (row.total > 0 || isProductionRole) {
+                        if (row.total > 0 || isProductionRole || !isDesktop) {
                             setAlertConfig({
                                 show: true,
                                 type: "warning",

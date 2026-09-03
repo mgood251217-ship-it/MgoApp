@@ -1,12 +1,13 @@
 import axios from "axios";
 import config from "../services/config";
+import { isDesktop } from "../services/platform";
 
 const api = axios.create({
 	baseURL: `${config.serverUrl}/api/`,
 	timeout: 10000,
 	withCredentials: true,
 	headers: {
-		"X-Client-Type": "desktop-app"
+		"X-Client-Type": isDesktop ? "desktop-app" : "mobile-app"
 	}
 });
 
