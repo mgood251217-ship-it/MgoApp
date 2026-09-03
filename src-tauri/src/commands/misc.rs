@@ -23,10 +23,20 @@ pub async fn pilih_file_order(app: AppHandle) -> Vec<String> {
 
 #[tauri::command]
 pub async fn pilih_folder(app: AppHandle) -> Option<String> {
-    app.dialog()
-        .file()
-        .blocking_pick_folder()
-        .map(|f| f.to_string())
+    #[cfg(desktop)]
+    {
+        return app
+            .dialog()
+            .file()
+            .blocking_pick_folder()
+            .map(|f| f.to_string());
+    }
+
+    #[cfg(not(desktop))]
+    {
+        let _ = app;
+        None
+    }
 }
 
 #[tauri::command]
@@ -80,12 +90,23 @@ pub async fn simpan_file_dialog(app: AppHandle, args: SimpanFileArgs) -> Value {
 
 #[tauri::command]
 pub fn print_window(app: AppHandle) -> Value {
-    match app.get_webview_window("main") {
-        Some(window) => match window.print() {
-            Ok(_) => serde_json::json!({ "success": true }),
-            Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
-        },
-        None => serde_json::json!({ "success": false, "message": "Window utama tidak ditemukan." }),
+    #[cfg(desktop)]
+    {
+        return match app.get_webview_window("main") {
+            Some(window) => match window.print() {
+                Ok(_) => serde_json::json!({ "success": true }),
+                Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
+            },
+            None => {
+                serde_json::json!({ "success": false, "message": "Window utama tidak ditemukan." })
+            }
+        };
+    }
+
+    #[cfg(not(desktop))]
+    {
+        let _ = app;
+        serde_json::json!({ "success": false, "message": "Print tidak didukung di platform ini." })
     }
 }
 

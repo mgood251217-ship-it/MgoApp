@@ -2,8 +2,11 @@ mod commands;
 
 use commands::{folder_order, icon_folder, misc, settings, updater_custom};
 use tauri::Manager;
+
+#[cfg(desktop)]
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+#[cfg(desktop)]
 fn toggle_devtools(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_devtools_open() {
@@ -16,26 +19,32 @@ fn toggle_devtools(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, shortcut, event| {
-                    if event.state() == ShortcutState::Pressed {
-                        let f12 = Shortcut::new(None, Code::F12);
-                        let ctrl_shift_i =
-                            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyI);
-                        if shortcut == &f12 || shortcut == &ctrl_shift_i {
-                            toggle_devtools(app);
-                        }
+        .plugin(tauri_plugin_store::Builder::new().build());
+
+    #[cfg(desktop)]
+    let builder = builder.plugin(
+        tauri_plugin_global_shortcut::Builder::new()
+            .with_handler(|app, shortcut, event| {
+                if event.state() == ShortcutState::Pressed {
+                    let f12 = Shortcut::new(None, Code::F12);
+                    let ctrl_shift_i =
+                        Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyI);
+                    if shortcut == &f12 || shortcut == &ctrl_shift_i {
+                        toggle_devtools(app);
                     }
-                })
-                .build(),
-        )
-        .menu(|app_handle| tauri::menu::Menu::new(app_handle))
+                }
+            })
+            .build(),
+    );
+
+    #[cfg(desktop)]
+    let builder = builder.menu(|app_handle| tauri::menu::Menu::new(app_handle));
+
+    builder
         .setup(|app| {
             let handle = app.handle();
 
@@ -43,15 +52,18 @@ pub fn run() {
                 eprintln!("Gagal setup icons: {}", e);
             }
 
-            let shortcut_manager = handle.global_shortcut();
-            if let Err(e) = shortcut_manager.register(Shortcut::new(None, Code::F12)) {
-                eprintln!("Gagal register shortcut F12: {}", e);
-            }
-            if let Err(e) = shortcut_manager.register(Shortcut::new(
-                Some(Modifiers::CONTROL | Modifiers::SHIFT),
-                Code::KeyI,
-            )) {
-                eprintln!("Gagal register shortcut Ctrl+Shift+I: {}", e);
+            #[cfg(desktop)]
+            {
+                let shortcut_manager = handle.global_shortcut();
+                if let Err(e) = shortcut_manager.register(Shortcut::new(None, Code::F12)) {
+                    eprintln!("Gagal register shortcut F12: {}", e);
+                }
+                if let Err(e) = shortcut_manager.register(Shortcut::new(
+                    Some(Modifiers::CONTROL | Modifiers::SHIFT),
+                    Code::KeyI,
+                )) {
+                    eprintln!("Gagal register shortcut Ctrl+Shift+I: {}", e);
+                }
             }
 
             Ok(())
