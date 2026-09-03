@@ -11,6 +11,7 @@ import Icon from "../../components/Icon/Icon";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportPelunasanExcel } from "../../services/excelService";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
+import { isMobile } from "../../services/platform";
 
 export default function Pelunasan() {
     const navigate = useNavigate();
@@ -161,7 +162,7 @@ export default function Pelunasan() {
                 loading={loading}
             />
 
-            <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                 <Table 
                     id="table-pelunasan"
                     columns={columns}
@@ -188,37 +189,52 @@ export default function Pelunasan() {
                     )}
                 />
 
-                <div style={{ 
-                    padding: "20px", 
-                    background: "var(--background)", 
-                    borderRadius: "var(--radius)", 
+                <div style={{
+                    padding: "20px",
+                    background: "var(--background)",
+                    borderRadius: "var(--radius)",
                     border: "1px dashed var(--border)",
                     display: "flex",
                     flexWrap: "wrap",
                     gap: "24px",
                     justifyContent: "space-between",
-                    alignItems: "center"
+                    alignItems: isMobile ? "flex-start" : "center",
+                    flexDirection: isMobile ? "column" : "row"
                 }}>
                     <div style={{ display: "flex", gap: "16px" }}>
                         <div style={{ padding: "12px 16px", background: "rgba(33, 150, 243, 0.05)", borderRadius: "var(--radius)", border: "1px solid rgba(33, 150, 243, 0.1)" }}>
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Jml Pelunasan</div>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Jml Transaksi</div>
                             <div style={{ fontWeight: "bold", fontSize: "18px", color: "var(--primary)" }}>
                                 {summary.total_transaksi} <span style={{ fontSize: "12px", fontWeight: "normal" }}>Trx</span>
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-                        <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total CASH (Pelunasan)</div>
+                    <div style={{
+                        display: "flex",
+                        gap: isMobile ? "16px" : "24px",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        width: isMobile ? "100%" : "auto",
+                        justifyContent: isMobile ? "space-between" : "flex-start"
+                    }}>
+                        <div style={{ textAlign: isMobile ? "left" : "right" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total CASH</div>
                             <div style={{ fontWeight: "600", fontSize: "16px", color: "var(--text)" }}>{formatRupiah(summary.total_cash)}</div>
                         </div>
-                        <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total TF (Pelunasan)</div>
+                        <div style={{ textAlign: isMobile ? "left" : "right" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total TRANSFER</div>
                             <div style={{ fontWeight: "600", fontSize: "16px", color: "var(--text)" }}>{formatRupiah(summary.total_tf)}</div>
                         </div>
-                        <div style={{ textAlign: "right", borderLeft: "2px solid var(--border)", paddingLeft: "24px" }}>
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Grand Total (Pelunasan)</div>
+                        <div style={{
+                            textAlign: isMobile ? "left" : "right",
+                            borderLeft: isMobile ? "none" : "2px solid var(--border)",
+                            borderTop: isMobile ? "2px solid var(--border)" : "none",
+                            paddingLeft: isMobile ? "0" : "24px",
+                            paddingTop: isMobile ? "12px" : "0",
+                            width: isMobile ? "100%" : "auto"
+                        }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Grand Total (Periode)</div>
                             <div style={{ fontWeight: "bold", fontSize: "20px", color: "var(--primary)" }}>{formatRupiah(summary.grand_total)}</div>
                         </div>
                     </div>

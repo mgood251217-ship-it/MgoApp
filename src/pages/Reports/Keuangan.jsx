@@ -281,19 +281,17 @@ export default function Keuangan() {
             <Header title="Laporan Keuangan" subtitle="Pantau arus kas, omset, pendapatan, dan pengeluaran toko." />
             <ReportNav />
             
-            <div style={{ padding: "0 24px" }}>
-                <DateFilter 
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                    onFilter={fetchFinance}
-                    onExport={handleExportExcel}
-                    loading={loading}
-                />
-            </div>
+            <DateFilter 
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onFilter={fetchFinance}
+                onExport={handleExportExcel}
+                loading={loading}
+            />
 
-            <div style={{ padding: "0 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <h3 style={{ margin: 0, fontSize: "16px", color: "var(--text)", fontWeight: "600" }}>Rekap Keuangan</h3>

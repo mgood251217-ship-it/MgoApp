@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
@@ -11,6 +10,7 @@ import Button from "../../components/Button/Button";
 import Tag from "../../components/Tag/Tag";
 import Icon from "../../components/Icon/Icon";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
+import { isMobile } from "../../services/platform";
 
 export default function TransaksiHarian() {
     const navigate = useNavigate();
@@ -165,16 +165,17 @@ export default function TransaksiHarian() {
                         )}
                     />
 
-                <div style={{ 
-                    padding: "20px", 
-                    background: "var(--background)", 
-                    borderRadius: "var(--radius)", 
+                <div style={{
+                    padding: "20px",
+                    background: "var(--background)",
+                    borderRadius: "var(--radius)",
                     border: "1px dashed var(--border)",
                     display: "flex",
                     flexWrap: "wrap",
                     gap: "24px",
                     justifyContent: "space-between",
-                    alignItems: "center"
+                    alignItems: isMobile ? "flex-start" : "center",
+                    flexDirection: isMobile ? "column" : "row"
                 }}>
                     <div style={{ display: "flex", gap: "16px" }}>
                         <div style={{ padding: "12px 16px", background: "rgba(33, 150, 243, 0.05)", borderRadius: "var(--radius)", border: "1px solid rgba(33, 150, 243, 0.1)" }}>
@@ -185,16 +186,30 @@ export default function TransaksiHarian() {
                         </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-                        <div style={{ textAlign: "right" }}>
+                    <div style={{
+                        display: "flex",
+                        gap: isMobile ? "16px" : "24px",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        width: isMobile ? "100%" : "auto",
+                        justifyContent: isMobile ? "space-between" : "flex-start"
+                    }}>
+                        <div style={{ textAlign: isMobile ? "left" : "right" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total CASH</div>
                             <div style={{ fontWeight: "600", fontSize: "16px", color: "var(--text)" }}>{formatRupiah(summary.total_cash)}</div>
                         </div>
-                        <div style={{ textAlign: "right" }}>
+                        <div style={{ textAlign: isMobile ? "left" : "right" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Total TRANSFER</div>
                             <div style={{ fontWeight: "600", fontSize: "16px", color: "var(--text)" }}>{formatRupiah(summary.total_tf)}</div>
                         </div>
-                        <div style={{ textAlign: "right", borderLeft: "2px solid var(--border)", paddingLeft: "24px" }}>
+                        <div style={{
+                            textAlign: isMobile ? "left" : "right",
+                            borderLeft: isMobile ? "none" : "2px solid var(--border)",
+                            borderTop: isMobile ? "2px solid var(--border)" : "none",
+                            paddingLeft: isMobile ? "0" : "24px",
+                            paddingTop: isMobile ? "12px" : "0",
+                            width: isMobile ? "100%" : "auto"
+                        }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Grand Total (Harian)</div>
                             <div style={{ fontWeight: "bold", fontSize: "20px", color: "var(--primary)" }}>{formatRupiah(summary.grand_total)}</div>
                         </div>
