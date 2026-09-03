@@ -1,5 +1,6 @@
 import api from "../api/axios";
 import config from "./config";
+import { isMobile } from "./platform";
 
 function compareVersions(a, b) {
     const pa = String(a).split(".").map(Number);
@@ -24,7 +25,9 @@ export async function checkUpdate() {
         }
 
         const latestVersion = data.data.version;
-        const downloadUrl = data.data.download_url;
+        const downloadUrl = isMobile
+            ? (data.data.download_url_mobile || data.data.download_url)
+            : data.data.download_url;
         const minRequiredVersion = data.data.min_required_version || latestVersion;
         const releaseNotes = Array.isArray(data.data.release_notes) ? data.data.release_notes : [];
 

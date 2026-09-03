@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Splash from "../../components/Splash/Splash";
 import UpdatePrompt from "../../components/UpdatePrompt/UpdatePrompt";
 import { delay } from "../../services/helpers";
+import { isMobile } from "../../services/platform";
 import { bootSteps } from "./steps";
 
 export default function Boot() {
@@ -62,7 +63,22 @@ export default function Boot() {
         runSteps(resumeIndex);
     };
 
-    const handleUpdateNow = async () => {
+    const handleUpdateNowMobile = async () => {
+        try {
+            await window.electron.bukaLinkEksternal(updateInfo.downloadUrl);
+        } catch (err) {
+            setError("Gagal membuka link download.");
+            return;
+        }
+
+        if (!updateInfo.forceUpdate) {
+            const resumeIndex = updateInfo.nextStepIndex;
+            setUpdateInfo(null);
+            runSteps(resumeIndex);
+        }
+    };
+
+    const handleUpdateNowDesktop = async () => {
         setDownloading(true);
         setProgress(0);
 
@@ -90,6 +106,8 @@ export default function Boot() {
         }
     };
 
+    const handleUpdateNow = isMobile ? handleUpdateNowMobile : handleUpdateNowDesktop;
+
     if (updateInfo) {
         return (
             <UpdatePrompt
@@ -100,6 +118,7 @@ export default function Boot() {
                 releaseNotes={updateInfo.releaseNotes}
                 onContinueOld={handleContinueOld}
                 onUpdateNow={handleUpdateNow}
+                showProgress={!isMobile}
             />
         );
     }
