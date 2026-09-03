@@ -11,6 +11,7 @@
     "store:default",
     "global-shortcut:default",
     "shell:default",
-    "core:webview:allow-print"
+    "core:webview:allow-print",
+    "fs:allow-write-file"
   ]
 }

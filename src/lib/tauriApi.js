@@ -1,18 +1,7 @@
-
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64 = reader.result.split(",")[1];
-            resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 
 export const tauriApi = {
     version: () => "1.0.8",
@@ -47,10 +36,19 @@ export const tauriApi = {
     savePdfData: (args) => invoke("save_pdf_data", { args }),
 
     simpanFile: async (blob, defaultFileName, filters = null) => {
-        const base64Data = await blobToBase64(blob);
-        return invoke("simpan_file_dialog", {
-            args: { base64Data, defaultFileName, filters },
+        const path = await save({
+            defaultPath: defaultFileName,
+            filters: filters?.map(([name, extensions]) => ({ name, extensions })),
         });
+
+        if (!path) {
+            return { success: false, cancelled: true };
+        }
+
+        const arrayBuffer = await blob.arrayBuffer();
+        await writeFile(path, new Uint8Array(arrayBuffer));
+
+        return { success: true, filePath: path };
     },
 
     cetakStruk: () => invoke("print_window"),
