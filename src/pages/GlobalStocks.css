@@ -1,3 +1,8 @@
+.global-stocks-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
 .global-stocks-table {
     min-width: 1670px;
     width: 100%;
@@ -22,20 +27,6 @@
     width: 200px;
     min-width: 200px;
     z-index: 6;
-}
-
-.global-stocks-table .global-stock-sticky-action {
-    left: 240px;
-    width: 70px;
-    min-width: 70px;
-    z-index: 5;
-}
-
-.global-stocks-table .global-stock-sticky-opening {
-    left: 310px;
-    width: 60px;
-    min-width: 60px;
-    z-index: 4;
 }
 
 .global-stocks-table tbody .global-stock-sticky {

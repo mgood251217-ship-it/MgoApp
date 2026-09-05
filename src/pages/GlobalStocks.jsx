@@ -21,20 +21,20 @@ const StockRow = memo(({ productDetails, index, daysInMonth, monthFilter, hovere
         <tr className={hoveredCell?.rowIndex === index ? "global-stock-row-active" : ""} style={{ borderBottom: "1px solid var(--border)", backgroundColor: rowBg }}>
             <td className="global-stock-sticky global-stock-sticky-no" style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>{index}</td>
             <td className="global-stock-sticky global-stock-sticky-item" style={{ padding: "8px 12px", borderRight: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-                    <span><strong>{productDetails.name}</strong> {productDetails.size && productDetails.size !== "-" ? `(${productDetails.size})` : ""}</span>
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)", backgroundColor: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
-                        {formatRupiah(productDetails.price || 0)}
-                    </span>
-                </div>
+                <strong>{productDetails.name}</strong> {productDetails.size && productDetails.size !== "-" ? `(${productDetails.size})` : ""}
             </td>
-            <td className="global-stock-sticky global-stock-sticky-action" style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
+            <td style={{ padding: "8px", textAlign: "right", borderRight: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)", backgroundColor: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                    {formatRupiah(productDetails.price || 0)}
+                </span>
+            </td>
+            <td style={{ padding: "8px", textAlign: "center", borderRight: "1px solid var(--border)" }}>
                 <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                     <Button size="sm" icon={<Icon name="edit" />} onClick={() => onEdit(productDetails)} title="Edit Produk" variant="warning" />
                     <Button size="sm" icon={<Icon name="delete" />} onClick={() => onDelete(productDetails)} title="Hapus Produk" variant="danger" />
                 </div>
             </td>
-            <td className="global-stock-sticky global-stock-sticky-opening" style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>
+            <td style={{ padding: "8px", textAlign: "center", fontWeight: "bold", borderRight: "1px solid var(--border)", backgroundColor: "rgba(var(--info-rgb), 0.1)" }}>
                 {productDetails.sa_awal || 0}
             </td>
             {daysInMonth.map(day => {
@@ -46,7 +46,7 @@ const StockRow = memo(({ productDetails, index, daysInMonth, monthFilter, hovere
                         <div style={{ display: "flex", width: "100%", height: "100%", cursor: "pointer" }}>
                             <div 
                                 className="global-stock-value"
-                                data-tooltip={`Tanggal ${String(day).padStart(2, "0")} ${monthFilter}: M (Masuk)`}
+                                data-tooltip={`${productDetails.name} - Tanggal ${String(day).padStart(2, "0")}: M (Masuk)`}
                                 onMouseEnter={() => onHover(index, day, "M")}
                                 onFocus={() => onHover(index, day, "M")}
                                 onClick={() => onCellClick(productDetails, day, stockIn, stockOut, 'in')} 
@@ -55,7 +55,7 @@ const StockRow = memo(({ productDetails, index, daysInMonth, monthFilter, hovere
                             </div>
                             <div 
                                 className="global-stock-value"
-                                data-tooltip={`Tanggal ${String(day).padStart(2, "0")} ${monthFilter}: K (Keluar)`}
+                                data-tooltip={`${productDetails.name} - Tanggal ${String(day).padStart(2, "0")}: K (Keluar)`}
                                 onMouseEnter={() => onHover(index, day, "K")}
                                 onFocus={() => onHover(index, day, "K")}
                                 onClick={() => onCellClick(productDetails, day, stockIn, stockOut, 'out')} 
@@ -332,9 +332,10 @@ export default function GlobalStocks() {
         <thead>
             <tr>
                 <th rowSpan={2} className="global-stock-sticky global-stock-sticky-no" style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "40px" }}>No</th>
-                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-item" style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "200px" }}>Item & Harga</th>
-                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-action" style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "70px" }}>Aksi</th>
-                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-opening" style={{ padding: "12px 6px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", whiteSpace: "normal", width: "60px", lineHeight: "1.2" }}>Stok<br/>Awal</th>
+                <th rowSpan={2} className="global-stock-sticky global-stock-sticky-item" style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "200px" }}>Item</th>
+                <th rowSpan={2} style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "110px" }}>Harga</th>
+                <th rowSpan={2} style={{ padding: "12px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", width: "70px" }}>Aksi</th>
+                <th rowSpan={2} style={{ padding: "12px 6px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", whiteSpace: "normal", width: "60px", lineHeight: "1.2" }}>Stok<br/>Awal</th>
                 <th colSpan={31} style={{ padding: "8px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", textAlign: "center" }}>Tanggal (M: Masuk, K: Keluar)</th>
                 <th rowSpan={2} style={{ padding: "12px 6px", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", whiteSpace: "normal", width: "60px", lineHeight: "1.2" }}>Stok<br/>Akhir</th>
             </tr>
@@ -419,7 +420,7 @@ export default function GlobalStocks() {
                             if (firstVariationKey) categoryId = categoryProducts[firstProductName][firstVariationKey].global_stock_category_id;
                         }
                         return (
-                            <div key={categoryName} style={{ marginBottom: "32px", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px", overflowX: "auto" }}>
+                            <div key={categoryName} style={{ marginBottom: "32px", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                                     <h3 style={{ margin: 0, color: "var(--text)", fontWeight: "700" }}>
                                         Kategori: <span style={{ color: "var(--primary)" }}>{categoryName.toUpperCase()}</span>
@@ -442,30 +443,32 @@ export default function GlobalStocks() {
                                         </div>
                                     )}
                                 </div>
-                                <table className="global-stocks-table">
-                                    {renderTableHeaders()}
-                                    <tbody>
-                                        {Object.keys(categoryProducts).map((productName) => {
-                                            return Object.keys(categoryProducts[productName]).map((idKey) => {
-                                                const productDetails = categoryProducts[productName][idKey];
-                                                return (
-                                                    <StockRow 
-                                                        key={productDetails.id}
-                                                        productDetails={productDetails}
-                                                        index={globalIndex++}
-                                                        daysInMonth={daysInMonth}
-                                                        monthFilter={monthFilter}
-                                                        hoveredCell={hoveredCell}
-                                                        onHover={(rowIndex, day, type) => setHoveredCell({ rowIndex, day, type })}
-                                                        onEdit={handleOpenEditProduct}
-                                                        onDelete={handleDeleteProduct}
-                                                        onCellClick={handleCellClick}
-                                                    />
-                                                );
-                                            });
-                                        })}
-                                    </tbody>
-                                </table>
+                                <div className="global-stocks-table-scroll">
+                                    <table className="global-stocks-table">
+                                        {renderTableHeaders()}
+                                        <tbody>
+                                            {Object.keys(categoryProducts).map((productName) => {
+                                                return Object.keys(categoryProducts[productName]).map((idKey) => {
+                                                    const productDetails = categoryProducts[productName][idKey];
+                                                    return (
+                                                        <StockRow 
+                                                            key={productDetails.id}
+                                                            productDetails={productDetails}
+                                                            index={globalIndex++}
+                                                            daysInMonth={daysInMonth}
+                                                            monthFilter={monthFilter}
+                                                            hoveredCell={hoveredCell}
+                                                            onHover={(rowIndex, day, type) => setHoveredCell({ rowIndex, day, type })}
+                                                            onEdit={handleOpenEditProduct}
+                                                            onDelete={handleDeleteProduct}
+                                                            onCellClick={handleCellClick}
+                                                        />
+                                                    );
+                                                });
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         );
                     })
