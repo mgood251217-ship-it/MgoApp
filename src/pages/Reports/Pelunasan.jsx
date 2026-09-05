@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
@@ -8,7 +7,7 @@ import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
 import Tag from "../../components/Tag/Tag";
 import Icon from "../../components/Icon/Icon";
-import { formatRupiah, getTodayDate } from "../../services/helpers";
+import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportPelunasanExcel } from "../../services/excelService";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
 import { isMobile } from "../../services/platform";
@@ -116,7 +115,7 @@ export default function Pelunasan() {
         { 
             key: "dp_date", 
             title: "Tanggal DP",
-            render: (row) => <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>{row.dp_date !== "-" ? row.dp_date : "-"}</span>
+            render: (row) => <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>{formatTime(row.dp_date) || '-'}</span>
         },
         { 
             key: "nominal", 
@@ -135,7 +134,7 @@ export default function Pelunasan() {
         { 
             key: "payment_date", 
             title: "Tanggal Pelunasan",
-            render: (row) => <span style={{ color: "var(--text)", fontSize: "12px" }}>{row.payment_date}</span>
+            render: (row) => <span style={{ color: "var(--text)", fontSize: "12px" }}>{formatTime(row.payment_date)}</span>
         }
     ], []);
 

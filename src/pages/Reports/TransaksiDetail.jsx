@@ -11,7 +11,7 @@ import Input from "../../components/Input/Input";
 import Tag from "../../components/Tag/Tag";
 import Modal from "../../components/Modal/Modal";
 import PaymentModal from "../../components/PaymentModal/PaymentModal";
-import { formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
+import { formatTime, formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 import { getCachedTransactionsDetail } from "../../services/apiCache";
 import { checkFoldersForItems, listFilesForFolder, formatUkuran } from "../../services/folderHelper";
@@ -377,7 +377,7 @@ export default function TransaksiDetail() {
                                     </div>
                                     <div>
                                         <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Waktu Dibuat</div>
-                                        <div style={{ fontWeight: "500", fontSize: "14px", color: "var(--text)" }}>{order.date}</div>
+                                        <div style={{ fontWeight: "500", fontSize: "14px", color: "var(--text)" }}>{formatTime(order.date)}</div>
                                     </div>
                                     <div>
                                         <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Sistem & Operator</div>
@@ -528,7 +528,7 @@ export default function TransaksiDetail() {
                                                         background: "var(--background)"
                                                     }}>
                                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{payment.date}</span>
+                                                            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{formatTime(payment.date)}</span>
                                                             {payment.status !== "LUNAS" && (
                                                                 <Tag variant="warning">
                                                                     {payment.status}

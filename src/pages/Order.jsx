@@ -13,6 +13,7 @@ import Alert from "../components/Alert/Alert";
 import { formatRupiah } from "../services/helpers";
 import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
 import { getCachedOrderDetail, getCachedStoreNames, clearCacheOrderDetail } from "../services/apiCache";
+import { formatTime } from "../services/helpers"
 
 export default function Order() {
     const { order_id } = useParams();
@@ -417,11 +418,11 @@ export default function Order() {
                         </div>
                         <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Dibuat</div>
-                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.date || "-"}</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{formatTime(orderMeta.date) || "-"}</div>
                         </div>
                         <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Deadline</div>
-                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--warning)" }}>{orderMeta.deadline || "-"}</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bol    d", color: "var(--warning)" }}>{formatTime(orderMeta.deadline) || "-"}</div>
                         </div>
                         <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Operator</div>

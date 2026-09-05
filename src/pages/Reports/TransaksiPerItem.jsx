@@ -1,13 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
-import { formatRupiah, getTodayDate } from "../../services/helpers";
+import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerItemExcel } from "../../services/excelService";
 import { getCachedAllOrderDetail } from "../../services/apiCache";
 
@@ -104,7 +103,7 @@ export default function TransaksiPerItem() {
         { 
             key: "date", 
             title: "Tanggal",
-            render: (row) => <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{row.date}</span>
+            render: (row) => <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{formatTime(row.date)}</span>
         }
     ], []);
 

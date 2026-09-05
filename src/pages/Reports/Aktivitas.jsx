@@ -4,7 +4,7 @@ import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
-import { formatRupiah, getTodayDate } from "../../services/helpers";
+import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportAktivitasExcel } from "../../services/excelService";
 import { getCachedActivity, getCachedOrderArchive } from "../../services/apiCache";
 
@@ -67,12 +67,12 @@ export default function Aktivitas() {
         { 
             key: "date", 
             title: "Waktu",
-            render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.date}</span>
+            render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{formatTime(row.date) || '-'}</span>
         },
         { 
             key: "order_date", 
             title: "Tanggal Order",
-            render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.date}</span>
+            render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{formatTime(row.order_date) || '-'}</span>
         },
         { 
             key: "order_id", 

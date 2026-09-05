@@ -4,7 +4,7 @@ import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
-import { formatRupiah, getTodayDate } from "../../services/helpers";
+import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiHarianExcel } from "../../services/excelService";
 import Button from "../../components/Button/Button";
 import Tag from "../../components/Tag/Tag";
@@ -111,7 +111,10 @@ export default function TransaksiHarian() {
         },
         { 
             key: "payment_date", 
-            title: "Tanggal" 
+            title: "Tanggal",
+            render: (row) => (
+                formatTime(row.payment_date)
+            )
         }
     ], []);
 

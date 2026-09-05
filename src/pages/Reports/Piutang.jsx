@@ -6,7 +6,7 @@ import ReportNav from "../../components/ReportNav/ReportNav";
 import Table from "../../components/Table/Table";
 import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
-import { formatRupiah, formatKeInternasional } from "../../services/helpers";
+import { formatTime, formatRupiah, formatKeInternasional } from "../../services/helpers";
 import { exportPiutangExcel } from "../../services/excelService";
 import { getCachedPiutang } from "../../services/apiCache";
 
@@ -107,7 +107,7 @@ export default function Piutang() {
         { 
             key: "date", 
             title: "Tanggal",
-            render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.date}</span>
+            render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{formatTime(row.date)}</span>
         }
     ], []);
 
