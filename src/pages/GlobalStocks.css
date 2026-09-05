@@ -1,6 +1,9 @@
 .global-stocks-table-scroll {
     width: 100%;
-    overflow: visible;
+    position: relative;
+    overflow-x: auto;
+    overflow-y: visible;
+    overscroll-behavior-x: contain;
 }
 
 .global-stocks-table {
@@ -13,6 +16,7 @@
 .global-stocks-table .global-stock-sticky {
     position: sticky;
     background: var(--bg-content);
+    background-clip: padding-box;
 }
 
 .global-stocks-table .global-stock-sticky-no {
@@ -51,6 +55,11 @@
 
 .global-stocks-table thead .global-stock-sticky {
     background-color: var(--bg-body);
+    z-index: 8;
+}
+
+.global-stocks-table thead .global-stock-sticky-item {
+    z-index: 9;
 }
 
 .global-stocks-table thead tr:nth-child(2) th {
