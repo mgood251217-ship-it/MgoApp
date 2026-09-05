@@ -1,7 +1,7 @@
 ﻿import "./Navbar.css";
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
-import { FiBell, FiLogOut, FiMoon, FiSun, FiHelpCircle, FiInfo } from "react-icons/fi";
+import { FiBell, FiLogOut, FiMoon, FiSun, FiHelpCircle, FiInfo, FiMinus, FiPlus, FiZoomIn } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { authStore, useSession } from "../../services/session";
 import { changeTheme } from "../../services/setting";
@@ -16,6 +16,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const THEME_KEY = "theme";
+const ZOOM_KEY = "app-zoom";
+const ZOOM_LEVELS = [80, 90, 100, 110, 125, 150];
 const GITHUB_OWNER = "mgood251217-ship-it";
 const GITHUB_REPO = "MgoApp";
 
@@ -52,6 +54,7 @@ export default function Navbar() {
     const navigate = useNavigate();
     const session = useSession();
     const [theme, setTheme] = useState(() => getInitialTheme(null));
+    const [zoom, setZoom] = useState(() => Number(localStorage.getItem(ZOOM_KEY)) || 100);
     const [themeLoading, setThemeLoading] = useState(false);
     const storeName = session?.store?.name ?? "MGO Store";
     const userName = session?.user?.name ?? "Guest";
@@ -86,6 +89,26 @@ export default function Navbar() {
         document.documentElement.dataset.theme = theme;
         localStorage.setItem(THEME_KEY, theme);
     }, [theme]);
+
+    useEffect(() => {
+        document.documentElement.style.zoom = `${zoom}%`;
+        localStorage.setItem(ZOOM_KEY, String(zoom));
+
+        return () => {
+            document.documentElement.style.zoom = "";
+        };
+    }, [zoom]);
+
+    const changeZoom = (direction) => {
+        setZoom((currentZoom) => {
+            const currentIndex = ZOOM_LEVELS.indexOf(currentZoom);
+            const nextIndex = Math.min(
+                Math.max(currentIndex + direction, 0),
+                ZOOM_LEVELS.length - 1
+            );
+            return ZOOM_LEVELS[nextIndex];
+        });
+    };
 
     async function handleLogout() {
         try { await logout(); } catch (e) {}
@@ -213,6 +236,28 @@ export default function Navbar() {
                 </div>
 
                 <div className="navbar-right">
+                    <div className="navbar-zoom" aria-label="Ukuran tampilan">
+                        <FiZoomIn aria-hidden="true" />
+                        <button
+                            className="navbar-zoom-button"
+                            onClick={() => changeZoom(-1)}
+                            disabled={zoom === ZOOM_LEVELS[0]}
+                            aria-label="Perkecil tampilan"
+                            title="Perkecil tampilan"
+                        >
+                            <FiMinus />
+                        </button>
+                        <span className="navbar-zoom-value">{zoom}%</span>
+                        <button
+                            className="navbar-zoom-button"
+                            onClick={() => changeZoom(1)}
+                            disabled={zoom === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
+                            aria-label="Perbesar tampilan"
+                            title="Perbesar tampilan"
+                        >
+                            <FiPlus />
+                        </button>
+                    </div>
                     <button
                         className="navbar-button"
                         onClick={handleTheme}
