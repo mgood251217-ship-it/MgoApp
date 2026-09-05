@@ -353,29 +353,6 @@ export default function Order() {
                 }
             />
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginTop: "20px" }}>
-                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomorator</div>
-                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.nomorator || "-"}</div>
-                </div>
-                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nama Customer</div>
-                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.customer_name || "-"}</div>
-                </div>
-                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Dibuat</div>
-                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.date || "-"}</div>
-                </div>
-                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Deadline</div>
-                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--warning)" }}>{orderMeta.deadline || "-"}</div>
-                </div>
-                <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Operator</div>
-                    <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--primary)" }}>{orderMeta.operator_initial || "-"}</div>
-                </div>
-            </div>
-
             <div style={{ display: "flex", gap: "24px", marginTop: "20px", alignItems: "flex-start" }}>
                 <div style={{ width: "30%", display: "flex", flexDirection: "column", gap: "20px" }}>
                     <div style={{ background: "color-mix(in srgb, var(--background) 10%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
@@ -428,6 +405,30 @@ export default function Order() {
 
                 {/* Kolom Kanan: Tabel Daftar Item & Total */}
                 <div style={{ width: "70%" }}>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginBottom: "20px" }}>
+                        <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomorator</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.nomorator || "-"}</div>
+                        </div>
+                        <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nama Customer</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.customer_name || "-"}</div>
+                        </div>
+                        <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Dibuat</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.date || "-"}</div>
+                        </div>
+                        <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Deadline</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--warning)" }}>{orderMeta.deadline || "-"}</div>
+                        </div>
+                        <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Operator</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--primary)" }}>{orderMeta.operator_initial || "-"}</div>
+                        </div>  
+                    </div>
+
                     <div style={{ backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                         <h3 style={{ marginBottom: "16px" }}>Daftar Item</h3>
                         <Table
