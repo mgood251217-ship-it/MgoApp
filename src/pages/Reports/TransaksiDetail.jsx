@@ -10,6 +10,7 @@ import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
 import Tag from "../../components/Tag/Tag";
 import Modal from "../../components/Modal/Modal";
+import PaymentModal from "../../components/PaymentModal/PaymentModal";
 import { formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 import { getCachedTransactionsDetail } from "../../services/apiCache";
@@ -34,6 +35,8 @@ export default function TransaksiDetail() {
     
     const [hoveredTf, setHoveredTf] = useState(null);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     const fetchTransactions = async () => {
         setLoading(true);
@@ -52,6 +55,16 @@ export default function TransaksiDetail() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePayClick = (order, totalTerbayar) => {
+        setSelectedOrder({ ...order, total_paid: totalTerbayar });
+        setPaymentModalOpen(true);
+    };
+
+    const handlePaymentSuccess = () => {
+        setPaymentModalOpen(false);
+        fetchTransactions();
     };
 
     useEffect(() => {
@@ -500,7 +513,7 @@ export default function TransaksiDetail() {
                                 <div style={{ padding: "16px", borderBottom: "1px dashed var(--border)" }}>
                                     <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", color: "var(--text)" }}>Data Pembayaran & Bukti Transfer</div>
                                     
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", justifyContent: "space-between" }}>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "space-between" }}>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", flex: 1, alignItems: "center" }}>
                                             {payments.length > 0 ? (
                                                 payments.map((payment, idx) => (
@@ -536,26 +549,6 @@ export default function TransaksiDetail() {
                                             ) : (
                                                 <div style={{ fontSize: "15px", fontWeight: "600", color: "var(--danger)", display: "flex", alignItems: "center", gap: "6px" }}>
                                                     ⚠️ Belum Bayar
-                                                </div>
-                                            )}
-                                            
-                                            {isTfMethod && transfers.length === 0 && (
-                                                <div style={{ 
-                                                    padding: "16px 24px", 
-                                                    background: "rgba(239, 68, 68, 0.1)", 
-                                                    border: "2px dashed var(--danger)", 
-                                                    borderRadius: "var(--radius)", 
-                                                    color: "var(--danger)", 
-                                                    fontWeight: "bold", 
-                                                    fontSize: "18px",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    width: "100%",
-                                                    marginTop: "8px",
-                                                    textAlign: "center"
-                                                }}>
-                                                    ⚠️ TRANSAKSI TRANSFER: BELUM ADA BUKTI PEMBAYARAN
                                                 </div>
                                             )}
 
@@ -669,7 +662,7 @@ export default function TransaksiDetail() {
                                                 onMouseOut={(e) => e.currentTarget.style.background = "var(--background)"}
                                                 onFocus={(e) => e.currentTarget.style.border = "2px dashed var(--primary)"}
                                                 onBlur={(e) => e.currentTarget.style.border = "2px dashed var(--border)"}
-                                            >
+                                                >
                                                 📋 Paste Foto (CTRL+V)
                                             </div>
                                             
@@ -704,11 +697,62 @@ export default function TransaksiDetail() {
                                                         if (file) handleUploadTf(order.order_id, file);
                                                         e.target.value = null;
                                                     }} 
-                                                />
+                                                    />
                                                 📁 Upload / Drop
                                             </label>
                                         </div>
+                                        {selisih < 0 && (
+                                            <Button
+                                                variant="success"
+                                                icon={<Icon name="payments" />}
+                                                onClick={() => handlePayClick(order, totalTerbayar)}
+                                            >
+                                                Bayar
+                                            </Button>
+                                        )}
                                     </div>
+                                    
+
+                                    {isTfMethod && transfers.length === 0 && (
+                                        <div style={{ 
+                                            padding: "16px 24px", 
+                                            background: "rgba(239, 68, 68, 0.1)", 
+                                            border: "2px dashed var(--danger)", 
+                                            borderRadius: "var(--radius)", 
+                                            color: "var(--danger)", 
+                                            fontWeight: "bold", 
+                                            fontSize: "18px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            width: "100%",
+                                            marginTop: "8px",
+                                            textAlign: "center"
+                                        }}>
+                                            ⚠️ TRANSAKSI TRANSFER: BELUM ADA BUKTI PEMBAYARAN
+                                        </div>
+                                    )}
+
+                                    {selisih > 0 && (
+                                        <div style={{ 
+                                            padding: "16px 24px", 
+                                            background: "rgba(239, 68, 68, 0.1)", 
+                                            border: "2px dashed var(--danger)", 
+                                            borderRadius: "var(--radius)", 
+                                            color: "var(--danger)", 
+                                            fontWeight: "bold", 
+                                            fontSize: "18px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            width: "100%",
+                                            marginTop: "8px",
+                                            textAlign: "center"
+                                        }}>
+                                            ⚠️ KELEBIHAN BAYAR: {formatRupiah(selisih)}
+                                        </div>
+                                    )}
+                                    
                                 </div>
 
                                 <div style={{ padding: "16px", background: "var(--surface)", display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -752,8 +796,17 @@ export default function TransaksiDetail() {
                             </div>
                         );
                     })
+
                 )}
             </div>
+
+            <PaymentModal
+                open={paymentModalOpen}
+                onClose={() => setPaymentModalOpen(false)}
+                order={selectedOrder}
+                onSuccess={handlePaymentSuccess}
+            />
+
             <Modal 
                 open={!!selectedImage} 
                 onClose={() => setSelectedImage(null)} 
