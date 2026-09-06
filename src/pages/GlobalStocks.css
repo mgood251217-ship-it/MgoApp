@@ -1,6 +1,6 @@
 .global-stocks-table-scroll {
     width: 100%;
-    overflow-x: auto;
+    overflow: visible;
 }
 
 .global-stocks-table {
@@ -54,8 +54,15 @@
 }
 
 .global-stocks-table thead tr:nth-child(2) th {
-    top: 24px;
+    top: 20px;
     z-index: 3;
+}
+
+.global-stocks-table thead th.global-stock-date-header {
+    position: sticky;
+    top: 20px;
+    z-index: 5;
+    background-color: var(--bg-body);
 }
 
 .global-stocks-table thead th.global-stock-day-active,
@@ -125,7 +132,7 @@
 
 @media (max-width: 768px) {
     .global-stocks-table thead th {
-        top: -12px;
+        top: -20px;
     }
 
     .global-stocks-table thead tr:nth-child(2) th {

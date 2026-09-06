@@ -341,7 +341,7 @@ export default function GlobalStocks() {
             </tr>
             <tr>
                 {daysInMonth.map(day => (
-                    <th key={day} className={hoveredCell?.day === day ? "global-stock-day-active" : ""} style={{ padding: "0", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "40px" }}>
+                    <th key={day} className={`global-stock-date-header ${hoveredCell?.day === day ? "global-stock-day-active" : ""}`} style={{ padding: "0", border: "1px solid var(--border)", backgroundColor: "var(--bg-body)", minWidth: "40px" }}>
                         <div style={{ textAlign: "center", borderBottom: "1px solid var(--border)", padding: "4px", backgroundColor: "rgba(0,0,0,0.02)" }}>{day}</div>
                         <div style={{ display: "flex", fontSize: "11px" }}>
                             <div style={{ flex: 1, padding: "4px 2px", borderRight: "1px solid var(--border)", color: "var(--success)" }}>M</div>
