@@ -21,9 +21,10 @@ export default function TransaksiPerItem() {
     const fetchTransaksiItem = async () => {
         setLoading(true);
         try {
-            const res = await getCachedAllOrderDetail(startDate, endDate);
-            setTransaksiItemData(res.transaksi_item || {});
-
+            const res = await getCachedAllOrderDetail(startDate, endDate, (fresh) => {
+                setTransaksiItemData(fresh?.transaksi_item || {});
+            });
+            setTransaksiItemData(res?.transaksi_item || {});
         } catch (error) {
             console.error(error);
         } finally {
@@ -33,7 +34,7 @@ export default function TransaksiPerItem() {
 
     useEffect(() => {
         fetchTransaksiItem();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (Object.keys(transaksiItemData).length === 0) {

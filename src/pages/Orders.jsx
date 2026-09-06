@@ -92,18 +92,25 @@ export default function Orders() {
         }));
     }, []);
 
+    const applyOrdersData = (res) => {
+        setOrdersOnline(formatTableData(res?.online ?? []));
+        setOrdersOffline(formatTableData(res?.offline ?? []));
+    };
+
     const loadData = useCallback(async () => {
         try {
-            const res = await getCachedOrders(startDate, endDate, search);
-            const responseData = res;
-            setOrdersOnline(formatTableData(responseData.online ?? []));
-            setOrdersOffline(formatTableData(responseData.offline ?? []));
+            const res = await getCachedOrders(startDate, endDate, search, (fresh) => {
+                applyOrdersData(fresh);
+            });
+            applyOrdersData(res);
         } catch (err) {}
     }, [search, startDate, endDate, formatTableData]);
 
     const getOperators = useCallback(async () => {
         try {
-            const res = await getCachedInitials();
+            const res = await getCachedInitials((fresh) => {
+                setOperators(fresh || []);
+            });
             setOperators(res || []);
         } catch (err) {}
     }, []);

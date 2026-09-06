@@ -16,16 +16,21 @@ export default function OmsetPerItem() {
     const [omsetItemData, setOmsetItemData] = useState([]);
     const [totalOmsetKeseluruhan, setTotalOmsetKeseluruhan] = useState(0);
 
+    const applyOmsetItemData = (res) => {
+        const data = res || [];
+        setOmsetItemData(data);
+
+        const total = data.reduce((acc, curr) => acc + Number(curr.total_omset), 0);
+        setTotalOmsetKeseluruhan(total);
+    };
+
     const fetchOmsetItem = async () => {
         setLoading(true);
         try {
-            const res = await getCachedOmsetItem(startDate, endDate);
-
-            const data = res || [];
-            setOmsetItemData(data);
-            
-            const total = data.reduce((acc, curr) => acc + Number(curr.total_omset), 0);
-            setTotalOmsetKeseluruhan(total);
+            const res = await getCachedOmsetItem(startDate, endDate, (fresh) => {
+                applyOmsetItemData(fresh);
+            });
+            applyOmsetItemData(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -35,7 +40,7 @@ export default function OmsetPerItem() {
 
     useEffect(() => {
         fetchOmsetItem();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (omsetItemData.length === 0) {

@@ -234,7 +234,9 @@ export default function GlobalStocks() {
     const fetchGlobalStocks = async () => {
         setLoading(true);
         try {
-            const data = await getCachedGlobalStocks(monthFilter);
+            const data = await getCachedGlobalStocks(monthFilter, (fresh) => {
+                setGroupedStocks(fresh || {});
+            });
             setGroupedStocks(data || {});
         } catch (error) { 
             setGroupedStocks({}); 
@@ -245,7 +247,9 @@ export default function GlobalStocks() {
 
     const fetchStores = async () => {
         try {
-            const res = await getCachedStoreNames(); 
+            const res = await getCachedStoreNames((fresh) => {
+                setStores(fresh || []);
+            });
             setStores(res || []);
         } catch (err) { console.error("Gagal load stores", err); }
     };

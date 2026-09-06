@@ -22,52 +22,57 @@ export default function StatistikKaryawan() {
         omset: null
     });
 
+    const applyStatistikData = (res) => {
+        if (!res) return;
+
+        const { users, receiverCounts, pickupCounts, settingCounts, omsetPerUser } = res;
+
+        const normUsers = users || {};
+        const normReceiver = receiverCounts || {};
+        const normPickup = Array.isArray(pickupCounts) ? {} : (pickupCounts || {});
+        const normSetting = settingCounts || {};
+        const normOmset = omsetPerUser || {};
+
+        const allUserIds = new Set([
+            ...Object.keys(normUsers),
+            ...Object.keys(normReceiver),
+            ...Object.keys(normPickup),
+            ...Object.keys(normSetting),
+            ...Object.keys(normOmset)
+        ]);
+
+        const formattedData = Array.from(allUserIds).map(id => ({
+            id,
+            name: normUsers[id] || `User ${id}`,
+            receiver: Number(normReceiver[id]) || 0,
+            pickup: Number(normPickup[id]) || 0,
+            setting: Number(normSetting[id]) || 0,
+            omset: Number(normOmset[id]) || 0
+        })).filter(u => u.receiver > 0 || u.pickup > 0 || u.setting > 0 || u.omset > 0);
+
+        formattedData.sort((a, b) => b.omset - a.omset);
+
+        setKaryawanData(formattedData);
+
+        if (formattedData.length > 0) {
+            setTopPerformers({
+                receiver: [...formattedData].sort((a, b) => b.receiver - a.receiver)[0],
+                pickup: [...formattedData].sort((a, b) => b.pickup - a.pickup)[0],
+                setting: [...formattedData].sort((a, b) => b.setting - a.setting)[0],
+                omset: [...formattedData].sort((a, b) => b.omset - a.omset)[0]
+            });
+        } else {
+            setTopPerformers({ receiver: null, pickup: null, setting: null, omset: null });
+        }
+    };
+
     const fetchStatistik = async () => {
         setLoading(true);
         try {
-            const res = await getCachedStatistics(startDate, endDate);
-
-            if (res) {
-                const { users, receiverCounts, pickupCounts, settingCounts, omsetPerUser } = res;
-                
-                const normUsers = users || {};
-                const normReceiver = receiverCounts || {};
-                const normPickup = Array.isArray(pickupCounts) ? {} : (pickupCounts || {});
-                const normSetting = settingCounts || {};
-                const normOmset = omsetPerUser || {};
-
-                const allUserIds = new Set([
-                    ...Object.keys(normUsers),
-                    ...Object.keys(normReceiver),
-                    ...Object.keys(normPickup),
-                    ...Object.keys(normSetting),
-                    ...Object.keys(normOmset)
-                ]);
-
-                const formattedData = Array.from(allUserIds).map(id => ({
-                    id,
-                    name: normUsers[id] || `User ${id}`,
-                    receiver: Number(normReceiver[id]) || 0,
-                    pickup: Number(normPickup[id]) || 0,
-                    setting: Number(normSetting[id]) || 0,
-                    omset: Number(normOmset[id]) || 0
-                })).filter(u => u.receiver > 0 || u.pickup > 0 || u.setting > 0 || u.omset > 0);
-
-                formattedData.sort((a, b) => b.omset - a.omset);
-
-                setKaryawanData(formattedData);
-
-                if (formattedData.length > 0) {
-                    setTopPerformers({
-                        receiver: [...formattedData].sort((a, b) => b.receiver - a.receiver)[0],
-                        pickup: [...formattedData].sort((a, b) => b.pickup - a.pickup)[0],
-                        setting: [...formattedData].sort((a, b) => b.setting - a.setting)[0],
-                        omset: [...formattedData].sort((a, b) => b.omset - a.omset)[0]
-                    });
-                } else {
-                    setTopPerformers({ receiver: null, pickup: null, setting: null, omset: null });
-                }
-            }
+            const res = await getCachedStatistics(startDate, endDate, (fresh) => {
+                applyStatistikData(fresh);
+            });
+            applyStatistikData(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -77,7 +82,7 @@ export default function StatistikKaryawan() {
 
     useEffect(() => {
         fetchStatistik();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (karyawanData.length === 0) {

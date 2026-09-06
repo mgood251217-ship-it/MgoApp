@@ -16,23 +16,19 @@ export default function Aktivitas() {
     const [activityData, setActivityData] = useState([]);
     const [archiveData, setArchiveData] = useState([]);
 
+    const mapActivity = (data) => (data || []).map(({ done, ...rest }) => rest);
+    const mapArchive = (data) => Object.values(data || {});
+
     const fetchData = async () => {
         setLoading(true);
         try {
             const [resActivity, resArchive] = await Promise.all([
-                getCachedActivity(startDate, endDate),
-                getCachedOrderArchive(startDate, endDate)
+                getCachedActivity(startDate, endDate, (fresh) => setActivityData(mapActivity(fresh))),
+                getCachedOrderArchive(startDate, endDate, (fresh) => setArchiveData(mapArchive(fresh)))
             ]);
 
-            if (resActivity) {
-                const mappedActivities = (resActivity || []).map(({ done, ...rest }) => rest);
-                setActivityData(mappedActivities);
-            }
-
-            if (resArchive) {
-                const archiveValues = Object.values(resArchive || {});
-                setArchiveData(archiveValues);
-            }
+            if (resActivity) setActivityData(mapActivity(resActivity));
+            if (resArchive) setArchiveData(mapArchive(resArchive));
         } catch (error) {
             console.error(error);
         } finally {
@@ -42,7 +38,7 @@ export default function Aktivitas() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (activityData.length === 0 && archiveData.length === 0) {

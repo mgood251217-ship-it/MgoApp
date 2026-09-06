@@ -97,10 +97,10 @@ export default function Store() {
     const loadData = useCallback(async () => {
         try {
             const [resUsers, resMachines, resLocations, resStats] = await Promise.all([
-                getCachedUsers(),
-                getCachedMachines(),
-                getCachedLocations(),
-                getCachedOrdersAnalysis()
+                getCachedUsers((fresh) => setUsers(fresh)),
+                getCachedMachines((fresh) => setMachines(fresh)),
+                getCachedLocations((fresh) => setLocations(fresh)),
+                getCachedOrdersAnalysis((fresh) => setStats(fresh))
             ]);
 
             setUsers(resUsers);

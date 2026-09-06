@@ -26,21 +26,26 @@ export default function Pelunasan() {
         total_transaksi: 0
     });
 
+    const applyPelunasanData = (res) => {
+        const rawData = res?.pelunasan?.data || [];
+        const filteredData = rawData.filter(item => item.status_label === "PELUNASAN");
+
+        setPelunasanData(filteredData);
+        setSummary({
+            total_tf: res?.pelunasan?.total_tf || 0,
+            total_cash: res?.pelunasan?.total_cash || 0,
+            grand_total: res?.pelunasan?.grand_total || 0,
+            total_transaksi: filteredData.length
+        });
+    };
+
     const fetchPelunasan = async () => {
         setLoading(true);
         try {
-            const res = await getCachedTransactionsCapture(startDate, endDate);
-
-            const rawData = res.pelunasan.data || [];
-            const filteredData = rawData.filter(item => item.status_label === "PELUNASAN");
-            
-            setPelunasanData(filteredData);
-            setSummary({
-                total_tf: res.pelunasan.total_tf || 0,
-                total_cash: res.pelunasan.total_cash || 0,
-                grand_total: res.pelunasan.grand_total || 0,
-                total_transaksi: filteredData.length
+            const res = await getCachedTransactionsCapture(startDate, endDate, (fresh) => {
+                applyPelunasanData(fresh);
             });
+            applyPelunasanData(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -50,7 +55,7 @@ export default function Pelunasan() {
 
     useEffect(() => {
         fetchPelunasan();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (pelunasanData.length === 0) {

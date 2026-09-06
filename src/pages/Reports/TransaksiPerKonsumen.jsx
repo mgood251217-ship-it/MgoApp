@@ -22,8 +22,10 @@ export default function TransaksiPerKonsumen() {
     const fetchTransaksiKonsumen = async () => {
         setLoading(true);
         try {
-            const res = await getCachedAllOrderDetail(startDate, endDate);
-            setTransaksiKonsumenData(res.transaksi_konsumen || {});
+            const res = await getCachedAllOrderDetail(startDate, endDate, (fresh) => {
+                setTransaksiKonsumenData(fresh?.transaksi_konsumen || {});
+            });
+            setTransaksiKonsumenData(res?.transaksi_konsumen || {});
         } catch (error) {
             console.error(error);
         } finally {
@@ -33,7 +35,7 @@ export default function TransaksiPerKonsumen() {
 
     useEffect(() => {
         fetchTransaksiKonsumen();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (Object.keys(transaksiKonsumenData).length === 0) {
@@ -50,15 +52,6 @@ export default function TransaksiPerKonsumen() {
             console.error("Gagal export excel:", error);
             alert("Terjadi kesalahan saat melakukan export.");
         }
-    };
-
-    const formatWaLink = (phone) => {
-        if (!phone) return "";
-        let cleaned = phone.toString().replace(/\D/g, "");
-        if (cleaned.startsWith("0")) {
-            cleaned = "62" + cleaned.substring(1);
-        }
-        return cleaned;
     };
 
     const columns = useMemo(() => [

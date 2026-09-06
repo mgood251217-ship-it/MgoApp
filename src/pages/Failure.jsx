@@ -59,7 +59,9 @@ export default function Failure() {
     const fetchFailures = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await getCachedFailures(startDate, endDate);
+            const res = await getCachedFailures(startDate, endDate, (fresh) => {
+                setFailures(fresh);
+            });
             setFailures(res);
         } catch (error) {
             console.error(error);
@@ -70,10 +72,10 @@ export default function Failure() {
 
     const loadOperatorsAndMachines = useCallback(async () => {
         try {
-            const resUsers = await getCachedUsers();
+            const resUsers = await getCachedUsers((fresh) => setOperators(fresh));
             setOperators(resUsers);
 
-            const resMachines = await getCachedMachines();
+            const resMachines = await getCachedMachines((fresh) => setMachines(fresh));
             setMachines(resMachines);
         } catch (err) {
             console.error("Gagal load dropdown:", err);

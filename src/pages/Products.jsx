@@ -27,14 +27,17 @@ export default function Products() {
 
     const loadData = useCallback(async () => {
         try {
-            const prodData = await getCachedPaginatedProducts(page, limit, debouncedSearch);
+            const prodData = await getCachedPaginatedProducts(page, limit, debouncedSearch, (fresh) => {
+                setProducts(fresh.data);
+                setTotalPages(fresh.total_pages);
+            });
             setProducts(prodData.data);
             setTotalPages(prodData.total_pages);
 
-            const catData = await getCachedCategories();
+            const catData = await getCachedCategories((fresh) => setCategories(fresh));
             setCategories(catData);
 
-            const finData = await getCachedFinishings();
+            const finData = await getCachedFinishings((fresh) => setFinishings(fresh));
             setFinishings(finData);
         } catch (err) {
             console.error(err);

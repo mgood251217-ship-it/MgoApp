@@ -29,19 +29,24 @@ export default function TransaksiBulanan() {
         total_transaksi: 0 
     });
 
+    const applyBulananData = (res) => {
+        const rawData = res?.rekap?.data_per_tanggal || [];
+        setBulananData(rawData);
+        setSummary({
+            total_tf: res?.rekap?.total_bulan_tf || 0,
+            total_cash: res?.rekap?.total_bulan_cash || 0,
+            grand_total: res?.rekap?.total_bulan || 0,
+            total_transaksi: res?.rekap?.total_transaksi_all || 0
+        });
+    };
+
     const fetchBulanan = async () => {
         setLoading(true);
         try {
-            const res = await getCachedTransactionsCapture(startDate, endDate);
-
-            const rawData = res.rekap?.data_per_tanggal || [];
-            setBulananData(rawData);
-            setSummary({
-                total_tf: res.rekap?.total_bulan_tf || 0,
-                total_cash: res.rekap?.total_bulan_cash || 0,
-                grand_total: res.rekap?.total_bulan || 0,
-                total_transaksi: res.rekap?.total_transaksi_all || 0
+            const res = await getCachedTransactionsCapture(startDate, endDate, (fresh) => {
+                applyBulananData(fresh);
             });
+            applyBulananData(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -51,7 +56,7 @@ export default function TransaksiBulanan() {
 
     useEffect(() => {
         fetchBulanan();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (bulananData.length === 0) {

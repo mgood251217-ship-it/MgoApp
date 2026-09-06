@@ -31,17 +31,22 @@ export default function Keuangan() {
     const [expForm, setExpForm] = useState({ information: "", nominal: "", picture: null });
     const [incForm, setIncForm] = useState({ information: "", nominal: "" });
 
+    const applyFinanceData = (res) => {
+        if (!res) return;
+        setFinanceData(res.finance || []);
+        setExpenditureData(res.expenditure || []);
+        setIncomeData(res.income || []);
+    };
+
     const fetchFinance = async () => {
         setLoading(true);
         try {
-            const res = await getCachedFinance(startDate, endDate);
+            const res = await getCachedFinance(startDate, endDate, (fresh) => {
+                console.log(fresh);
+                applyFinanceData(fresh);
+            });
             console.log(res);
-
-            if (res) {
-                setFinanceData(res.finance || []);
-                setExpenditureData(res.expenditure || []);
-                setIncomeData(res.income || []);
-            }
+            applyFinanceData(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -51,7 +56,7 @@ export default function Keuangan() {
 
     useEffect(() => {
         fetchFinance();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (financeData.length === 0 && expenditureData.length === 0 && incomeData.length === 0) {

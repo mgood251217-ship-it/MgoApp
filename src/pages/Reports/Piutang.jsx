@@ -17,15 +17,19 @@ export default function Piutang() {
     const [piutangData, setPiutangData] = useState([]);
     const [totalPiutang, setTotalPiutang] = useState(0);
 
+    const applyPiutangData = (res) => {
+        if (!res) return;
+        setPiutangData(res.data || []);
+        setTotalPiutang(res.total || 0);
+    };
+
     const fetchPiutang = async () => {
         setLoading(true);
         try {
-            const res = await getCachedPiutang();
-
-            if (res) {
-                setPiutangData(res.data || []);
-                setTotalPiutang(res.total || 0);
-            }
+            const res = await getCachedPiutang((fresh) => {
+                applyPiutangData(fresh);
+            });
+            applyPiutangData(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -52,16 +56,6 @@ export default function Piutang() {
             console.error("Gagal export excel:", error);
             alert("Terjadi kesalahan saat melakukan export.");
         }
-    };
-
-    const formatWaLink = (phone) => {
-        if (!phone) return "#";
-        let cleaned = phone.replace(/\D/g, ""); 
-        
-        if (cleaned.startsWith("0")) {
-            cleaned = "62" + cleaned.substring(1);
-        }
-        return `https://wa.me/${cleaned}`;
     };
 
     const columns = useMemo(() => [

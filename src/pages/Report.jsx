@@ -12,13 +12,15 @@ export default function Report() {
     useEffect(() => {
         const fetchReport = async () => {
             try {
-                const res = await getCachedReport();
+                const res = await getCachedReport((fresh) => {
+                    setData(fresh || null);
+                });
                 setData(res || null);
             } catch (error) {
                 console.error(error);
             }
         };
-        
+
         fetchReport();
     }, []);
 

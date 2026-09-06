@@ -18,7 +18,7 @@ const setStorage = (key, val) => {
 const getCleanedDailyMap = (key) => {
     const map = getStorage(key, {});
     const today = new Date().toDateString();
-    
+
     if (map._lastCleared !== today) {
         return { _lastCleared: today };
     }
@@ -75,20 +75,33 @@ export const validateStoreCache = (newStoreName) => {
     }
 };
 
-export const getCachedStoreData = async () => {
+/**
+ * Pola umum semua getCached*:
+ * 1. Baca cache lokal, langsung dikembalikan (kalau ada) supaya UI cepat tampil.
+ * 2. Di belakang layar, cek dataset server. Kalau ternyata data server lebih baru
+ *    dari cache (cachedTime < serverTime), fetch ulang dari server.
+ * 3. Kalau ada data baru dari server, panggil onUpdate(result) supaya pemanggil
+ *    (komponen React, dsb) bisa update state-nya tanpa perlu reload manual.
+ *
+ * onUpdate bersifat OPSIONAL. Kalau tidak diisi, fungsi berperilaku sama seperti
+ * sebelumnya (fetch di background, hasil hanya disimpan ke localStorage).
+ */
+
+export const getCachedStoreData = async (onUpdate) => {
     const cachedData = getStorage("storeData", null);
     const cachedTime = getStorage("storeData_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.store_data_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "store" } });
                 const result = res.data?.data || [];
                 setStorage("storeData", result);
                 setStorage("storeData_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -105,20 +118,21 @@ export const getCachedStoreData = async () => {
     return (await fetchLatest()) || [];
 }
 
-export const getCachedUsers = async () => {
+export const getCachedUsers = async (onUpdate) => {
     const cachedData = getStorage("users", null);
     const cachedTime = getStorage("users_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.users_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "users" } });
                 const result = res.data?.data || [];
                 setStorage("users", result);
                 setStorage("users_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -135,20 +149,21 @@ export const getCachedUsers = async () => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedInitials = async () => {
+export const getCachedInitials = async (onUpdate) => {
     const cachedData = getStorage("initials", null);
     const cachedTime = getStorage("initials_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.initials_updated_at || dataset.users_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "get_initial" } });
                 const result = res.data?.data || [];
                 setStorage("initials", result);
                 setStorage("initials_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -165,20 +180,21 @@ export const getCachedInitials = async () => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedMachines = async () => {
+export const getCachedMachines = async (onUpdate) => {
     const cachedData = getStorage("machines", null);
     const cachedTime = getStorage("machines_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.machines_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "machines" } });
                 const result = res.data?.data || [];
                 setStorage("machines", result);
                 setStorage("machines_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -195,20 +211,21 @@ export const getCachedMachines = async () => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedLocations = async () => {
+export const getCachedLocations = async (onUpdate) => {
     const cachedData = getStorage("locations", null);
     const cachedTime = getStorage("locations_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.locations_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "locations" } });
                 const result = res.data?.data || [];
                 setStorage("locations", result);
                 setStorage("locations_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -225,20 +242,21 @@ export const getCachedLocations = async () => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedStoreNames = async () => {
+export const getCachedStoreNames = async (onUpdate) => {
     const cachedData = getStorage("storeNames", null);
     const cachedTime = getStorage("storeNames_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.store_names_updated_at || dataset.storeNames_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "store_names" } });
                 const result = res.data?.data || [];
                 setStorage("storeNames", result);
                 setStorage("storeNames_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -255,7 +273,7 @@ export const getCachedStoreNames = async () => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedFailures = async (startDate, endDate) => {
+export const getCachedFailures = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const failuresMap = getCleanedDailyMap("failures");
     const cachedItem = failuresMap[cacheKey];
@@ -263,7 +281,7 @@ export const getCachedFailures = async (startDate, endDate) => {
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.failures_updated_at || 0;
-        
+
         if (!cachedItem || cachedItem.updatedAt < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "failure", start_date: startDate, end_date: endDate } });
@@ -271,6 +289,7 @@ export const getCachedFailures = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("failures");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("failures", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -287,20 +306,21 @@ export const getCachedFailures = async (startDate, endDate) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedCategories = async () => {
+export const getCachedCategories = async (onUpdate) => {
     const cachedData = getStorage("categories", null);
     const cachedTime = getStorage("categories_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.categories_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "categories" } });
                 const result = res.data?.data || [];
                 setStorage("categories", result);
                 setStorage("categories_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -317,16 +337,16 @@ export const getCachedCategories = async () => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedProductsByCategory = async (categoryId) => {
+export const getCachedProductsByCategory = async (categoryId, onUpdate) => {
     if (!categoryId) return [];
-    
+
     const productsMap = getStorage("productsByCategory", {});
     const cachedItem = productsMap[categoryId];
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.products_updated_at || dataset.categories_updated_at || 0;
-        
+
         if (!cachedItem || cachedItem.updatedAt < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "products_by_category", category_id: categoryId } });
@@ -334,6 +354,7 @@ export const getCachedProductsByCategory = async (categoryId) => {
                 const currentMap = getStorage("productsByCategory", {});
                 currentMap[categoryId] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("productsByCategory", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -350,16 +371,16 @@ export const getCachedProductsByCategory = async (categoryId) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedGlobalStocks = async (month) => {
+export const getCachedGlobalStocks = async (month, onUpdate) => {
     if (!month) return {};
-    
+
     const stocksMap = getStorage("globalStocksByMonth", {});
     const cachedItem = stocksMap[month];
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.global_stocks_updated_at || 0;
-        
+
         if (!cachedItem || cachedItem.updatedAt < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "grouped_stock_global_stock", month: month } });
@@ -367,6 +388,7 @@ export const getCachedGlobalStocks = async (month) => {
                 const currentMap = getStorage("globalStocksByMonth", {});
                 currentMap[month] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("globalStocksByMonth", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -383,16 +405,16 @@ export const getCachedGlobalStocks = async (month) => {
     return (await fetchLatest()) || {};
 };
 
-export const getCachedFinishingsByCategory = async (categoryId) => {
+export const getCachedFinishingsByCategory = async (categoryId, onUpdate) => {
     if (!categoryId) return [];
-    
+
     const finishingsMap = getStorage("finishingsByCategory", {});
     const cachedItem = finishingsMap[categoryId];
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.finishings_updated_at || dataset.categories_updated_at || 0;
-        
+
         if (!cachedItem || cachedItem.updatedAt < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "finishing_by_category", category_id: categoryId } });
@@ -400,6 +422,7 @@ export const getCachedFinishingsByCategory = async (categoryId) => {
                 const currentMap = getStorage("finishingsByCategory", {});
                 currentMap[categoryId] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("finishingsByCategory", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -416,7 +439,7 @@ export const getCachedFinishingsByCategory = async (categoryId) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedPaginatedProducts = async (page, limit, search) => {
+export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) => {
     const cacheKey = `${page}_${limit}_${search}`;
     const paginatedMap = getStorage("paginatedProducts", {});
     const cachedItem = paginatedMap[cacheKey];
@@ -424,7 +447,7 @@ export const getCachedPaginatedProducts = async (page, limit, search) => {
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.products_updated_at || 0;
-        
+
         if (!cachedItem || cachedItem.updatedAt < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "pagination_products", page, limit, search } });
@@ -435,6 +458,7 @@ export const getCachedPaginatedProducts = async (page, limit, search) => {
                 const currentMap = getStorage("paginatedProducts", {});
                 currentMap[cacheKey] = { result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("paginatedProducts", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -451,20 +475,21 @@ export const getCachedPaginatedProducts = async (page, limit, search) => {
     return (await fetchLatest()) || { data: [], total_pages: 1 };
 };
 
-export const getCachedFinishings = async () => {
+export const getCachedFinishings = async (onUpdate) => {
     const cachedData = getStorage("finishings", null);
     const cachedTime = getStorage("finishings_time", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.finishings_updated_at || 0;
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "finishings" } });
                 const result = res.data?.data || [];
                 setStorage("finishings", result);
                 setStorage("finishings_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -481,7 +506,7 @@ export const getCachedFinishings = async () => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedOrdersAnalysis = async () => {
+export const getCachedOrdersAnalysis = async (onUpdate) => {
     const cachedData = getStorage("ordersAnalysis", null);
     const cachedTime = getStorage("ordersAnalysis_time", 0);
 
@@ -490,13 +515,14 @@ export const getCachedOrdersAnalysis = async () => {
         const orderTime = dataset.orders_updated_at || 0;
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
-        
+
         if (!cachedData || cachedTime < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "order_analysis" } });
                 const result = res.data?.data || { chart_30: {}, chart_365: {}, summary: {} };
                 setStorage("ordersAnalysis", result);
                 setStorage("ordersAnalysis_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -513,7 +539,7 @@ export const getCachedOrdersAnalysis = async () => {
     return (await fetchLatest()) || { chart_30: {}, chart_365: {}, summary: {} };
 }
 
-export const getCachedOrders = async (startDate, endDate, search) => {
+export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}_${search}`;
     const ordersMap = getCleanedDailyMap("orders");
     const cachedItem = ordersMap[cacheKey];
@@ -533,6 +559,7 @@ export const getCachedOrders = async (startDate, endDate, search) => {
                 const currentMap = getCleanedDailyMap("orders");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("orders", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -549,7 +576,7 @@ export const getCachedOrders = async (startDate, endDate, search) => {
     return (await fetchLatest()) || {};
 };
 
-export const getCachedOrderDetail = async (orderId) => {
+export const getCachedOrderDetail = async (orderId, onUpdate) => {
     const cacheKey = String(orderId);
     const orderMap = getCleanedDailyMap("orderDetail");
     const cachedItem = orderMap[cacheKey];
@@ -558,9 +585,9 @@ export const getCachedOrderDetail = async (orderId) => {
         const dataset = await getServerDataset();
         const globalOrderUpdate = dataset.orders_updated_at || 0;
         let specificOrderUpdate = 0;
-        
+
         if (dataset.order_trigger && dataset.order_trigger[cacheKey]) {
-            specificOrderUpdate = dataset.order_trigger[cacheKey]; 
+            specificOrderUpdate = dataset.order_trigger[cacheKey];
         }
 
         const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
@@ -569,11 +596,12 @@ export const getCachedOrderDetail = async (orderId) => {
             try {
                 const res = await api.get("", { params: { action: "order_detail", order_id: orderId } });
                 const result = res.data?.data || null;
-                
+
                 if (result) {
                     const currentMap = getCleanedDailyMap("orderDetail");
                     currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                     setStorage("orderDetail", currentMap);
+                    if (onUpdate) onUpdate(result);
                 }
                 return result;
             } catch (err) {
@@ -591,7 +619,7 @@ export const getCachedOrderDetail = async (orderId) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedTransactionsCapture = async (startDate, endDate) => {
+export const getCachedTransactionsCapture = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const transactionsMap = getCleanedDailyMap("transactionsCapture");
     const cachedItem = transactionsMap[cacheKey];
@@ -611,6 +639,7 @@ export const getCachedTransactionsCapture = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("transactionsCapture");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("transactionsCapture", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -627,7 +656,7 @@ export const getCachedTransactionsCapture = async (startDate, endDate) => {
     return (await fetchLatest()) || {};
 };
 
-export const getCachedTransactionsDetail = async (startDate, endDate, search) => {
+export const getCachedTransactionsDetail = async (startDate, endDate, search, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}_${search}`;
     const transactionsDetailMap = getCleanedDailyMap("transactionsDetail");
     const cachedItem = transactionsDetailMap[cacheKey];
@@ -647,6 +676,7 @@ export const getCachedTransactionsDetail = async (startDate, endDate, search) =>
                 const currentMap = getCleanedDailyMap("transactionsDetail");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("transactionsDetail", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -663,7 +693,7 @@ export const getCachedTransactionsDetail = async (startDate, endDate, search) =>
     return (await fetchLatest()) || {};
 };
 
-export const getCachedAllOrderDetail = async (startDate, endDate) => {
+export const getCachedAllOrderDetail = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const allOrderDetailMap = getCleanedDailyMap("allOrderDetail");
     const cachedItem = allOrderDetailMap[cacheKey];
@@ -683,6 +713,7 @@ export const getCachedAllOrderDetail = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("allOrderDetail");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("allOrderDetail", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -699,7 +730,7 @@ export const getCachedAllOrderDetail = async (startDate, endDate) => {
     return (await fetchLatest()) || {};
 };
 
-export const getCachedPiutang = async () => {
+export const getCachedPiutang = async (onUpdate) => {
     const cachedData = getStorage("piutang", null);
     const cachedTime = getStorage("piutang_time", 0);
 
@@ -715,6 +746,7 @@ export const getCachedPiutang = async () => {
                 const result = res.data?.data || { data: [], total: 0 };
                 setStorage("piutang", result);
                 setStorage("piutang_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -731,7 +763,7 @@ export const getCachedPiutang = async () => {
     return (await fetchLatest()) || { data: [], total: 0 };
 };
 
-export const getCachedReport = async () => {
+export const getCachedReport = async (onUpdate) => {
     const cachedData = getStorage("report", null);
     const cachedTime = getStorage("report_time", 0);
 
@@ -747,6 +779,7 @@ export const getCachedReport = async () => {
                 const result = res.data?.data || { data: [], total: 0 };
                 setStorage("report", result);
                 setStorage("report_time", serverTime > 0 ? serverTime : Date.now());
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -763,7 +796,7 @@ export const getCachedReport = async () => {
     return (await fetchLatest()) || { data: [], total: 0 };
 };
 
-export const getCachedProductUsed = async (startDate, endDate) => {
+export const getCachedProductUsed = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const productUsedMap = getCleanedDailyMap("productUsed");
     const cachedItem = productUsedMap[cacheKey];
@@ -781,6 +814,7 @@ export const getCachedProductUsed = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("productUsed");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("productUsed", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -797,7 +831,7 @@ export const getCachedProductUsed = async (startDate, endDate) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedOmsetItem = async (startDate, endDate) => {
+export const getCachedOmsetItem = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const omsetItemMap = getCleanedDailyMap("omsetItem");
     const cachedItem = omsetItemMap[cacheKey];
@@ -815,6 +849,7 @@ export const getCachedOmsetItem = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("omsetItem");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("omsetItem", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -831,7 +866,7 @@ export const getCachedOmsetItem = async (startDate, endDate) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedStatistics = async (startDate, endDate) => {
+export const getCachedStatistics = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const statisticMap = getCleanedDailyMap("statistic");
     const cachedItem = statisticMap[cacheKey];
@@ -851,6 +886,7 @@ export const getCachedStatistics = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("statistic");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("statistic", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -867,7 +903,7 @@ export const getCachedStatistics = async (startDate, endDate) => {
     return (await fetchLatest()) || {};
 };
 
-export const getCachedFinance = async (startDate, endDate) => {
+export const getCachedFinance = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const financeMap = getCleanedDailyMap("finance");
     const cachedItem = financeMap[cacheKey];
@@ -888,6 +924,7 @@ export const getCachedFinance = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("finance");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("finance", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -904,7 +941,7 @@ export const getCachedFinance = async (startDate, endDate) => {
     return (await fetchLatest()) || {};
 };
 
-export const getCachedActivity = async (startDate, endDate) => {
+export const getCachedActivity = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const activityMap = getCleanedDailyMap("activity");
     const cachedItem = activityMap[cacheKey];
@@ -924,6 +961,7 @@ export const getCachedActivity = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("activity");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("activity", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;
@@ -940,7 +978,7 @@ export const getCachedActivity = async (startDate, endDate) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedOrderArchive = async (startDate, endDate) => {
+export const getCachedOrderArchive = async (startDate, endDate, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}`;
     const archiveMap = getCleanedDailyMap("orderArchive");
     const cachedItem = archiveMap[cacheKey];
@@ -960,6 +998,7 @@ export const getCachedOrderArchive = async (startDate, endDate) => {
                 const currentMap = getCleanedDailyMap("orderArchive");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("orderArchive", currentMap);
+                if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
                 return null;

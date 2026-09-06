@@ -38,24 +38,36 @@ export default function TransaksiDetail() {
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
 
+    const applyTransactionsData = (res, { resetSelection = false } = {}) => {
+        setOrders(res?.orders || []);
+        setItemsByOrder(res?.itemsByOrder || {});
+        setPaymentsByOrder(res?.paymentsByOrder || {});
+        setTransfersByOrder(res?.transfersByOrder || {});
+        setNotesByOrder(res?.notesByOrder || {});
+
+        if (resetSelection) {
+            setCheckAllFolders(false);
+            setScannedFolders({});
+        }
+    };
+
     const fetchTransactions = async () => {
         setLoading(true);
         try {
-            const res = await getCachedTransactionsDetail(startDate, endDate, search);
-            setOrders(res.orders || []);
-            setItemsByOrder(res.itemsByOrder || {});
-            setPaymentsByOrder(res.paymentsByOrder || {});
-            setTransfersByOrder(res.transfersByOrder || {});
-            setNotesByOrder(res.notesByOrder || {});
-            
-            setCheckAllFolders(false);
-            setScannedFolders({});
+            const res = await getCachedTransactionsDetail(startDate, endDate, search, (fresh) => {
+                applyTransactionsData(fresh, { resetSelection: false });
+            });
+            applyTransactionsData(res, { resetSelection: true });
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchTransactions();
+    }, [startDate, endDate, search]);
 
     const handlePayClick = (order, totalTerbayar) => {
         setSelectedOrder({ ...order, total_paid: totalTerbayar });
@@ -66,10 +78,6 @@ export default function TransaksiDetail() {
         setPaymentModalOpen(false);
         fetchTransactions();
     };
-
-    useEffect(() => {
-        fetchTransactions();
-    }, []);
 
     const handleExportExcel = async () => {
         if (orders.length === 0) {

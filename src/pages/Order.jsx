@@ -78,30 +78,40 @@ export default function Order() {
         }, 150);
     };
 
+    const applyOrderData = (res, { autoFocus = false } = {}) => {
+        const data = res || {};
+        const loadedItems = data.items || [];
+
+        setItems(loadedItems);
+        setOrderMeta(data.order || {});
+        setOrderInfo({
+            total: data.total || 0,
+            diskon_per_produk: data.diskon_per_produk || {},
+            note: data.note || ""
+        });
+        setNoteInput(data.note || "");
+
+        if (autoFocus && loadedItems.length === 0) {
+            focusCategoryField();
+        }
+    };
+
     const loadOrderData = useCallback(async () => {
         try {
-            const res = await getCachedOrderDetail(order_id);
-            const data = res || {};
-            const loadedItems = data.items || [];
-            
-            setItems(loadedItems);
-            setOrderMeta(data.order || {});
-            setOrderInfo({
-                total: data.total || 0,
-                diskon_per_produk: data.diskon_per_produk || {},
-                note: data.note || ""
+            const res = await getCachedOrderDetail(order_id, (fresh) => {
+                // Data refresh di background: update datanya saja, tanpa auto-focus
+                applyOrderData(fresh, { autoFocus: false });
             });
-            setNoteInput(data.note || "");
-            
-            if (loadedItems.length === 0) {
-                focusCategoryField();
-            }
+            // Load awal: boleh auto-focus kalau item kosong
+            applyOrderData(res, { autoFocus: true });
         } catch (err) {}
     }, [order_id]);
 
     const loadStores = useCallback(async () => {
         try {
-            const res = await getCachedStoreNames();
+            const res = await getCachedStoreNames((fresh) => {
+                setStores(fresh || []);
+            });
             setStores(res || []);
         } catch (err) {}
     }, []);

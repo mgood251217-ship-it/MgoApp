@@ -18,7 +18,9 @@ export default function PemakaianBahan() {
     const fetchPemakaianBahan = async () => {
         setLoading(true);
         try {
-            const res = await getCachedProductUsed(startDate, endDate);
+            const res = await getCachedProductUsed(startDate, endDate, (fresh) => {
+                if (fresh) setPemakaianBahanData(fresh);
+            });
 
             if (res) {
                 setPemakaianBahanData(res);
@@ -32,7 +34,7 @@ export default function PemakaianBahan() {
 
     useEffect(() => {
         fetchPemakaianBahan();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (pemakaianBahanData.length === 0) {

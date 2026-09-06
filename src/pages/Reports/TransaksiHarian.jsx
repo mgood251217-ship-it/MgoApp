@@ -26,17 +26,23 @@ export default function TransaksiHarian() {
         total_transaksi: 0 
     });
 
+    const applyHarianData = (res) => {
+        setHarianData(res?.harian?.data || []);
+        setSummary({
+            total_tf: res?.harian?.total_tf || 0,
+            total_cash: res?.harian?.total_cash || 0,
+            grand_total: res?.harian?.grand_total || 0,
+            total_transaksi: res?.rekap?.total_transaksi_all || 0
+        });
+    };
+
     const fetchHarian = async () => {
         setLoading(true);
         try {
-            const res = await getCachedTransactionsCapture(startDate, endDate);
-            setHarianData(res.harian.data || []);
-            setSummary({
-                total_tf: res.harian.total_tf || 0,
-                total_cash: res.harian.total_cash || 0,
-                grand_total: res.harian.grand_total || 0,
-                total_transaksi: res.rekap?.total_transaksi_all || 0
+            const res = await getCachedTransactionsCapture(startDate, endDate, (fresh) => {
+                applyHarianData(fresh);
             });
+            applyHarianData(res);
         } catch (error) {
             console.error(error);
         } finally {
@@ -46,7 +52,7 @@ export default function TransaksiHarian() {
 
     useEffect(() => {
         fetchHarian();
-    }, []);
+    }, [startDate, endDate]);
 
     const handleExportExcel = async () => {
         if (harianData.length === 0) {
