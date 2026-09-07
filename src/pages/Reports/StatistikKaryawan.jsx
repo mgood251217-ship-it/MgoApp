@@ -7,9 +7,11 @@ import Table from "../../components/Table/Table";
 import CardTrophy from "../../components/CardTrophy/CardTrophy";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportStatistikKaryawanExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedStatistics } from "../../services/apiCache";
 
 export default function StatistikKaryawan() {
+    const { showAlert, alertElement } = usePageAlert();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -86,7 +88,7 @@ export default function StatistikKaryawan() {
 
     const handleExportExcel = async () => {
         if (karyawanData.length === 0) {
-            alert("Tidak ada data untuk diexport.");
+            showAlert("Tidak ada data untuk diexport.");
             return;
         }
         try {
@@ -98,7 +100,7 @@ export default function StatistikKaryawan() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -143,6 +145,7 @@ export default function StatistikKaryawan() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Statistik Karyawan" subtitle="Performa kinerja karyawan berdasarkan transaksi dan aktivitas." />
             <ReportNav />
             

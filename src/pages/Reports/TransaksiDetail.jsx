@@ -15,8 +15,10 @@ import { formatTime, formatRupiah, getTodayDate, formatKeInternasional } from ".
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 import { getCachedTransactionsDetail } from "../../services/apiCache";
 import { checkFoldersForItems, listFilesForFolder, formatUkuran } from "../../services/folderHelper";
+import usePageAlert from "../../hooks/usePageAlert";
 
 export default function TransaksiDetail() {
+    const { showAlert, alertElement } = usePageAlert();
     const [searchParams] = useSearchParams();
     const [startDate, setStartDate] = useState(searchParams.get("start_date") || getTodayDate());
     const [endDate, setEndDate] = useState(searchParams.get("end_date") || getTodayDate());
@@ -81,7 +83,7 @@ export default function TransaksiDetail() {
 
     const handleExportExcel = async () => {
         if (orders.length === 0) {
-            alert("Tidak ada data untuk diexport.");
+            showAlert("Tidak ada data untuk diexport.", "warning");
             return;
         }
         try {
@@ -93,13 +95,13 @@ export default function TransaksiDetail() {
             });
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
     const handleUploadTf = async (order_id, file) => {
         if (!file || !file.type.startsWith("image/")) {
-            alert("File harus berupa gambar.");
+            showAlert("File harus berupa gambar.");
             return;
         }
         
@@ -115,13 +117,13 @@ export default function TransaksiDetail() {
             });
             if (res.data?.success) {
                 fetchTransactions();
-                alert("Bukti transfer berhasil diupload.");
+                showAlert("Bukti transfer berhasil diupload.", "success");
             } else {
-                alert("Gagal upload bukti transfer.");
+                showAlert("Gagal upload bukti transfer.");
             }
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan sistem.");
+            showAlert("Terjadi kesalahan sistem.");
         }
     };
 
@@ -142,11 +144,11 @@ export default function TransaksiDetail() {
             if (res.data?.success) {
                 fetchTransactions();
             } else {
-                alert("Gagal menghapus bukti transfer.");
+                showAlert("Gagal menghapus bukti transfer.");
             }
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan sistem.");
+            showAlert("Terjadi kesalahan sistem.");
         }
     };
 
@@ -162,10 +164,10 @@ export default function TransaksiDetail() {
                     return;
                 }
             }
-            alert("Tidak ada gambar di clipboard.");
+            showAlert("Tidak ada gambar di clipboard.");
         } catch (err) {
             console.error(err);
-            alert("Gagal membaca clipboard secara otomatis. Silakan klik kotak lalu tekan CTRL+V.");
+            showAlert("Gagal membaca clipboard secara otomatis. Silakan klik kotak lalu tekan CTRL+V.");
         }
     };
 
@@ -202,14 +204,14 @@ export default function TransaksiDetail() {
             });
             if (res.data?.success) {
                 fetchTransactions();
-                alert("Catatan berhasil diupdate.");
+                showAlert("Catatan berhasil diupdate.", "success");
                 e.target.reset();
             } else {
-                alert("Gagal mengupdate catatan.");
+                showAlert("Gagal mengupdate catatan.");
             }
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan sistem.");
+            showAlert("Terjadi kesalahan sistem.");
         }
     };
 
@@ -250,7 +252,7 @@ export default function TransaksiDetail() {
                 setScannedFolders(newScannedFolders);
             } catch (err) {
                 console.error(err);
-                alert("Gagal mengecek folder secara massal.");
+                showAlert("Gagal mengecek folder secara massal.");
                 setCheckAllFolders(false);
             } finally {
                 setIsScanningAll(false);
@@ -271,6 +273,7 @@ export default function TransaksiDetail() {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", paddingBottom: "40px" }}>
+            {alertElement}
             
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Header 

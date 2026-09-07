@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import DateFilter from "../../components/DateFilter/DateFilter";
@@ -10,6 +9,7 @@ import Icon from "../../components/Icon/Icon"
 import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerKonsumenExcel } from "../../services/excelService";
 import { getCachedAllOrderDetail } from "../../services/apiCache";
+import Alert from "../../components/Alert/Alert";
 
 export default function TransaksiPerKonsumen() {
     const navigate = useNavigate();
@@ -18,6 +18,8 @@ export default function TransaksiPerKonsumen() {
     const [loading, setLoading] = useState(false);
     
     const [transaksiKonsumenData, setTransaksiKonsumenData] = useState({});
+
+    const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
     const fetchTransaksiKonsumen = async () => {
         setLoading(true);
@@ -39,7 +41,7 @@ export default function TransaksiPerKonsumen() {
 
     const handleExportExcel = async () => {
         if (Object.keys(transaksiKonsumenData).length === 0) {
-            alert("Tidak ada data untuk diexport.");
+            setAlertConfig({ show: true, type: "warning", message: "Tidak ada data untuk diexport." });
             return;
         }
         try {
@@ -50,7 +52,7 @@ export default function TransaksiPerKonsumen() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            setAlertConfig({ show: true, type: "error", message: "Gagal export excel. Silakan coba lagi." });
         }
     };
 
@@ -118,6 +120,13 @@ export default function TransaksiPerKonsumen() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertConfig.show && (
+                <Alert 
+                    type={alertConfig.type} 
+                    message={alertConfig.message} 
+                    onClose={() => setAlertConfig({ ...alertConfig, show: false, message: "" })} 
+                />
+            )}
             <Header title="Transaksi Per Konsumen" subtitle="Ringkasan transaksi berdasarkan nama konsumen." />
             <ReportNav />
             

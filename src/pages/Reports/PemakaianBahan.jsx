@@ -6,9 +6,11 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { getTodayDate } from "../../services/helpers";
 import { exportPemakaianBahanExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedProductUsed } from "../../services/apiCache";
 
 export default function PemakaianBahan() {
+    const { showAlert, alertElement } = usePageAlert();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -38,7 +40,7 @@ export default function PemakaianBahan() {
 
     const handleExportExcel = async () => {
         if (pemakaianBahanData.length === 0) {
-            alert("Tidak ada data pemakaian bahan untuk diexport.");
+            showAlert("Tidak ada data pemakaian bahan untuk diexport.");
             return;
         }
         
@@ -50,7 +52,7 @@ export default function PemakaianBahan() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -85,6 +87,7 @@ export default function PemakaianBahan() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Pemakaian Bahan" subtitle="Ringkasan total pemakaian bahan atau produk." />
             <ReportNav />
             

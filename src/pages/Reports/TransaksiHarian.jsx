@@ -6,6 +6,7 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiHarianExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import Button from "../../components/Button/Button";
 import Tag from "../../components/Tag/Tag";
 import Icon from "../../components/Icon/Icon";
@@ -13,6 +14,7 @@ import { getCachedTransactionsCapture } from "../../services/apiCache";
 import { isMobile } from "../../services/platform";
 
 export default function TransaksiHarian() {
+    const { showAlert, alertElement } = usePageAlert();
     const navigate = useNavigate();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
@@ -56,7 +58,7 @@ export default function TransaksiHarian() {
 
     const handleExportExcel = async () => {
         if (harianData.length === 0) {
-            alert("Tidak ada data untuk diexport.");
+            showAlert("Tidak ada data untuk diexport.");
             return;
         }
         try {
@@ -68,7 +70,7 @@ export default function TransaksiHarian() {
             });
         } catch (error) {
             console.error("Gagal export:", error);
-            alert("Terjadi kesalahan saat export.");
+            showAlert("Terjadi kesalahan saat export.");
         }
     };
 
@@ -133,6 +135,7 @@ export default function TransaksiHarian() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Transaksi Harian" subtitle="Ringkasan transaksi harian toko." />
             <ReportNav />
             

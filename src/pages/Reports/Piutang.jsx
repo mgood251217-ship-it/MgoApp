@@ -8,9 +8,11 @@ import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
 import { formatTime, formatRupiah, formatKeInternasional } from "../../services/helpers";
 import { exportPiutangExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedPiutang } from "../../services/apiCache";
 
 export default function Piutang() {
+    const { showAlert, alertElement } = usePageAlert();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
@@ -43,7 +45,7 @@ export default function Piutang() {
 
     const handleExportExcel = async () => {
         if (piutangData.length === 0) {
-            alert("Tidak ada data piutang untuk diexport.");
+            showAlert("Tidak ada data piutang untuk diexport.");
             return;
         }
         
@@ -54,7 +56,7 @@ export default function Piutang() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -114,6 +116,7 @@ export default function Piutang() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Laporan Piutang" subtitle="Daftar tagihan konsumen yang belum lunas." />
             <ReportNav />
             

@@ -11,8 +11,10 @@ import Icon from "../../components/Icon/Icon";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportKeuanganExcel } from "../../services/excelService";
 import { getCachedFinance } from "../../services/apiCache";
+import usePageAlert from "../../hooks/usePageAlert";
 
 export default function Keuangan() {
+    const { showAlert, alertElement } = usePageAlert();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function Keuangan() {
 
     const handleExportExcel = async () => {
         if (financeData.length === 0 && expenditureData.length === 0 && incomeData.length === 0) {
-            alert("Tidak ada data keuangan untuk diexport.");
+            showAlert("Tidak ada data keuangan untuk diexport.", "warning");
             return;
         }
 
@@ -74,7 +76,7 @@ export default function Keuangan() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -94,14 +96,14 @@ export default function Keuangan() {
                 }
             });
             if (res.data?.success) {
-                alert("Data keuangan berhasil disinkronisasi.");
+                showAlert("Data keuangan berhasil disinkronisasi.", "success");
                 fetchFinance();
             } else {
-                alert("Gagal melakukan sinkronisasi.");
+                showAlert("Gagal melakukan sinkronisasi.");
             }
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan sistem saat sinkronisasi.");
+            showAlert("Terjadi kesalahan sistem saat sinkronisasi.");
         }
     };
 
@@ -125,15 +127,15 @@ export default function Keuangan() {
         try {
             const res = await api.post("", formData, { params: { action } });
             if (res.data?.success) {
-                alert(`Pengeluaran berhasil ${editExpData ? 'diperbarui' : 'ditambahkan'}.`);
+                showAlert(`Pengeluaran berhasil ${editExpData ? 'diperbarui' : 'ditambahkan'}.`, "success");
                 setShowExpModal(false);
                 fetchFinance();
             } else {
-                alert("Gagal menyimpan pengeluaran.");
+                showAlert("Gagal menyimpan pengeluaran.");
             }
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan sistem.");
+            showAlert("Terjadi kesalahan sistem.");
         }
     };
 
@@ -153,15 +155,15 @@ export default function Keuangan() {
         try {
             const res = await api.post("", formData, { params: { action } });
             if (res.data?.success) {
-                alert(`Pemasukan berhasil ${editIncData ? 'diperbarui' : 'ditambahkan'}.`);
+                showAlert(`Pemasukan berhasil ${editIncData ? 'diperbarui' : 'ditambahkan'}.`, "success");
                 setShowIncModal(false);
                 fetchFinance();
             } else {
-                alert("Gagal menyimpan pemasukan.");
+                showAlert("Gagal menyimpan pemasukan.");
             }
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan sistem.");
+            showAlert("Terjadi kesalahan sistem.");
         }
     };
 
@@ -282,6 +284,7 @@ export default function Keuangan() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Laporan Keuangan" subtitle="Pantau arus kas, omset, pendapatan, dan pengeluaran toko." />
             <ReportNav />
             

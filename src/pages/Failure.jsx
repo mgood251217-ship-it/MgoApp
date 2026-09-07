@@ -89,7 +89,7 @@ export default function Failure() {
 
     const handleExportExcel = async () => {
         if (failures.length === 0) {
-            alert("Tidak ada data kegagalan produksi untuk diexport.");
+            setAlertConfig({ show: true, type: "warning", message: "Tidak ada data kegagalan produksi untuk diexport." });
             return;
         }
 
@@ -101,7 +101,7 @@ export default function Failure() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            setAlertConfig({ show: true, type: "error", message: "Terjadi kesalahan saat melakukan export." });
         }
     };
 
@@ -165,7 +165,7 @@ export default function Failure() {
                 fetchFailures();
             } catch (err) {
                 console.error(err);
-                alert("Gagal menghapus data.");
+                setAlertConfig({ show: true, type: "error", message: "Gagal menghapus data." });
             }
         }
     };

@@ -5,8 +5,10 @@ import DateFilter from "../components/DateFilter/DateFilter";
 import Table from "../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../services/helpers";
 import { exportMaklunExcel } from "../services/excelService";
+import usePageAlert from "../hooks/usePageAlert";
 
 export default function Maklun() {
+    const { showAlert, alertElement } = usePageAlert();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ export default function Maklun() {
 
     const handleExportExcel = async () => {
         if (maklunMasuk.length === 0 && maklunKeluar.length === 0) {
-            alert("Tidak ada data maklun untuk diexport.");
+            showAlert("Tidak ada data maklun untuk diexport.");
             return;
         }
 
@@ -55,7 +57,7 @@ export default function Maklun() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -90,6 +92,7 @@ export default function Maklun() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Laporan Maklun" subtitle="Pantau rincian pekerjaan maklun masuk dan maklun keluar antar cabang." />
             
             <DateFilter 

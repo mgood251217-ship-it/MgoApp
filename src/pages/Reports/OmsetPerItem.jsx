@@ -6,9 +6,11 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportOmsetPerItemExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedOmsetItem } from "../../services/apiCache";
 
 export default function OmsetPerItem() {
+    const { showAlert, alertElement } = usePageAlert();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -44,7 +46,7 @@ export default function OmsetPerItem() {
 
     const handleExportExcel = async () => {
         if (omsetItemData.length === 0) {
-            alert("Tidak ada data omset per item untuk diexport.");
+            showAlert("Tidak ada data omset per item untuk diexport.");
             return;
         }
         
@@ -57,7 +59,7 @@ export default function OmsetPerItem() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -101,6 +103,7 @@ export default function OmsetPerItem() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Omset Per Item" subtitle="Ringkasan total penjualan dan omset berdasarkan barang." />
             <ReportNav />
             

@@ -1,6 +1,6 @@
 .alert {
     position: fixed;
-    top: 24px;
+    top: calc(20px + var(--navbar-height));
     right: 24px;
     z-index: 9999;
     min-width: 300px;

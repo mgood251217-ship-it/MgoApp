@@ -27,6 +27,7 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import usePageAlert from "../hooks/usePageAlert";
 
 const customIcon = new L.Icon({
     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -50,6 +51,7 @@ function MapClickHandler({ onMapClick }) {
 }
 
 export default function Store() {
+    const { showAlert, alertElement } = usePageAlert();
     const [users, setUsers] = useState([]);
     const [machines, setMachines] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -183,7 +185,7 @@ export default function Store() {
             await clearUsersCache();
             loadData();
         } catch (error) {
-            alert(`Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`);
+            showAlert(`Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`);
         } finally {
             setLoadingUserForm(false);
         }
@@ -203,7 +205,7 @@ export default function Store() {
             await clearUsersCache();
             loadData();
         } catch (error) {
-            alert("Gagal menghapus user.");
+            showAlert("Gagal menghapus user.");
         }
     }, [loadData]);
 
@@ -254,7 +256,7 @@ export default function Store() {
             await clearMachinesCache();
             loadData();
         } catch (error) {
-            alert(`Gagal ${isMachineEditMode ? 'mengedit' : 'menambah'} mesin.`);
+            showAlert(`Gagal ${isMachineEditMode ? 'mengedit' : 'menambah'} mesin.`);
         } finally {
             setLoadingMachineForm(false);
         }
@@ -274,7 +276,7 @@ export default function Store() {
             await clearMachinesCache();
             loadData();
         } catch (error) {
-            alert("Gagal menghapus mesin.");
+            showAlert("Gagal menghapus mesin.");
         }
     }, [loadData]);
 
@@ -297,7 +299,7 @@ export default function Store() {
                 params: { action: "set_location" }
             });
 
-            alert("Lokasi berhasil ditambahkan!");
+            showAlert("Lokasi berhasil ditambahkan!", "success");
             await clearLocationsCache();
             loadData();
             
@@ -305,7 +307,7 @@ export default function Store() {
             setPendingLocation(null);
         } catch (error) {
             console.error(error);
-            alert("Gagal menambahkan lokasi.");
+            showAlert("Gagal menambahkan lokasi.");
         } finally {
             setLoadingLocationForm(false);
         }
@@ -414,6 +416,7 @@ export default function Store() {
 
     return (
         <div style={{ paddingBottom: "32px" }}>
+            {alertElement}
             <Header 
                 title="Store Dashboard" 
                 subtitle="Ringkasan data toko dan statistik." 

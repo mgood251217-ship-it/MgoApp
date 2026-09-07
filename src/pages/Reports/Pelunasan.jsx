@@ -9,10 +9,12 @@ import Tag from "../../components/Tag/Tag";
 import Icon from "../../components/Icon/Icon";
 import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportPelunasanExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
 import { isMobile } from "../../services/platform";
 
 export default function Pelunasan() {
+    const { showAlert, alertElement } = usePageAlert();
     const navigate = useNavigate();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
@@ -59,7 +61,7 @@ export default function Pelunasan() {
 
     const handleExportExcel = async () => {
         if (pelunasanData.length === 0) {
-            alert("Tidak ada data pelunasan untuk diexport.");
+            showAlert("Tidak ada data pelunasan untuk diexport.");
             return;
         }
         
@@ -72,7 +74,7 @@ export default function Pelunasan() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -152,6 +154,7 @@ export default function Pelunasan() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Laporan Pelunasan" subtitle="Daftar transaksi yang telah dilunasi beserta data DP." />
             <ReportNav />
             

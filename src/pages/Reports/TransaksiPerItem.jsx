@@ -8,9 +8,11 @@ import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
 import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerItemExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedAllOrderDetail } from "../../services/apiCache";
 
 export default function TransaksiPerItem() {
+    const { showAlert, alertElement } = usePageAlert();
     const navigate = useNavigate();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
@@ -38,7 +40,7 @@ export default function TransaksiPerItem() {
 
     const handleExportExcel = async () => {
         if (Object.keys(transaksiItemData).length === 0) {
-            alert("Tidak ada data untuk diexport.");
+            showAlert("Tidak ada data untuk diexport.");
             return;
         }
         try {
@@ -49,7 +51,7 @@ export default function TransaksiPerItem() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -117,6 +119,7 @@ export default function TransaksiPerItem() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Transaksi Per Item" subtitle="Ringkasan transaksi berdasarkan produk dan item." />
             <ReportNav />
             

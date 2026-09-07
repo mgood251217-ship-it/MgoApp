@@ -7,8 +7,10 @@ import Table from "../../components/Table/Table";
 import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportAktivitasExcel } from "../../services/excelService";
 import { getCachedActivity, getCachedOrderArchive } from "../../services/apiCache";
+import usePageAlert from "../../hooks/usePageAlert";
 
 export default function Aktivitas() {
+    const { showAlert, alertElement } = usePageAlert();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ export default function Aktivitas() {
 
     const handleExportExcel = async () => {
         if (activityData.length === 0 && archiveData.length === 0) {
-            alert("Tidak ada data untuk diexport.");
+            showAlert("Tidak ada data untuk diexport.");
             return;
         }
 
@@ -55,7 +57,7 @@ export default function Aktivitas() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -111,6 +113,7 @@ export default function Aktivitas() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Aktivitas & Arsip" subtitle="Riwayat perubahan data dan log order yang telah dihapus." />
             <ReportNav />
             

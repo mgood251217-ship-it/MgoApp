@@ -5,10 +5,12 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import { formatRupiah } from "../../services/helpers";
 import { exportTransaksiBulananExcel } from "../../services/excelService";
+import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
 import { isMobile } from "../../services/platform";
 
 export default function TransaksiBulanan() {
+    const { showAlert, alertElement } = usePageAlert();
     const todayObj = new Date();
     const y = todayObj.getFullYear();
     const m = String(todayObj.getMonth() + 1).padStart(2, "0");
@@ -60,7 +62,7 @@ export default function TransaksiBulanan() {
 
     const handleExportExcel = async () => {
         if (bulananData.length === 0) {
-            alert("Tidak ada data untuk diexport.");
+            showAlert("Tidak ada data untuk diexport.");
             return;
         }
         try {
@@ -72,7 +74,7 @@ export default function TransaksiBulanan() {
             });
         } catch (error) {
             console.error("Gagal export excel:", error);
-            alert("Terjadi kesalahan saat melakukan export.");
+            showAlert("Terjadi kesalahan saat melakukan export.");
         }
     };
 
@@ -134,6 +136,7 @@ export default function TransaksiBulanan() {
             boxSizing: "border-box",
             paddingBottom: "40px"
         }}>
+            {alertElement}
             <Header title="Transaksi Bulanan" subtitle="Rekapitulasi total transaksi per tanggal." />
             <ReportNav />
             
