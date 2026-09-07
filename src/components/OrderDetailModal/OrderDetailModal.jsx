@@ -98,9 +98,14 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
             payload.append("order_id", viewOrderData.order.order_id);
             payload.append("order_item_id", maklunData.order_item_id);
             payload.append("store_id", maklunData.store_id);
-            await api.post("", payload, { params: { action: "update_maklun" } });
+            const res = await api.post("", payload, { params: { action: "update_maklun" } });
             setMaklunModalOpen(false);
-            setAlertConfig({ type: "success", message: "Maklun berhasil diperbarui" });
+            if (res.data?.success) {
+                setAlertConfig({ type: "success", message: res.data?.message || "Maklun berhasil diperbarui" });
+                return;
+            }else{
+                setAlertConfig({ type: "error", message: res.data?.message || "Gagal memperbarui maklun" });
+            }
             loadStores();
             onRefresh?.();
         } catch (err) {

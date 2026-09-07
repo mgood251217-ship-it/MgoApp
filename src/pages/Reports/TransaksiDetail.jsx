@@ -117,9 +117,9 @@ export default function TransaksiDetail() {
             });
             if (res.data?.success) {
                 fetchTransactions();
-                showAlert("Bukti transfer berhasil diupload.", "success");
+                showAlert(res.data?.message || "Bukti transfer berhasil diupload.", "success");
             } else {
-                showAlert("Gagal upload bukti transfer.");
+                showAlert(res.data?.message || "Gagal upload bukti transfer.");
             }
         } catch (error) {
             console.error(error);
@@ -144,7 +144,7 @@ export default function TransaksiDetail() {
             if (res.data?.success) {
                 fetchTransactions();
             } else {
-                showAlert("Gagal menghapus bukti transfer.");
+                showAlert(res.data?.message || "Gagal menghapus bukti transfer.");
             }
         } catch (error) {
             console.error(error);
@@ -204,10 +204,10 @@ export default function TransaksiDetail() {
             });
             if (res.data?.success) {
                 fetchTransactions();
-                showAlert("Catatan berhasil diupdate.", "success");
+                showAlert(res.data?.message || "Catatan berhasil diperbarui.", "success");
                 e.target.reset();
             } else {
-                showAlert("Gagal mengupdate catatan.");
+                showAlert(res.data?.message || "Gagal mengupdate catatan.");
             }
         } catch (error) {
             console.error(error);

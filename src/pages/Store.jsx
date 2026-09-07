@@ -175,17 +175,23 @@ export default function Store() {
 
             const actionType = isUserEditMode ? "update_user" : "create_user";
 
-            await api.post("", payload, {
+            const res = await api.post("", payload, {
                 params: { action: actionType },
                 headers: { "Content-Type": "multipart/form-data" }
             });
+
+            if (res.data?.success) {
+                showAlert(res.data?.message || `User berhasil ${isUserEditMode ? 'diperbarui' : 'ditambahkan'}.`, "success");
+            } else {
+                showAlert(res.data?.message || `Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`, "error");
+            }
 
             setIsUserModalOpen(false);
             setUserFormData(initialUserFormState);
             await clearUsersCache();
             loadData();
         } catch (error) {
-            showAlert(`Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`);
+            showAlert(`Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`, "error");
         } finally {
             setLoadingUserForm(false);
         }
@@ -198,14 +204,18 @@ export default function Store() {
             const payload = new FormData();
             payload.append("user_id", userId);
 
-            await api.post("", payload, {
+            const res = await api.post("", payload, {
                 params: { action: "delete_user" }
             });
-
+            if (res.data?.success) {
+                showAlert(res.data?.message || "User berhasil dihapus.");
+            }else{
+                showAlert(res.data?.message || "Gagal menghapus user.", "error");
+            }
             await clearUsersCache();
             loadData();
         } catch (error) {
-            showAlert("Gagal menghapus user.");
+            showAlert("Gagal menghapus user.", "error");
         }
     }, [loadData]);
 
@@ -246,17 +256,23 @@ export default function Store() {
 
             const actionType = isMachineEditMode ? "update_machine" : "create_machine";
 
-            await api.post("", payload, {
+            const res = await api.post("", payload, {
                 params: { action: actionType },
                 headers: { "Content-Type": "multipart/form-data" }
             });
+
+            if (res.data?.success) {
+                showAlert(res.data?.message || `Mesin berhasil ${isMachineEditMode ? 'diperbarui' : 'ditambahkan'}.`, "success");
+            } else {
+                showAlert(res.data?.message || `Gagal ${isMachineEditMode ? 'mengedit' : 'menambah'} mesin.`, "error");
+            }
 
             setIsMachineModalOpen(false);
             setMachineFormData(initialMachineFormState);
             await clearMachinesCache();
             loadData();
         } catch (error) {
-            showAlert(`Gagal ${isMachineEditMode ? 'mengedit' : 'menambah'} mesin.`);
+            showAlert(`Gagal ${isMachineEditMode ? 'mengedit' : 'menambah'} mesin.`, "error");
         } finally {
             setLoadingMachineForm(false);
         }
@@ -269,14 +285,20 @@ export default function Store() {
             const payload = new FormData();
             payload.append("machine_id", machineId);
 
-            await api.post("", payload, {
+            const res = await api.post("", payload, {
                 params: { action: "delete_machine" }
             });
+
+            if (res.data?.success) {
+                showAlert(res.data?.message || "Mesin berhasil dihapus.", "success");
+            } else {
+                showAlert(res.data?.message || "Gagal menghapus mesin.", "error");
+            }
 
             await clearMachinesCache();
             loadData();
         } catch (error) {
-            showAlert("Gagal menghapus mesin.");
+            showAlert("Gagal menghapus mesin.", "error");
         }
     }, [loadData]);
 
@@ -295,11 +317,16 @@ export default function Store() {
             payload.append("latitude", pendingLocation.lat);
             payload.append("longitude", pendingLocation.lng);
 
-            await api.post("", payload, {
+            const res = await api.post("", payload, {
                 params: { action: "set_location" }
             });
 
-            showAlert("Lokasi berhasil ditambahkan!", "success");
+            if (res.data?.success) {
+                showAlert(res.data?.message || "Lokasi berhasil ditambahkan!", "success");
+            } else {
+                showAlert(res.data?.message || "Gagal menambahkan lokasi.", "error");
+            }
+
             await clearLocationsCache();
             loadData();
             
@@ -307,7 +334,7 @@ export default function Store() {
             setPendingLocation(null);
         } catch (error) {
             console.error(error);
-            showAlert("Gagal menambahkan lokasi.");
+            showAlert("Gagal menambahkan lokasi.", "error");
         } finally {
             setLoadingLocationForm(false);
         }

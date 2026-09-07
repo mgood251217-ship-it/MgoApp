@@ -127,11 +127,11 @@ export default function Keuangan() {
         try {
             const res = await api.post("", formData, { params: { action } });
             if (res.data?.success) {
-                showAlert(`Pengeluaran berhasil ${editExpData ? 'diperbarui' : 'ditambahkan'}.`, "success");
+                showAlert(res.data?.message || `Pengeluaran berhasil ${editExpData ? 'diperbarui' : 'ditambahkan'}.`, "success");
                 setShowExpModal(false);
                 fetchFinance();
             } else {
-                showAlert("Gagal menyimpan pengeluaran.");
+                showAlert(res.data?.message || "Gagal menyimpan pengeluaran.");
             }
         } catch (error) {
             console.error(error);
@@ -155,11 +155,11 @@ export default function Keuangan() {
         try {
             const res = await api.post("", formData, { params: { action } });
             if (res.data?.success) {
-                showAlert(`Pemasukan berhasil ${editIncData ? 'diperbarui' : 'ditambahkan'}.`, "success");
+                showAlert(res.data?.message || `Pemasukan berhasil ${editIncData ? 'diperbarui' : 'ditambahkan'}.`, "success");
                 setShowIncModal(false);
                 fetchFinance();
             } else {
-                showAlert("Gagal menyimpan pemasukan.");
+                showAlert(res.data?.message || "Gagal menyimpan pemasukan.");
             }
         } catch (error) {
             console.error(error);
