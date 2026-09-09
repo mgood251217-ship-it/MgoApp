@@ -125,6 +125,55 @@ export const exportMeteranExcel = async ({
     const exportGroupedSection = (title, source) => {
         if (!source || typeof source !== 'object') return;
 
+        if (source.meteran !== undefined || source.kiloan !== undefined) {
+            const totalMeteran = (source.meteran || []).reduce((sum, product) => {
+                if (!Array.isArray(product?.rows)) return sum;
+                return sum + product.rows.reduce((acc, row) => acc + (Number(row?.m2) || 0), 0);
+            }, 0);
+            const totalKiloan = (source.kiloan || []).reduce((sum, product) => {
+                if (!Array.isArray(product?.rows)) return sum;
+                return sum + product.rows.reduce((acc, row) => acc + (Number(row?.kg_total) || 0), 0);
+            }, 0);
+
+            sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+            sheet.getCell(`A${currentRow}`).value = title;
+            sheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+            sheet.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+            currentRow += 2;
+
+            sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+            sheet.getCell(`A${currentRow}`).value = `Total Keseluruhan Bahan Sublim: ${totalMeteran} M² | ${totalKiloan} Kg`;
+            sheet.getCell(`A${currentRow}`).font = { bold: true };
+            currentRow += 2;
+
+            if (source.meteran && source.meteran.length > 0) {
+                source.meteran.forEach(p => {
+                    if (!p.rows || p.rows.length === 0) return;
+                    let no = 1;
+                    let totalM2 = 0;
+                    const rowsData = p.rows.map(r => {
+                        totalM2 += (r.m2 || 0);
+                        return [no++, r.p, r.l, r.qty, r.m2];
+                    });
+                    createTable(`Bahan Meteran - ${p.name}`, ['No', 'P', 'L', 'Qty', 'Total (M²)'], rowsData, 'Total M²', totalM2);
+                });
+            }
+
+            if (source.kiloan && source.kiloan.length > 0) {
+                source.kiloan.forEach(p => {
+                    if (!p.rows || p.rows.length === 0) return;
+                    let no = 1;
+                    let totalKg = 0;
+                    const rowsData = p.rows.map(r => {
+                        totalKg += (r.kg_total || 0);
+                        return [no++, `${r.kg} Kg`, '-', r.qty, r.kg_total];
+                    });
+                    createTable(`Bahan Kiloan - ${p.name}`, ['No', 'Berat (Kg)', '-', 'Qty', 'Total (Kg)'], rowsData, 'Total Kg', totalKg);
+                });
+            }
+            return;
+        }
+
         if (source.product_data && Array.isArray(source.product_data) && source.product_data[0]?.rows !== undefined) {
             const totalKey = Object.keys(source).find(key => key.startsWith("total_all_m2"));
             const totalAllM2 = totalKey ? source[totalKey] : 0;

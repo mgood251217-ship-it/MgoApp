@@ -99,10 +99,9 @@ export default function Meteran() {
         { value: "meter_jersey_finishing_jersey", label: "Jersey + Finishing Jersey" },
         { value: "meter_akrilik_merchandise_akrilik", label: "Akrilik + Merchandise Akrilik" },
         { value: "meter_laser_merchandise", label: "Laser A3 + Merchandise" },
-        { value: "meter_sublim", label: "Sublim" },
+        { value: "meter_sublim_bahan_sublim", label: "Sublim + Bahan Sublim" },
         { value: "meter_dtf", label: "DTF" },
-        { value: "meter_cetakan", label: "Cetakan" },
-        { value: "meter_bahan_sublim", label: "Bahan Sublim" }
+        { value: "meter_cetakan", label: "Cetakan" }
     ], []);
 
     const loadData = async () => {
@@ -110,7 +109,8 @@ export default function Meteran() {
             const groupedActions = {
                 meter_jersey_finishing_jersey: ["meter_jersey", "meter_finishing_jersey"],
                 meter_akrilik_merchandise_akrilik: ["meter_akrilik", "meter_mercendise_akrilik"],
-                meter_laser_merchandise: ["meter_laser", "meter_merchandise"]
+                meter_laser_merchandise: ["meter_laser", "meter_merchandise"],
+                meter_sublim_bahan_sublim: ["meter_sublim", "meter_bahan_sublim"]
             };
 
             if (groupedActions[category]) {
@@ -139,6 +139,11 @@ export default function Meteran() {
                 if (category === "meter_laser_merchandise") {
                     groupedSections[0] = { title: "Laser A3", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} };
                     groupedSections[1] = { title: "Merchandise", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} };
+                }
+
+                if (category === "meter_sublim_bahan_sublim") {
+                    groupedSections[0] = { title: "Sublim", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} };
+                    groupedSections[1] = { title: "Bahan Sublim", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} };
                 }
 
                 setDataState({ grouped_sections: groupedSections });
@@ -248,11 +253,19 @@ export default function Meteran() {
         );
     };
 
-    const renderBahanSublimLayout = () => {
-        if (!dataState) return null;
+    const renderBahanSublimLayout = (payload = dataState, title = "Bahan Sublim") => {
+        if (!payload) return null;
         
-        const meteranData = dataState.meteran || [];
-        const kiloanData = dataState.kiloan || [];
+        const meteranData = payload.meteran || [];
+        const kiloanData = payload.kiloan || [];
+        const totalMeteran = meteranData.reduce((sum, product) => {
+            if (!Array.isArray(product?.rows)) return sum;
+            return sum + product.rows.reduce((acc, row) => acc + (Number(row?.m2) || 0), 0);
+        }, 0);
+        const totalKiloan = kiloanData.reduce((sum, product) => {
+            if (!Array.isArray(product?.rows)) return sum;
+            return sum + product.rows.reduce((acc, row) => acc + (Number(row?.kg_total) || 0), 0);
+        }, 0);
 
         const meteranColumns = [
             { key: "p", title: "P" },
@@ -268,76 +281,86 @@ export default function Meteran() {
         ];
 
         return (
-            <>
-                {meteranData.length > 0 && (
-                    <>
-                        <h3 style={{ marginTop: 24, marginBottom: 16 }}>Bahan Meteran</h3>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
-                            {meteranData.map((product, index) => {
-                                if (!product.rows || product.rows.length === 0) return null;
-                                
-                                const formattedRows = product.rows.map((rowItem, idx) => ({
-                                    id: idx,
-                                    p: rowItem.p,
-                                    l: rowItem.l,
-                                    qty: `${rowItem.qty}x`,
-                                    m2: rapihkanAngka(rowItem.m2)
-                                }));
+            <div key={title}>
+                {title && <h3 style={{ marginTop: 24, marginBottom: 16 }}>{title}</h3>}
+                <div style={{ marginBottom: 24 }}>
+                    <div style={{ background: "var(--info)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--info-hover)", display: "inline-block" }}>
+                        <h3 style={{ margin: 0, color: "var(--text)" }}>
+                            Total Keseluruhan Bahan Sublim: {rapihkanAngka(totalMeteran)} M² | {rapihkanAngka(totalKiloan)} Kg
+                        </h3>
+                    </div>
+                </div>
+                <div style={{ display: "flex", gap: "32px", alignItems: "flex-start", flexWrap: "wrap" }}>
+                    {meteranData.length > 0 && (
+                        <div style={{ flex: "1 1 420px", minWidth: "300px" }}>
+                            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Bahan Meteran</h3>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "32px" }}>
+                                {meteranData.map((product, index) => {
+                                    if (!product.rows || product.rows.length === 0) return null;
+                                    
+                                    const formattedRows = product.rows.map((rowItem, idx) => ({
+                                        id: idx,
+                                        p: rowItem.p,
+                                        l: rowItem.l,
+                                        qty: `${rowItem.qty}x`,
+                                        m2: rapihkanAngka(rowItem.m2)
+                                    }));
 
-                                const totalM2 = product.rows.reduce((acc, curr) => acc + (curr.m2 || 0), 0);
+                                    const totalM2 = product.rows.reduce((acc, curr) => acc + (curr.m2 || 0), 0);
 
-                                return (
-                                    <div key={`met-${index}`} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                                        <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
-                                            <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
+                                    return (
+                                        <div key={`met-${title}-${index}`} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                                            <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
+                                                <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
+                                            </div>
+                                            <div style={{ padding: "0", flexGrow: 1 }}>
+                                                <Table id={`table-sublim-met-${title}-${index}`} showNumber={true} size="sm" rowKey="id" rowDataKey="id" columns={meteranColumns} rows={formattedRows} />
+                                            </div>
+                                            <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
+                                                <strong style={{ color: "var(--warning)", fontSize: "14px" }}>Total: {rapihkanAngka(totalM2)} M²</strong>
+                                            </div>
                                         </div>
-                                        <div style={{ padding: "0", flexGrow: 1 }}>
-                                            <Table id={`table-sublim-met-${index}`} showNumber={true} size="sm" rowKey="id" rowDataKey="id" columns={meteranColumns} rows={formattedRows} />
-                                        </div>
-                                        <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
-                                            <strong style={{ color: "var(--warning)", fontSize: "14px" }}>Total: {rapihkanAngka(totalM2)} M²</strong>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </>
-                )}
+                    )}
 
-                {kiloanData.length > 0 && (
-                    <>
-                        <h3 style={{ marginTop: 32, marginBottom: 16 }}>Bahan Kiloan</h3>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
-                            {kiloanData.map((product, index) => {
-                                if (!product.rows || product.rows.length === 0) return null;
-                                
-                                const formattedRows = product.rows.map((rowItem, idx) => ({
-                                    id: idx,
-                                    kg: rowItem.kg,
-                                    qty: `${rowItem.qty}x`,
-                                    kg_total: rapihkanAngka(rowItem.kg_total)
-                                }));
+                    {kiloanData.length > 0 && (
+                        <div style={{ flex: "1 1 420px", minWidth: "300px" }}>
+                            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Bahan Kiloan</h3>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "32px" }}>
+                                {kiloanData.map((product, index) => {
+                                    if (!product.rows || product.rows.length === 0) return null;
+                                    
+                                    const formattedRows = product.rows.map((rowItem, idx) => ({
+                                        id: idx,
+                                        kg: rowItem.kg,
+                                        qty: `${rowItem.qty}x`,
+                                        kg_total: rapihkanAngka(rowItem.kg_total)
+                                    }));
 
-                                const totalKg = product.rows.reduce((acc, curr) => acc + (curr.kg_total || 0), 0);
+                                    const totalKg = product.rows.reduce((acc, curr) => acc + (curr.kg_total || 0), 0);
 
-                                return (
-                                    <div key={`kil-${index}`} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                                        <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
-                                            <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
+                                    return (
+                                        <div key={`kil-${title}-${index}`} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                                            <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
+                                                <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
+                                            </div>
+                                            <div style={{ padding: "0", flexGrow: 1 }}>
+                                                <Table id={`table-sublim-kil-${title}-${index}`} showNumber={true} size="sm" rowKey="id" rowDataKey="id" columns={kiloanColumns} rows={formattedRows} />
+                                            </div>
+                                            <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
+                                                <strong style={{ color: "var(--info)", fontSize: "14px" }}>Total: {rapihkanAngka(totalKg)} Kg</strong>
+                                            </div>
                                         </div>
-                                        <div style={{ padding: "0", flexGrow: 1 }}>
-                                            <Table id={`table-sublim-kil-${index}`} showNumber={true} size="sm" rowKey="id" rowDataKey="id" columns={kiloanColumns} rows={formattedRows} />
-                                        </div>
-                                        <div style={{ padding: "12px 16px", background: "var(--background)", borderTop: "1px solid var(--border)", textAlign: "right" }}>
-                                            <strong style={{ color: "var(--info)", fontSize: "14px" }}>Total: {rapihkanAngka(totalKg)} Kg</strong>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </>
-                )}
-            </>
+                    )}
+                </div>
+            </div>
         );
     };
 
@@ -481,11 +504,14 @@ export default function Meteran() {
                 <div style={{ display: "flex", gap: "32px", alignItems: "flex-start", flexWrap: "wrap" }}>
                     {dataState.grouped_sections.map((section) => {
                         const source = section?.source;
+                        const isBahanSublim = source && (source.meteran !== undefined || source.kiloan !== undefined);
                         return (
                             <div key={section?.title || Math.random()} style={{ flex: "1 1 420px", minWidth: "300px" }}>
-                                {source?.product_data && Array.isArray(source.product_data) && source.product_data[0]?.rows !== undefined
-                                    ? renderM2Section(section.title, source)
-                                    : renderQtySection(section.title, source)}
+                                {isBahanSublim
+                                    ? renderBahanSublimLayout(source, section.title)
+                                    : source?.product_data && Array.isArray(source.product_data) && source.product_data[0]?.rows !== undefined
+                                        ? renderM2Section(section.title, source)
+                                        : renderQtySection(section.title, source)}
                             </div>
                         );
                     })}
