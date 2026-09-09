@@ -153,6 +153,7 @@ export default function OrderItemForm({
     
     const isWaktu = selectedProductName === "SETTING" || selectedProductName === "POTONG AKRILIK";
     const isBahan = selectedProductName.includes("BAHAN");
+    const isBahanM2 = isBahan && selectedProduct?.unit_type?.toUpperCase() === "M2";
     const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
 
     const hideFinishing = ["PAKET INDOOR OUTDOOR", "STAMP", "MERCENDISE", "MERCENDISE AKRILIK"].includes(selectedCategoryName);
@@ -214,7 +215,7 @@ export default function OrderItemForm({
 
                         if (pName === "SETTING" || pName === "POTONG AKRILIK") {
                             document.querySelector('input[name="waktu"]')?.focus();
-                        } else if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN")) {
+                        } else if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN") && pUnit !== "M2") {
                             document.querySelector('input[name="kiloan"]')?.focus();
                         } else if (selectedCategoryName === "JERSEY") {
                             document.querySelector('select[name="ukuranJersey"]')?.focus();
@@ -256,7 +257,7 @@ export default function OrderItemForm({
                         value={formItem.waktu}
                         onChange={handleFormChange}
                     />
-                ) : (isSublim && isBahan) ? (
+                ) : (isSublim && isBahan && !isBahanM2) ? (
                     <Input
                         labelPosition="left"
                         labelWidth={110}
