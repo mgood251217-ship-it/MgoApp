@@ -85,10 +85,6 @@
     border-radius: var(--radius);
 }
 
-.table-responsive .table {
-    min-width: 600px;
-}
-
 @media (max-width: 768px) {
     .table thead th {
         top: -12px;
