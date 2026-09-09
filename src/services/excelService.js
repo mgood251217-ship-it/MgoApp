@@ -40,7 +40,13 @@ export const exportMeteranExcel = async ({
 }) => {
     if (!dataState) return;
 
-    const formattedCategory = category
+    const categoryLabelMap = {
+        meter_jersey_finishing_jersey: "Jersey + Finishing Jersey",
+        meter_akrilik_merchandise_akrilik: "Akrilik + Merchandise Akrilik",
+        meter_laser_merchandise: "Laser A3 + Merchandise"
+    };
+
+    const formattedCategory = categoryLabelMap[category] || category
         .replace("meter_", "")
         .split("_")
         .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -116,7 +122,77 @@ export const exportMeteranExcel = async ({
         currentRow++;
     };
 
-    if (dataState.meteran !== undefined || dataState.kiloan !== undefined) {
+    const exportGroupedSection = (title, source) => {
+        if (!source || typeof source !== 'object') return;
+
+        if (source.product_data && Array.isArray(source.product_data) && source.product_data[0]?.rows !== undefined) {
+            const totalKey = Object.keys(source).find(key => key.startsWith("total_all_m2"));
+            const totalAllM2 = totalKey ? source[totalKey] : 0;
+
+            sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+            sheet.getCell(`A${currentRow}`).value = title;
+            sheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+            sheet.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+            currentRow += 2;
+
+            if (totalAllM2 !== undefined && totalAllM2 !== null) {
+                sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+                sheet.getCell(`A${currentRow}`).value = `Total Keseluruhan Penggunaan: ${totalAllM2} M²`;
+                sheet.getCell(`A${currentRow}`).font = { bold: true };
+                currentRow += 2;
+            }
+
+            source.product_data.forEach(p => {
+                if (!p.rows || p.rows.length === 0) return;
+                let no = 1;
+                let calculatedTotal = 0;
+                const rowsData = p.rows.map(r => {
+                    calculatedTotal += (r.m2 || 0);
+                    return [no++, r.p, r.l, r.qty, r.m2];
+                });
+                const finalTotal = source.total_m2_product?.[p.name] !== undefined ? source.total_m2_product[p.name] : calculatedTotal;
+                createTable(p.name, ['No', 'P', 'L', 'Qty', 'Total (M²)'], rowsData, 'Total M²', finalTotal);
+            });
+            return;
+        }
+
+        let normalizedData = [];
+        if (source.data && Array.isArray(source.data)) {
+            normalizedData = source.data;
+        } else if (source.product_data) {
+            normalizedData = Array.isArray(source.product_data) ? source.product_data : Object.keys(source.product_data).map(key => ({
+                name: key,
+                total_qty: source.product_data[key]
+            }));
+        } else if (Array.isArray(source)) {
+            normalizedData = source;
+        } else if (typeof source === "object") {
+            normalizedData = Object.keys(source).map(key => ({
+                name: key,
+                total_qty: source[key]
+            }));
+        }
+
+        const totalQty = source.total_all_qty ?? source.total_all ?? normalizedData.reduce((acc, curr) => acc + (curr.total_qty || 0), 0);
+        sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+        sheet.getCell(`A${currentRow}`).value = title;
+        sheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+        sheet.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+        currentRow += 2;
+
+        sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+        sheet.getCell(`A${currentRow}`).value = `Total Keseluruhan Qty: ${totalQty}`;
+        sheet.getCell(`A${currentRow}`).font = { bold: true };
+        currentRow += 2;
+
+        let no = 1;
+        const rowsData = normalizedData.map(item => [no++, item.name, '-', '-', item.total_qty]);
+        createTable(title, ['No', 'Nama Produk', '-', '-', 'Total Qty'], rowsData, 'Total Qty', totalQty);
+    };
+
+    if (dataState.grouped_sections && Array.isArray(dataState.grouped_sections)) {
+        dataState.grouped_sections.forEach((section) => exportGroupedSection(section.title, section.source));
+    } else if (dataState.meteran !== undefined || dataState.kiloan !== undefined) {
         if (dataState.meteran && dataState.meteran.length > 0) {
             dataState.meteran.forEach(p => {
                 if (!p.rows || p.rows.length === 0) return;
@@ -158,6 +234,42 @@ export const exportMeteranExcel = async ({
             });
             createTable(title, ['No', 'Panjang / Tipe', '-', 'Qty', 'Total'], rowsData, 'Total', total);
         });
+    } else if (category === "meter_akrilik_merchandise_akrilik") {
+        const hasM2 = Array.isArray(dataState.product_data) && dataState.product_data.some(p => Array.isArray(p.rows) && p.rows.length > 0);
+        const hasQty = Array.isArray(dataState.data) && dataState.data.length > 0;
+
+        if (hasM2) {
+            const totalKey = Object.keys(dataState).find(key => key.startsWith("total_all_m2"));
+            const totalAllM2 = totalKey ? dataState[totalKey] : 0;
+
+            sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+            sheet.getCell(`A${currentRow}`).value = `Total Keseluruhan Penggunaan: ${totalAllM2} M²`;
+            sheet.getCell(`A${currentRow}`).font = { bold: true };
+            currentRow += 2;
+
+            dataState.product_data.forEach(p => {
+                if (!p.rows || p.rows.length === 0) return;
+                let no = 1;
+                let calculatedTotal = 0;
+                const rowsData = p.rows.map(r => {
+                    calculatedTotal += (r.m2 || 0);
+                    return [no++, r.p, r.l, r.qty, r.m2];
+                });
+                const finalTotal = dataState.total_m2_product?.[p.name] !== undefined ? dataState.total_m2_product[p.name] : calculatedTotal;
+                createTable(p.name, ['No', 'P', 'L', 'Qty', 'Total (M²)'], rowsData, 'Total M²', finalTotal);
+            });
+        }
+
+        if (hasQty) {
+            sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+            sheet.getCell(`A${currentRow}`).value = `Merchandise Akrilik`;
+            sheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+            sheet.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+            currentRow++;
+
+            const qtyRows = dataState.data.map((item, index) => [index + 1, item.name, '-', '-', item.total_qty]);
+            createTable('Merchandise Akrilik', ['No', 'Nama Produk', '-', '-', 'Total Qty'], qtyRows, 'Total Qty', dataState.data.reduce((sum, item) => sum + Number(item.total_qty || 0), 0));
+        }
     } else if (dataState.product_data && Array.isArray(dataState.product_data) && dataState.product_data[0]?.rows !== undefined) {
         const totalKey = Object.keys(dataState).find(key => key.startsWith("total_all_m2"));
         const totalAllM2 = totalKey ? dataState[totalKey] : 0;
@@ -216,7 +328,8 @@ export const exportMeteranExcel = async ({
         { key: 'col5', width: 15 }
     ];
 
-    const fileName = `Laporan_Meteran_${formattedCategory}_${startDate}_sd_${endDate}.xlsx`;
+    const safeCategoryName = formattedCategory.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+    const fileName = `Laporan_Meteran_${safeCategoryName}_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
     await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };

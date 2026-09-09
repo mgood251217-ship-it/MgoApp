@@ -99,10 +99,8 @@ export default function Order() {
     const loadOrderData = useCallback(async () => {
         try {
             const res = await getCachedOrderDetail(order_id, (fresh) => {
-                // Data refresh di background: update datanya saja, tanpa auto-focus
                 applyOrderData(fresh, { autoFocus: false });
             });
-            // Load awal: boleh auto-focus kalau item kosong
             applyOrderData(res, { autoFocus: true });
         } catch (err) {}
     }, [order_id]);
@@ -202,7 +200,7 @@ export default function Order() {
 
             const res = await api.post("", payload, { params: { action: endpointAction } });
             
-            if (res.data && res.data.success === false) {
+            if (!res.data?.success) {
                 setAlertConfig({ show: true, type: "error", message: res.data.message || "Gagal menyimpan item." });
             } else {
                 setInitialFormItem({

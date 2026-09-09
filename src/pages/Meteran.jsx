@@ -19,23 +19,132 @@ export default function Meteran() {
     
     const [dataState, setDataState] = useState(null);
 
+    const mergeQtyResult = (responses) => {
+        const merged = {};
+        let totalAllQty = 0;
+
+        responses.forEach((payload) => {
+            const source = payload?.product_data ?? payload?.data ?? payload ?? {};
+
+            if (Array.isArray(source)) {
+                source.forEach((item) => {
+                    const name = item?.name ?? "Unnamed";
+                    const qty = Number(item?.total_qty ?? 0);
+                    merged[name] = (merged[name] || 0) + qty;
+                });
+            } else if (source && typeof source === "object") {
+                Object.entries(source).forEach(([name, value]) => {
+                    if (name === "product_data" || name === "data" || name === "total_all_qty" || name === "total_all" || name === "message" || name === "success") return;
+                    merged[name] = (merged[name] || 0) + Number(value || 0);
+                });
+            }
+
+            totalAllQty += Number(
+                payload?.total_all_qty ??
+                payload?.total_all ??
+                (Array.isArray(payload?.product_data) ? payload.product_data.reduce((sum, item) => sum + Number(item?.total_qty || 0), 0) : 0) ??
+                (Array.isArray(payload?.data) ? payload.data.reduce((sum, item) => sum + Number(item?.total_qty || 0), 0) : 0) ??
+                0
+            );
+        });
+
+        return {
+            product_data: Object.entries(merged).map(([name, total_qty]) => ({ name, total_qty })),
+            total_all_qty: totalAllQty
+        };
+    };
+
+    const mergeM2Result = (responses) => {
+        const merged = {};
+        const totalM2Product = {};
+        let totalAllM2 = 0;
+        const mergedQty = {};
+
+        responses.forEach((payload) => {
+            const source = payload?.product_data ?? payload?.data ?? payload ?? [];
+            const productData = Array.isArray(source) ? source : [];
+
+            productData.forEach((product) => {
+                const name = product?.name ?? "Unnamed";
+
+                if (Array.isArray(product?.rows) && product.rows.length > 0) {
+                    if (!merged[name]) {
+                        merged[name] = { name, rows: [] };
+                        totalM2Product[name] = 0;
+                    }
+
+                    product.rows.forEach((row) => {
+                        merged[name].rows.push({ ...row });
+                        totalM2Product[name] += Number(row?.m2 || 0);
+                        totalAllM2 += Number(row?.m2 || 0);
+                    });
+                } else if (typeof product?.total_qty !== "undefined") {
+                    mergedQty[name] = (mergedQty[name] || 0) + Number(product.total_qty || 0);
+                }
+            });
+        });
+
+        return {
+            product_data: Object.values(merged),
+            data: Object.entries(mergedQty).map(([name, total_qty]) => ({ name, total_qty })),
+            total_all_m2: totalAllM2,
+            total_m2_product: totalM2Product,
+            max_rows: Math.max(...Object.values(merged).map((p) => p.rows.length), 0)
+        };
+    };
+
     const categoryOptions = useMemo(() => [
         { value: "meter_outdoor", label: "Outdoor" },
         { value: "meter_indoor", label: "Indoor" },
-        { value: "meter_jersey", label: "Jersey" },
-        { value: "meter_akrilik", label: "Akrilik" },
-        { value: "meter_laser", label: "Laser A3" },
-        { value: "meter_merchandise", label: "Merchandise" },
+        { value: "meter_jersey_finishing_jersey", label: "Jersey + Finishing Jersey" },
+        { value: "meter_akrilik_merchandise_akrilik", label: "Akrilik + Merchandise Akrilik" },
+        { value: "meter_laser_merchandise", label: "Laser A3 + Merchandise" },
         { value: "meter_sublim", label: "Sublim" },
-        { value: "meter_mercendise_akrilik", label: "Merchandise Akrilik" },
         { value: "meter_dtf", label: "DTF" },
         { value: "meter_cetakan", label: "Cetakan" },
-        { value: "meter_bahan_sublim", label: "Bahan Sublim" },
-        { value: "meter_finishing_jersey", label: "Finishing Jersey" }
+        { value: "meter_bahan_sublim", label: "Bahan Sublim" }
     ], []);
 
     const loadData = async () => {
         try {
+            const groupedActions = {
+                meter_jersey_finishing_jersey: ["meter_jersey", "meter_finishing_jersey"],
+                meter_akrilik_merchandise_akrilik: ["meter_akrilik", "meter_mercendise_akrilik"],
+                meter_laser_merchandise: ["meter_laser", "meter_merchandise"]
+            };
+
+            if (groupedActions[category]) {
+                const responses = await Promise.all(
+                    groupedActions[category].map((actionName) =>
+                        api.get("", {
+                            params: {
+                                action: actionName,
+                                start_date: startDate,
+                                end_date: endDate
+                            }
+                        })
+                    )
+                );
+
+                const groupedSections = [
+                    { title: "Jersey", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} },
+                    { title: "Finishing Jersey", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} }
+                ];
+
+                if (category === "meter_akrilik_merchandise_akrilik") {
+                    groupedSections[0] = { title: "Akrilik", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} };
+                    groupedSections[1] = { title: "Merchandise Akrilik", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} };
+                }
+
+                if (category === "meter_laser_merchandise") {
+                    groupedSections[0] = { title: "Laser A3", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} };
+                    groupedSections[1] = { title: "Merchandise", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} };
+                }
+
+                setDataState({ grouped_sections: groupedSections });
+                return;
+            }
+
             const res = await api.get("", {
                 params: {
                     action: category,
@@ -66,11 +175,11 @@ export default function Meteran() {
         });
     };
 
-    const renderM2Layout = () => {
-        if (!dataState || !dataState.product_data) return null;
+    const renderM2Section = (title, payload) => {
+        if (!payload || !payload.product_data) return null;
 
-        const totalKey = Object.keys(dataState).find(key => key.startsWith("total_all_m2"));
-        const totalAllM2 = totalKey ? dataState[totalKey] : 0;
+        const totalKey = Object.keys(payload).find(key => key.startsWith("total_all_m2"));
+        const totalAllM2 = totalKey ? payload[totalKey] : 0;
 
         const columns = [
             { key: "p", title: "P" },
@@ -80,8 +189,11 @@ export default function Meteran() {
         ];
 
         return (
-            <>
-                <div style={{ marginTop: 24, marginBottom: 24 }}>
+            <div key={title}>
+                {title && (
+                    <h3 style={{ marginTop: 24, marginBottom: 16 }}>{title}</h3>
+                )}
+                <div style={{ marginBottom: 24 }}>
                     <div style={{ background: "var(--warning)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--warning-hover)", display: "inline-block" }}>
                         <h3 style={{ margin: 0, color: "var(--text)" }}>
                             Total Keseluruhan: {rapihkanAngka(totalAllM2)} M²
@@ -90,7 +202,7 @@ export default function Meteran() {
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
-                    {Array.isArray(dataState.product_data) && dataState.product_data.map((product, index) => {
+                    {Array.isArray(payload.product_data) && payload.product_data.map((product, index) => {
                         if (!product.rows || product.rows.length === 0) return null;
 
                         const formattedRows = product.rows.map((rowItem, idx) => ({
@@ -101,19 +213,19 @@ export default function Meteran() {
                             m2: rapihkanAngka(rowItem.m2)
                         }));
 
-                        const totalM2Value = dataState.total_m2_product?.[product.name] !== undefined 
-                            ? dataState.total_m2_product[product.name] 
+                        const totalM2Value = payload.total_m2_product?.[product.name] !== undefined 
+                            ? payload.total_m2_product[product.name] 
                             : product.rows.reduce((sum, r) => sum + (r.m2 || 0), 0);
 
                         return (
-                            <div key={index} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                            <div key={`${title}-${index}`} style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                                 <div style={{ padding: "12px 16px", background: "var(--background)", borderBottom: "1px solid var(--border)" }}>
                                     <h4 style={{ margin: 0, fontSize: "14px" }}>{product.name}</h4>
                                 </div>
                                 
                                 <div style={{ padding: "0", flexGrow: 1 }}>
                                     <Table
-                                        id={`table-m2-${product.name}`}
+                                        id={`table-m2-${title}-${product.name}`}
                                         showNumber={true}
                                         size="sm"
                                         rowKey="id"
@@ -132,7 +244,7 @@ export default function Meteran() {
                         );
                     })}
                 </div>
-            </>
+            </div>
         );
     };
 
@@ -229,28 +341,28 @@ export default function Meteran() {
         );
     };
 
-    const renderQtyLayout = () => {
-        if (!dataState) return null;
+    const renderQtySection = (title, payload) => {
+        if (!payload) return null;
 
         let normalizedData = [];
         
-        if (dataState.data && Array.isArray(dataState.data)) {
-            normalizedData = dataState.data;
-        } else if (dataState.product_data) {
-            normalizedData = Array.isArray(dataState.product_data) ? dataState.product_data : Object.keys(dataState.product_data).map(key => ({
+        if (payload.data && Array.isArray(payload.data)) {
+            normalizedData = payload.data;
+        } else if (payload.product_data) {
+            normalizedData = Array.isArray(payload.product_data) ? payload.product_data : Object.keys(payload.product_data).map(key => ({
                 name: key,
-                total_qty: dataState.product_data[key]
+                total_qty: payload.product_data[key]
             }));
-        } else if (Array.isArray(dataState)) {
-            normalizedData = dataState;
-        } else if (typeof dataState === "object") {
-            normalizedData = Object.keys(dataState).map(key => ({
+        } else if (Array.isArray(payload)) {
+            normalizedData = payload;
+        } else if (typeof payload === "object") {
+            normalizedData = Object.keys(payload).map(key => ({
                 name: key,
-                total_qty: dataState[key]
+                total_qty: payload[key]
             }));
         }
 
-        const totalQty = dataState.total_all_qty ?? dataState.total_all ?? normalizedData.reduce((acc, curr) => acc + (curr.total_qty || 0), 0);
+        const totalQty = payload.total_all_qty ?? payload.total_all ?? normalizedData.reduce((acc, curr) => acc + (curr.total_qty || 0), 0);
 
         const columns = [
             { key: "name", title: "Nama Produk" },
@@ -264,8 +376,11 @@ export default function Meteran() {
         }));
 
         return (
-            <>
-                <div style={{ marginTop: 24, marginBottom: 24 }}>
+            <div key={title}>
+                {title && (
+                    <h3 style={{ marginTop: 24, marginBottom: 16 }}>{title}</h3>
+                )}
+                <div style={{ marginBottom: 24 }}>
                     <div style={{ background: "var(--success)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--success-hover)", display: "inline-block" }}>
                         <h3 style={{ margin: 0, color: "var(--text)" }}>
                             Total Keseluruhan Qty: {totalQty}
@@ -275,7 +390,7 @@ export default function Meteran() {
 
                 <div style={{ background: "var(--background)", borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden" }}>
                     <Table
-                        id="table-qty"
+                        id={`table-qty-${title}`}
                         showNumber={true}
                         size="sm"
                         rowKey="id"
@@ -284,7 +399,7 @@ export default function Meteran() {
                         rows={rows}
                     />
                 </div>
-            </>
+            </div>
         );
     };
 
@@ -361,6 +476,23 @@ export default function Meteran() {
     const renderContent = () => {
         if (!dataState) return null;
 
+        if (dataState.grouped_sections && Array.isArray(dataState.grouped_sections)) {
+            return (
+                <div style={{ display: "flex", gap: "32px", alignItems: "flex-start", flexWrap: "wrap" }}>
+                    {dataState.grouped_sections.map((section) => {
+                        const source = section?.source;
+                        return (
+                            <div key={section?.title || Math.random()} style={{ flex: "1 1 420px", minWidth: "300px" }}>
+                                {source?.product_data && Array.isArray(source.product_data) && source.product_data[0]?.rows !== undefined
+                                    ? renderM2Section(section.title, source)
+                                    : renderQtySection(section.title, source)}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
         if (dataState.meteran !== undefined || dataState.kiloan !== undefined) {
             return renderBahanSublimLayout();
         }
@@ -371,10 +503,10 @@ export default function Meteran() {
 
         const hasTotalM2 = Object.keys(dataState).some(key => key.startsWith("total_all_m2"));
         if (dataState.product_data && Array.isArray(dataState.product_data) && dataState.product_data[0]?.rows !== undefined && hasTotalM2) {
-            return renderM2Layout();
+            return renderM2Section(null, dataState);
         }
 
-        return renderQtyLayout();
+        return renderQtySection(null, dataState);
     };
 
     return (
