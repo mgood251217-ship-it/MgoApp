@@ -281,10 +281,6 @@ export default function Navbar() {
                     >
                         <FiHelpCircle />
                     </button>
-                    <button className="navbar-button">
-                        <FiBell />
-                        <span className="navbar-badge">3</span>
-                    </button>
                     <button className="navbar-logout" onClick={handleLogout}>
                         <FiLogOut />
                         <span>Logout</span>
