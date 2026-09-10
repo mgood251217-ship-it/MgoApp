@@ -49,6 +49,296 @@ const OTHER_COLORS = [
     { key: "theme_active", label: "Warna Aktif (Active)" },
 ];
 
+const ALL_COLOR_KEYS = [
+    ...LAYOUT_COLORS,
+    ...ACCENT_COLORS,
+    ...TEXT_COLORS,
+    ...OTHER_COLORS,
+].map(({ key }) => key);
+
+const COLOR_PRESETS = [
+    {
+        name: "Aurora Night",
+        preview: "linear-gradient(135deg, #0f172a 0%, #1d4ed8 40%, #8b5cf6 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #0f172a 0%, #1e293b 45%, #111827 100%)",
+            theme_navbar: "linear-gradient(to right top, #1e293b 0%, #0f172a 100%)",
+            theme_background: "linear-gradient(to right top, #020817 0%, #0f172a 45%, #111827 100%)",
+            theme_content: "linear-gradient(to right top, #111827 0%, #1f2937 100%)",
+            theme_footer: "linear-gradient(to right top, #111827 0%, #0f172a 100%)",
+            theme_primary: "#60a5fa",
+            theme_primary_hover: "#3b82f6",
+            theme_secondary: "#a78bfa",
+            theme_secondary_hover: "#8b5cf6",
+            theme_success: "#34d399",
+            theme_success_hover: "#10b981",
+            theme_info: "#38bdf8",
+            theme_info_hover: "#0ea5e9",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#f87171",
+            theme_danger_hover: "#ef4444",
+            theme_text: "#e2e8f0",
+            theme_text_secondary: "#cbd5e1",
+            theme_text_muted: "#94a3b8",
+            theme_border: "#334155",
+            theme_active: "#60a5fa"
+        }
+    },
+    {
+        name: "Ocean Pulse",
+        preview: "linear-gradient(135deg, #0ea5e9 0%, #14b8a6 50%, #22d3ee 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #082f49 0%, #0f172a 100%)",
+            theme_navbar: "linear-gradient(to right top, #0f766e 0%, #0ea5e9 100%)",
+            theme_background: "linear-gradient(to right top, #f7fff6 0%, #ebfcf7 25%, #e1f8fa 50%, #ddf3fe 75%, #e1ecff 100%)",
+            theme_content: "linear-gradient(to right top, #ffffff 0%, #f0fdfa 100%)",
+            theme_footer: "linear-gradient(to right top, #dbeafe 0%, #cffafe 100%)",
+            theme_primary: "#0ea5e9",
+            theme_primary_hover: "#0284c7",
+            theme_secondary: "#22d3ee",
+            theme_secondary_hover: "#06b6d4",
+            theme_success: "#14b8a6",
+            theme_success_hover: "#0f766e",
+            theme_info: "#3b82f6",
+            theme_info_hover: "#1d4ed8",
+            theme_warning: "#f59e0b",
+            theme_warning_hover: "#d97706",
+            theme_danger: "#ef4444",
+            theme_danger_hover: "#dc2626",
+            theme_text: "#0f172a",
+            theme_text_secondary: "#334155",
+            theme_text_muted: "#64748b",
+            theme_border: "#bae6fd",
+            theme_active: "#0ea5e9"
+        }
+    },
+    {
+        name: "Sunset Glow",
+        preview: "linear-gradient(135deg, #fb7185 0%, #f97316 45%, #fbbf24 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #431407 0%, #7c2d12 100%)",
+            theme_navbar: "linear-gradient(to right top, #7c2d12 0%, #b45309 100%)",
+            theme_background: "linear-gradient(to right top, #fff7ed 0%, #fff1f2 28%, #fde68a 60%, #fed7aa 100%)",
+            theme_content: "linear-gradient(to right top, #fffaf7 0%, #fff1f2 100%)",
+            theme_footer: "linear-gradient(to right top, #fed7aa 0%, #fbcfe8 100%)",
+            theme_primary: "#f97316",
+            theme_primary_hover: "#ea580c",
+            theme_secondary: "#fb7185",
+            theme_secondary_hover: "#f43f5e",
+            theme_success: "#34d399",
+            theme_success_hover: "#10b981",
+            theme_info: "#f59e0b",
+            theme_info_hover: "#d97706",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#ef4444",
+            theme_danger_hover: "#dc2626",
+            theme_text: "#1f2937",
+            theme_text_secondary: "#4b5563",
+            theme_text_muted: "#6b7280",
+            theme_border: "#fdba74",
+            theme_active: "#f97316"
+        }
+    },
+    {
+        name: "Emerald Luxe",
+        preview: "linear-gradient(135deg, #10b981 0%, #14b8a6 45%, #22d3ee 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #022c22 0%, #064e3b 100%)",
+            theme_navbar: "linear-gradient(to right top, #064e3b 0%, #0f766e 100%)",
+            theme_background: "linear-gradient(to right top, #ecfdf5 0%, #d1fae5 35%, #ccfbf1 65%, #ddf3fe 100%)",
+            theme_content: "linear-gradient(to right top, #f0fdf4 0%, #ecfeff 100%)",
+            theme_footer: "linear-gradient(to right top, #bbf7d0 0%, #a7f3d0 100%)",
+            theme_primary: "#10b981",
+            theme_primary_hover: "#059669",
+            theme_secondary: "#34d399",
+            theme_secondary_hover: "#10b981",
+            theme_success: "#22c55e",
+            theme_success_hover: "#16a34a",
+            theme_info: "#14b8a6",
+            theme_info_hover: "#0f766e",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#f87171",
+            theme_danger_hover: "#ef4444",
+            theme_text: "#0f172a",
+            theme_text_secondary: "#1f2937",
+            theme_text_muted: "#64748b",
+            theme_border: "#86efac",
+            theme_active: "#10b981"
+        }
+    },
+    {
+        name: "Violet Haze",
+        preview: "linear-gradient(135deg, #8b5cf6 0%, #c084fc 45%, #ec4899 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #1f1634 0%, #312e81 100%)",
+            theme_navbar: "linear-gradient(to right top, #4c1d95 0%, #7c3aed 100%)",
+            theme_background: "linear-gradient(to right top, #f5f3ff 0%, #fdf2f8 35%, #eef2ff 70%, #e0e7ff 100%)",
+            theme_content: "linear-gradient(to right top, #ffffff 0%, #f5f3ff 100%)",
+            theme_footer: "linear-gradient(to right top, #ddd6fe 0%, #fbcfe8 100%)",
+            theme_primary: "#8b5cf6",
+            theme_primary_hover: "#7c3aed",
+            theme_secondary: "#c084fc",
+            theme_secondary_hover: "#a855f7",
+            theme_success: "#34d399",
+            theme_success_hover: "#10b981",
+            theme_info: "#60a5fa",
+            theme_info_hover: "#3b82f6",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#f87171",
+            theme_danger_hover: "#ef4444",
+            theme_text: "#1e1b4b",
+            theme_text_secondary: "#4338ca",
+            theme_text_muted: "#6d28d9",
+            theme_border: "#ddd6fe",
+            theme_active: "#8b5cf6"
+        }
+    },
+    {
+        name: "Slate Calm",
+        preview: "linear-gradient(135deg, #334155 0%, #64748b 45%, #cbd5e1 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #1f2937 0%, #334155 100%)",
+            theme_navbar: "linear-gradient(to right top, #374151 0%, #475569 100%)",
+            theme_background: "linear-gradient(to right top, #f8fafc 0%, #e2e8f0 52%, #cbd5e1 100%)",
+            theme_content: "linear-gradient(to right top, #ffffff 0%, #f8fafc 100%)",
+            theme_footer: "linear-gradient(to right top, #e2e8f0 0%, #cbd5e1 100%)",
+            theme_primary: "#475569",
+            theme_primary_hover: "#334155",
+            theme_secondary: "#94a3b8",
+            theme_secondary_hover: "#64748b",
+            theme_success: "#22c55e",
+            theme_success_hover: "#16a34a",
+            theme_info: "#3b82f6",
+            theme_info_hover: "#1d4ed8",
+            theme_warning: "#f59e0b",
+            theme_warning_hover: "#d97706",
+            theme_danger: "#ef4444",
+            theme_danger_hover: "#dc2626",
+            theme_text: "#0f172a",
+            theme_text_secondary: "#475569",
+            theme_text_muted: "#64748b",
+            theme_border: "#cbd5e1",
+            theme_active: "#475569"
+        }
+    },
+    {
+        name: "Rose Quartz",
+        preview: "linear-gradient(135deg, #f472b6 0%, #fb7185 40%, #f9a8d4 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #3f1d2e 0%, #7a1c4d 100%)",
+            theme_navbar: "linear-gradient(to right top, #9d174d 0%, #be185d 100%)",
+            theme_background: "linear-gradient(to right top, #fff1f2 0%, #fdf2f8 40%, #fce7f3 72%, #f5d0fe 100%)",
+            theme_content: "linear-gradient(to right top, #ffffff 0%, #fff1f2 100%)",
+            theme_footer: "linear-gradient(to right top, #fbcfe8 0%, #f9a8d4 100%)",
+            theme_primary: "#ec4899",
+            theme_primary_hover: "#db2777",
+            theme_secondary: "#fb7185",
+            theme_secondary_hover: "#f43f5e",
+            theme_success: "#34d399",
+            theme_success_hover: "#10b981",
+            theme_info: "#60a5fa",
+            theme_info_hover: "#3b82f6",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#ef4444",
+            theme_danger_hover: "#dc2626",
+            theme_text: "#4c1d95",
+            theme_text_secondary: "#7c2d12",
+            theme_text_muted: "#9d174d",
+            theme_border: "#f9a8d4",
+            theme_active: "#ec4899"
+        }
+    },
+    {
+        name: "Forest Drift",
+        preview: "linear-gradient(135deg, #15803d 0%, #22c55e 40%, #84cc16 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #052e16 0%, #14532d 100%)",
+            theme_navbar: "linear-gradient(to right top, #166534 0%, #16a34a 100%)",
+            theme_background: "linear-gradient(to right top, #f0fdf4 0%, #dcfce7 35%, #bbf7d0 70%, #d9f99d 100%)",
+            theme_content: "linear-gradient(to right top, #ffffff 0%, #f0fdf4 100%)",
+            theme_footer: "linear-gradient(to right top, #bbf7d0 0%, #86efac 100%)",
+            theme_primary: "#16a34a",
+            theme_primary_hover: "#15803d",
+            theme_secondary: "#22c55e",
+            theme_secondary_hover: "#16a34a",
+            theme_success: "#4ade80",
+            theme_success_hover: "#22c55e",
+            theme_info: "#38bdf8",
+            theme_info_hover: "#0ea5e9",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#f87171",
+            theme_danger_hover: "#ef4444",
+            theme_text: "#14532d",
+            theme_text_secondary: "#166534",
+            theme_text_muted: "#4d7c0f",
+            theme_border: "#86efac",
+            theme_active: "#16a34a"
+        }
+    },
+    {
+        name: "Signal Tech",
+        preview: "linear-gradient(135deg, #111827 0%, #2563eb 40%, #06b6d4 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #020617 0%, #0f172a 100%)",
+            theme_navbar: "linear-gradient(to right top, #0f172a 0%, #2563eb 100%)",
+            theme_background: "linear-gradient(to right top, #f8fafc 0%, #e0f2fe 45%, #dbeafe 100%)",
+            theme_content: "linear-gradient(to right top, #ffffff 0%, #eff6ff 100%)",
+            theme_footer: "linear-gradient(to right top, #dbeafe 0%, #cffafe 100%)",
+            theme_primary: "#2563eb",
+            theme_primary_hover: "#1d4ed8",
+            theme_secondary: "#06b6d4",
+            theme_secondary_hover: "#0891b2",
+            theme_success: "#22c55e",
+            theme_success_hover: "#16a34a",
+            theme_info: "#38bdf8",
+            theme_info_hover: "#0ea5e9",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#f87171",
+            theme_danger_hover: "#ef4444",
+            theme_text: "#0f172a",
+            theme_text_secondary: "#334155",
+            theme_text_muted: "#64748b",
+            theme_border: "#bfdbfe",
+            theme_active: "#2563eb"
+        }
+    },
+    {
+        name: "Lunar Mist",
+        preview: "linear-gradient(135deg, #1e293b 0%, #6d28d9 42%, #a78bfa 100%)",
+        colors: {
+            theme_sidebar: "linear-gradient(to right top, #0f172a 0%, #1e293b 100%)",
+            theme_navbar: "linear-gradient(to right top, #312e81 0%, #7c3aed 100%)",
+            theme_background: "linear-gradient(to right top, #f8fafc 0%, #eef2ff 52%, #e0e7ff 100%)",
+            theme_content: "linear-gradient(to right top, #ffffff 0%, #f8fafc 100%)",
+            theme_footer: "linear-gradient(to right top, #e0e7ff 0%, #c4b5fd 100%)",
+            theme_primary: "#7c3aed",
+            theme_primary_hover: "#6d28d9",
+            theme_secondary: "#a78bfa",
+            theme_secondary_hover: "#8b5cf6",
+            theme_success: "#34d399",
+            theme_success_hover: "#10b981",
+            theme_info: "#60a5fa",
+            theme_info_hover: "#3b82f6",
+            theme_warning: "#fbbf24",
+            theme_warning_hover: "#f59e0b",
+            theme_danger: "#f87171",
+            theme_danger_hover: "#ef4444",
+            theme_text: "#1f2937",
+            theme_text_secondary: "#4b5563",
+            theme_text_muted: "#6b7280",
+            theme_border: "#c4b5fd",
+            theme_active: "#7c3aed"
+        }
+    }
+];
+
 const THEME_MAPPING = {
     theme_sidebar: '--sidebar',
     theme_navbar: '--navbar',
@@ -148,6 +438,22 @@ export default function Settings() {
 
     const handleResetField = (key) => {
         setSettings(prev => ({ ...prev, [key]: "" }));
+    };
+
+    const handleApplyPreset = (preset) => {
+        setSettings(prev => ({ ...prev, ...preset.colors }));
+        setAlertConfig({ show: true, type: "success", message: `Tema "${preset.name}" berhasil diterapkan.` });
+    };
+
+    const handleResetAllColors = () => {
+        setSettings(prev => {
+            const next = { ...prev };
+            ALL_COLOR_KEYS.forEach(key => {
+                delete next[key];
+            });
+            return next;
+        });
+        setAlertConfig({ show: true, type: "success", message: "Semua warna berhasil direset ke bawaan." });
     };
 
     const handleRestart = async () => {
@@ -333,13 +639,58 @@ export default function Settings() {
         ];
 
         return (
-            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
+            <div style={{
+                background: "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
+                padding: "28px",
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--border)",
+                gridColumn: "1 / -1",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)"
+            }}>
                 <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
                     <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Warna Aplikasi</h3>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "12px" }}>
-                    {allColorFields.map(({ key, label }) => renderColorItem(key, label))}
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                            {COLOR_PRESETS.map((preset) => (
+                                <button
+                                    key={preset.name}
+                                    type="button"
+                                    onClick={() => handleApplyPreset(preset)}
+                                    style={{
+                                        border: "1px solid rgba(255,255,255,0.18)",
+                                        borderRadius: "var(--radius)",
+                                        background: preset.preview,
+                                        color: "#fff",
+                                        padding: "10px 14px",
+                                        fontWeight: 700,
+                                        fontSize: "12px",
+                                        cursor: "pointer",
+                                        boxShadow: "0 8px 20px rgba(15, 23, 42, 0.18)",
+                                        minWidth: "130px",
+                                        textShadow: "0 1px 3px rgba(0,0,0,0.35)"
+                                    }}
+                                >
+                                    {preset.name}
+                                </button>
+                            ))}
+                        </div>
+
+                        <Button
+                            type="button"
+                            variant="danger"
+                            icon={<Icon name="refresh" />}
+                            onClick={handleResetAllColors}
+                        >
+                            Reset All Color
+                        </Button>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "12px" }}>
+                        {allColorFields.map(({ key, label }) => renderColorItem(key, label))}
+                    </div>
                 </div>
             </div>
         );
