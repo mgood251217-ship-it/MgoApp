@@ -106,6 +106,23 @@ export default function Orders() {
         } catch (err) {}
     }, [search, startDate, endDate, formatTableData]);
 
+    const handleRefresh = useCallback(async () => {
+        try {
+            await loadData();
+            setAlertConfig({
+                show: true,
+                type: "success",
+                message: "Data berhasil diperbarui."
+            });
+        } catch (err) {
+            setAlertConfig({
+                show: true,
+                type: "error",
+                message: "Gagal memperbarui data."
+            });
+        }
+    }, [loadData]);
+
     const getOperators = useCallback(async () => {
         try {
             const res = await getCachedInitials((fresh) => {
@@ -460,7 +477,7 @@ export default function Orders() {
                             variant="secondary"
                             size="lg"
                             icon={<Icon name="refresh" />}
-                            onClick={loadData}
+                            onClick={handleRefresh}
                         />
                         {!isProductionRole && (
                             <Button 
