@@ -121,8 +121,8 @@
 .navbar-logout {
     height: 38px;
     border: none;
-    background: var(--danger);
-    color: #ffffff;
+    background: var(--background);
+    color: var(--navbar);
     border-radius: var(--radius);
     padding: 0 14px;
     display: flex;
@@ -135,7 +135,7 @@
 }
 
 .navbar-logout:hover {
-    background: var(--danger-hover);
+    background: var(--bg-content);
 }
 
 .navbar-button:disabled {
