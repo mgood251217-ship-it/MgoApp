@@ -250,71 +250,72 @@ export default function Settings() {
         };
 
         return (
-            <div key={key} style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center", 
-                flexWrap: "wrap",
-                gap: "12px",
-                padding: "16px 20px", 
-                backgroundColor: "var(--background)", 
-                border: "1px solid var(--border)", 
-                borderRadius: "var(--radius)" 
+            <div key={key} style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                padding: "14px 16px",
+                backgroundColor: "var(--bg-body)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                minHeight: "150px"
             }}>
-                <label style={{ fontWeight: "600", fontSize: 14, color: "var(--text)" }}>
+                <label style={{ fontWeight: "600", fontSize: 13, color: "var(--text)", lineHeight: 1.4 }}>
                     {label}
                 </label>
-                
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
                     <select
                         value={type}
                         onChange={e => updateColor(e.target.value, c1, c2, angle)}
-                        style={{ padding: "6px", borderRadius: "var(--radius)", background: "var(--bg-content)", color: "var(--text)", border: "1px solid var(--border)", outline: "none" }}
+                        style={{ padding: "8px 10px", borderRadius: "var(--radius)", background: "var(--bg-content)", color: "var(--text)", border: "1px solid var(--border)", outline: "none", width: "100%" }}
                     >
                         <option value="solid">Solid</option>
                         <option value="gradient">Gradient</option>
                     </select>
 
                     {type === 'gradient' && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "var(--bg-content)", padding: "6px 8px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <input
                                 type="number"
                                 value={angle}
                                 onChange={e => updateColor('gradient', c1, c2, e.target.value)}
-                                style={{ width: "60px", padding: "6px", borderRadius: "var(--radius)", background: "var(--bg-content)", color: "var(--text)", border: "1px solid var(--border)", outline: "none" }}
+                                style={{ width: "60px", padding: "6px", borderRadius: "var(--radius)", background: "transparent", color: "var(--text)", border: "none", outline: "none" }}
                                 title="Sudut rotasi (derajat)"
                             />
                             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>deg</span>
                         </div>
                     )}
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "var(--bg-content)", padding: "4px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                        <input
-                            type="color"
-                            value={c1}
-                            onChange={e => updateColor(type, e.target.value, c2, angle)}
-                            style={{ width: "32px", height: "32px", padding: 0, border: "none", borderRadius: "var(--radius)", cursor: "pointer", background: "transparent" }}
-                            title="Warna 1"
-                        />
-                        {type === 'gradient' && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "var(--bg-content)", padding: "4px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <input
                                 type="color"
-                                value={c2}
-                                onChange={e => updateColor('gradient', c1, e.target.value, angle)}
+                                value={c1}
+                                onChange={e => updateColor(type, e.target.value, c2, angle)}
                                 style={{ width: "32px", height: "32px", padding: 0, border: "none", borderRadius: "var(--radius)", cursor: "pointer", background: "transparent" }}
-                                title="Warna 2"
+                                title="Warna 1"
                             />
-                        )}
+                            {type === 'gradient' && (
+                                <input
+                                    type="color"
+                                    value={c2}
+                                    onChange={e => updateColor('gradient', c1, e.target.value, angle)}
+                                    style={{ width: "32px", height: "32px", padding: 0, border: "none", borderRadius: "var(--radius)", cursor: "pointer", background: "transparent" }}
+                                    title="Warna 2"
+                                />
+                            )}
+                        </div>
+
+                        <div style={{ width: "38px", height: "38px", borderRadius: "var(--radius)", border: "1px solid var(--border)", background: rawVal, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)" }}></div>
                     </div>
-                    
-                    <div style={{ width: "40px", height: "40px", borderRadius: "var(--radius)", border: "1px solid var(--border)", background: rawVal }}></div>
 
                     <Button
                         type="button"
                         variant="danger"
                         icon={<Icon name="refresh" />}
                         onClick={() => handleResetField(key)}
-                        style={{ marginLeft: "8px" }}
+                        style={{ width: "100%" }}
                     >
                         Reset
                     </Button>
@@ -323,17 +324,26 @@ export default function Settings() {
         );
     };
 
-    const renderColorGroup = (title, fields) => (
-        <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-            <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
-                <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>{title}</h3>
-            </div>
+    const renderColorSettingsCard = () => {
+        const allColorFields = [
+            ...LAYOUT_COLORS,
+            ...ACCENT_COLORS,
+            ...TEXT_COLORS,
+            ...OTHER_COLORS,
+        ];
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {fields.map(({ key, label }) => renderColorItem(key, label))}
+        return (
+            <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
+                <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "24px" }}>
+                    <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Warna Aplikasi</h3>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "12px" }}>
+                    {allColorFields.map(({ key, label }) => renderColorItem(key, label))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
@@ -445,10 +455,7 @@ export default function Settings() {
                             </div>
                         </div>
 
-                        {renderColorGroup("Warna Layout & Latar", LAYOUT_COLORS)}
-                        {renderColorGroup("Warna Aksen & Status (Termasuk Hover)", ACCENT_COLORS)}
-                        {renderColorGroup("Warna Teks", TEXT_COLORS)}
-                        {renderColorGroup("Warna Elemen Lainnya", OTHER_COLORS)}
+                        {renderColorSettingsCard()}
                         
                     </div>
 
