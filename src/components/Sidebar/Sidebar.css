@@ -88,13 +88,12 @@
 
 .sidebar-item.active {
     background: var(--sidebar-active-bg, var(--active, rgba(255, 255, 255, 0.16)));
-    color: var(--sidebar-active-color, var(--text));
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    color: var(--sidebar-active-color, var(--primary));
 }
 
 .sidebar-item.active .sidebar-icon,
 .sidebar-item.active span {
-    color: var(--sidebar-active-color, var(--text));
+    color: var(--sidebar-active-color, var(--primary));
 }
 
 .sidebar-icon {
