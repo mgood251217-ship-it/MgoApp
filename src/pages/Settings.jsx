@@ -5,6 +5,7 @@ import Button from "../components/Button/Button";
 import Form from "../components/Form/Form";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
+import { applyTheme } from "../services/theme";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
@@ -388,6 +389,30 @@ export default function Settings() {
     const [saving, setSaving] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
     const fileInputRef = useRef(null);
+    const hasInitialSettingsLoaded = useRef(false);
+
+    const saveSettingsNow = useCallback(async (payload, showSuccess = false) => {
+        if (!window.electron || !window.electron.saveSettings) {
+            return false;
+        }
+
+        try {
+            const res = await window.electron.saveSettings(payload);
+            if (!res || !res.success) {
+                setAlertConfig({ show: true, type: "error", message: res?.message || "Gagal menyimpan pengaturan." });
+                return false;
+            }
+
+            if (showSuccess) {
+                setAlertConfig({ show: true, type: "success", message: "Pengaturan berhasil disimpan. Restart aplikasi untuk menerapkan perubahan." });
+            }
+
+            return true;
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: "Terjadi kesalahan saat menyimpan." });
+            return false;
+        }
+    }, []);
 
     const loadSettings = useCallback(async () => {
         setLoading(true);
@@ -404,7 +429,7 @@ export default function Settings() {
     useEffect(() => {
         const computedStyles = getComputedStyle(document.documentElement);
         const defaults = {};
-        
+
         Object.keys(THEME_MAPPING).forEach(key => {
             let val = computedStyles.getPropertyValue(THEME_MAPPING[key]).trim();
             if (val) {
@@ -417,10 +442,16 @@ export default function Settings() {
                 else defaults[key] = "#000000";
             }
         });
-        
+
         setDefaultColors(defaults);
         loadSettings();
     }, [loadSettings]);
+
+    useEffect(() => {
+        if (!loading) {
+            applyTheme(settings);
+        }
+    }, [settings, loading]);
 
     const handlePilihPath = async (key) => {
         try {
@@ -433,26 +464,31 @@ export default function Settings() {
     };
 
     const handleInputChange = (key, value) => {
-        setSettings(prev => ({ ...prev, [key]: value }));
+        const nextSettings = { ...settings, [key]: value };
+        setSettings(nextSettings);
+        applyTheme(nextSettings);
     };
 
     const handleResetField = (key) => {
-        setSettings(prev => ({ ...prev, [key]: "" }));
+        const nextSettings = { ...settings, [key]: "" };
+        setSettings(nextSettings);
+        applyTheme(nextSettings);
     };
 
     const handleApplyPreset = (preset) => {
-        setSettings(prev => ({ ...prev, ...preset.colors }));
+        const nextSettings = { ...settings, ...preset.colors };
+        setSettings(nextSettings);
+        applyTheme(nextSettings);
         setAlertConfig({ show: true, type: "success", message: `Tema "${preset.name}" berhasil diterapkan.` });
     };
 
     const handleResetAllColors = () => {
-        setSettings(prev => {
-            const next = { ...prev };
-            ALL_COLOR_KEYS.forEach(key => {
-                next[key] = "";
-            });
-            return next;
+        const next = { ...settings };
+        ALL_COLOR_KEYS.forEach(key => {
+            next[key] = "";
         });
+        setSettings(next);
+        applyTheme(next);
         setAlertConfig({ show: true, type: "success", message: "Semua warna berhasil direset ke bawaan." });
     };
 
@@ -514,19 +550,32 @@ export default function Settings() {
         e.preventDefault();
         setSaving(true);
         try {
-            const res = await window.electron.saveSettings(settings);
-            if (!res.success) {
-                setAlertConfig({ show: true, type: "error", message: res.message || "Gagal menyimpan pengaturan." });
-            } else {
-                setSettings(res.data);
-                setAlertConfig({ show: true, type: "success", message: "Pengaturan berhasil disimpan. Restart aplikasi untuk menerapkan perubahan." });
+            const saved = await saveSettingsNow(settings, true);
+            if (saved && window.electron && window.electron.getSettings) {
+                const data = await window.electron.getSettings();
+                if (data) {
+                    setSettings(data);
+                }
             }
-        } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Terjadi kesalahan saat menyimpan." });
         } finally {
             setSaving(false);
         }
     };
+
+    useEffect(() => {
+        if (loading) return;
+
+        if (!hasInitialSettingsLoaded.current) {
+            hasInitialSettingsLoaded.current = true;
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            saveSettingsNow(settings, false);
+        }, 450);
+
+        return () => clearTimeout(timer);
+    }, [settings, loading, saveSettingsNow]);
 
     const renderColorItem = (key, label) => {
         const rawVal = settings[key] || defaultColors[key] || "#000000";
