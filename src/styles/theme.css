@@ -1,9 +1,4 @@
-﻿:root {
-    color-scheme: light;
-    --active: #2563eb;
-}
-
-:root[data-theme="dark"] {
+﻿:root[data-theme="dark"] {
     color-scheme: dark;
 
     --primary: #1d4ed8;

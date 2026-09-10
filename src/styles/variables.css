@@ -23,10 +23,10 @@
     --bg-body: #f3f4f6;
     --bg-content: #ffffff;
 
-    --bg-sidebar: #ffffff;
+    --bg-sidebar: #2563eb;
     --sidebar: #ffffff;
 
-    --bg-navbar: #ffffff;
+    --bg-navbar: #2563eb;
     --navbar: #ffffff;
 
     --bg-footer: #ffffff;
@@ -38,7 +38,7 @@
 
     --border: #e5e7eb;
     --hover: #dde5ef;
-    --active: #2563eb;
+    --active: #ffffff;
 
     --shadow: 0 8px 24px rgba(0, 0, 0, .08);
     --radius: 8px;
