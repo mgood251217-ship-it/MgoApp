@@ -449,7 +449,7 @@ export default function Settings() {
         setSettings(prev => {
             const next = { ...prev };
             ALL_COLOR_KEYS.forEach(key => {
-                delete next[key];
+                next[key] = "";
             });
             return next;
         });
