@@ -1,6 +1,27 @@
 import api from "./axios";
 
+let cachedConnectionResult = null;
+let cachedConnectionPromise = null;
+
 export async function testConnection() {
-	const { data } = await api.get("", { params: { action: "test_connection" } });
-	return data;
+	if (cachedConnectionResult) {
+		return cachedConnectionResult;
+	}
+
+	if (cachedConnectionPromise) {
+		return cachedConnectionPromise;
+	}
+
+	cachedConnectionPromise = api
+		.get("", { params: { action: "test_connection" } })
+		.then(({ data }) => {
+			cachedConnectionResult = data;
+			return data;
+		})
+		.catch((error) => {
+			cachedConnectionPromise = null;
+			throw error;
+		});
+
+	return cachedConnectionPromise;
 }

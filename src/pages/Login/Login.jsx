@@ -8,7 +8,19 @@ import Button from "../../components/Button/Button";
 import Alert from "../../components/Alert/Alert";
 import { authStore } from "../../services/session";
 import api from "../../api/axios";
+import { testConnection } from "../../api/testApi";
 import "./Login.css";
+
+async function getRecaptchaSiteKey() {
+    const response = await testConnection();
+    const key = response?.data?.site_key || response?.site_key || "";
+
+    if (!key) {
+        throw new Error("reCAPTCHA site key unavailable");
+    }
+
+    return key;
+}
 
 async function login(payload) {
     const formData = new FormData();
@@ -167,8 +179,64 @@ function LoginInternal() {
 }
 
 export default function Login() {
+    const [siteKey, setSiteKey] = useState("");
+    const [loadingKey, setLoadingKey] = useState(true);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const fetchSiteKey = async () => {
+            try {
+                const key = await getRecaptchaSiteKey();
+
+                if (mounted) {
+                    setSiteKey(key);
+                    setLoadingKey(false);
+                }
+            } catch (error) {
+                if (mounted) {
+                    setSiteKey("");
+                    setLoadingKey(false);
+                }
+            }
+        };
+
+        fetchSiteKey();
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    if (loadingKey) {
+        return (
+            <div className="login-page">
+                <div className="login-box">
+                    <div className="login-header">
+                        <div className="app-title">MGO Desktop</div>
+                        <div className="app-subtitle">Loading security setup...</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!siteKey) {
+        return (
+            <div className="login-page">
+                <div className="login-box">
+                    <div className="login-header">
+                        <div className="app-title">MGO Desktop</div>
+                        <div className="app-subtitle">Security configuration unavailable</div>
+                    </div>
+                    <Alert type="error" message="reCAPTCHA site key tidak tersedia dari server." />
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <GoogleReCaptchaProvider reCaptchaKey="6LfKclYtAAAAAD9zWKtWXNNl-n3hahu0GmNXthVE">
+        <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
             <LoginInternal />
         </GoogleReCaptchaProvider>
     );
