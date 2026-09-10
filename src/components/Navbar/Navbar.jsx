@@ -76,6 +76,24 @@ export default function Navbar() {
         detail: ""
     });
 
+    const helpStatusColors = {
+        SENT: "rgba(14, 165, 233, 0.15)",
+        OPEN: "rgba(59, 130, 246, 0.15)",
+        PROCESS: "rgba(139, 92, 246, 0.15)",
+        REJECT: "rgba(239, 68, 68, 0.15)",
+        ACCEPT: "rgba(16, 185, 129, 0.15)",
+        FINISHED: "rgba(100, 116, 139, 0.15)",
+    };
+
+    const helpStatusTextColors = {
+        SENT: "#0ea5e9",
+        OPEN: "#3b82f6",
+        PROCESS: "#8b5cf6",
+        REJECT: "#ef4444",
+        ACCEPT: "#10b981",
+        FINISHED: "#64748b",
+    };
+
     const [changelogOpen, setChangelogOpen] = useState(false);
     const [changelogData, setChangelogData] = useState([]);
     const [changelogLoading, setChangelogLoading] = useState(false);
@@ -186,7 +204,7 @@ export default function Navbar() {
             payload.append("category", formHelp.category);
             payload.append("subject", formHelp.subject);
             payload.append("detail", formHelp.detail);
-            payload.append("status", "OPEN");
+            payload.append("status", "SENT");
             payload.append("datetime", datetimeStr);
 
             const res = await api.post("", payload, { params: { action: "create_help" } });
@@ -391,8 +409,8 @@ export default function Navbar() {
                                                 borderRadius: "12px", 
                                                 fontSize: "12px", 
                                                 fontWeight: "bold",
-                                                backgroundColor: selectedTicket.status?.toUpperCase() === 'OPEN' ? 'rgba(var(--warning-rgb), 0.2)' : 'rgba(var(--success-rgb), 0.2)',
-                                                color: selectedTicket.status?.toUpperCase() === 'OPEN' ? 'var(--warning)' : 'var(--success)'
+                                                backgroundColor: helpStatusColors[selectedTicket.status?.toUpperCase()] || "rgba(148, 163, 184, 0.15)",
+                                                color: helpStatusTextColors[selectedTicket.status?.toUpperCase()] || "#64748b"
                                             }}>
                                                 {selectedTicket.status}
                                             </span>
@@ -439,8 +457,8 @@ export default function Navbar() {
                                                 borderRadius: "12px", 
                                                 fontSize: "11px", 
                                                 fontWeight: "bold",
-                                                backgroundColor: row.status?.toUpperCase() === 'OPEN' ? 'rgba(var(--warning-rgb), 0.2)' : 'rgba(var(--success-rgb), 0.2)',
-                                                color: row.status?.toUpperCase() === 'OPEN' ? 'var(--warning)' : 'var(--success)'
+                                                backgroundColor: helpStatusColors[row.status?.toUpperCase()] || "rgba(148, 163, 184, 0.15)",
+                                                color: helpStatusTextColors[row.status?.toUpperCase()] || "#64748b"
                                             }}>
                                                 {row.status}
                                             </span>
