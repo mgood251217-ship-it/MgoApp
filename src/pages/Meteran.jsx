@@ -284,7 +284,7 @@ export default function Meteran() {
             <div key={title}>
                 {title && <h3 style={{ marginTop: 24, marginBottom: 16 }}>{title}</h3>}
                 <div style={{ marginBottom: 24 }}>
-                    <div style={{ background: "var(--info)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--info-hover)", display: "inline-block" }}>
+                    <div style={{ background: "var(--warning)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--warning)", display: "inline-block" }}>
                         <h3 style={{ margin: 0, color: "var(--text)" }}>
                             Total Keseluruhan Bahan Sublim: {rapihkanAngka(totalMeteran)} M² | {rapihkanAngka(totalKiloan)} Kg
                         </h3>
