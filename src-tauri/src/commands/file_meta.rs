@@ -204,17 +204,30 @@ fn get_psd_meta(bytes: &[u8]) -> Option<(u32, u32, String, Option<f64>)> {
     Some((width, height, color_mode.into(), None))
 }
 
-fn get_tiff_meta(bytes: &[u8]) -> Option<(u32, u32, String, Option<f64>)> {
-    let little_endian = match bytes.get(0..2)? {
+fn get_tiff_meta(file_path: &Path) -> Option<(u32, u32, String, Option<f64>)> {
+    let mut file = File::open(file_path).ok()?;
+    let mut header = [0u8; 8];
+    file.read_exact(&mut header).ok()?;
+
+    let little_endian = match &header[0..2] {
         b"II" => true,
         b"MM" => false,
         _ => return None,
     };
-    if read_u16(bytes, 2, little_endian)? != 42 {
+    if read_u16(&header, 2, little_endian)? != 42 {
         return None;
     }
-    let ifd_offset = read_u32(bytes, 4, little_endian)? as usize;
-    let entries = read_u16(bytes, ifd_offset, little_endian)? as usize;
+
+    let ifd_offset = read_u32(&header, 4, little_endian)? as u64;
+    file.seek(SeekFrom::Start(ifd_offset)).ok()?;
+
+    let mut count_buf = [0u8; 2];
+    file.read_exact(&mut count_buf).ok()?;
+    let entries = read_u16(&count_buf, 0, little_endian)? as usize;
+
+    let mut ifd_buf = vec![0u8; entries * 12];
+    file.read_exact(&mut ifd_buf).ok()?;
+
     let mut width = None;
     let mut height = None;
     let mut samples = 1u32;
@@ -223,28 +236,48 @@ fn get_tiff_meta(bytes: &[u8]) -> Option<(u32, u32, String, Option<f64>)> {
     let mut resolution_unit = 2u16;
 
     for index in 0..entries {
-        let entry = ifd_offset + 2 + index * 12;
-        let tag = read_u16(bytes, entry, little_endian)?;
-        let field_type = read_u16(bytes, entry + 2, little_endian)?;
-        let count = read_u32(bytes, entry + 4, little_endian)? as usize;
+        let entry = index * 12;
+        let tag = read_u16(&ifd_buf, entry, little_endian)?;
+        let field_type = read_u16(&ifd_buf, entry + 2, little_endian)?;
+        let count = read_u32(&ifd_buf, entry + 4, little_endian)? as usize;
         let value_size = match field_type {
             3 => 2 * count,
             4 => 4 * count,
             5 => 8 * count,
             _ => continue,
         };
-        let value_offset = if value_size <= 4 { entry + 8 } else { read_u32(bytes, entry + 8, little_endian)? as usize };
-        let value = match field_type {
-            3 => read_u16(bytes, value_offset, little_endian)? as f64,
-            4 => read_u32(bytes, value_offset, little_endian)? as f64,
-            5 => {
-                let numerator = read_u32(bytes, value_offset, little_endian)? as f64;
-                let denominator = read_u32(bytes, value_offset + 4, little_endian)? as f64;
-                if denominator == 0.0 { continue; }
-                numerator / denominator
+
+        let value = if value_size <= 4 {
+            match field_type {
+                3 => read_u16(&ifd_buf, entry + 8, little_endian)? as f64,
+                4 => read_u32(&ifd_buf, entry + 8, little_endian)? as f64,
+                _ => continue,
             }
-            _ => continue,
+        } else {
+            if field_type != 5 || count == 0 {
+                continue;
+            }
+            let value_offset = read_u32(&ifd_buf, entry + 8, little_endian)? as u64;
+            let current_pos = file.seek(SeekFrom::Current(0)).ok()?;
+            
+            file.seek(SeekFrom::Start(value_offset)).ok()?;
+            let mut val_buf = [0u8; 8];
+            let read_ok = file.read_exact(&mut val_buf).is_ok();
+            
+            file.seek(SeekFrom::Start(current_pos)).ok()?;
+            
+            if !read_ok {
+                continue;
+            }
+
+            let numerator = read_u32(&val_buf, 0, little_endian)? as f64;
+            let denominator = read_u32(&val_buf, 4, little_endian)? as f64;
+            if denominator == 0.0 {
+                continue;
+            }
+            numerator / denominator
         };
+
         match tag {
             256 => width = Some(value as u32),
             257 => height = Some(value as u32),
@@ -340,6 +373,8 @@ pub fn get_file_meta(file_path: &Path) -> FileMeta {
 
     let parsed = if matches!(ext.as_str(), "jpg" | "jpeg") {
         get_jpeg_meta_from_file(file_path)
+    } else if matches!(ext.as_str(), "tif" | "tiff") {
+        get_tiff_meta(file_path)
     } else {
         let bytes = match read_prefix(file_path, 256 * 1024) {
             Some(bytes) => bytes,
@@ -347,7 +382,6 @@ pub fn get_file_meta(file_path: &Path) -> FileMeta {
         };
         match ext.as_str() {
             "png" => get_png_meta(&bytes),
-            "tif" | "tiff" => get_tiff_meta(&bytes),
             "psd" => get_psd_meta(&bytes),
             _ => None,
         }
