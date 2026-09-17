@@ -37,7 +37,7 @@ export default function TransaksiPerKonsumen() {
 
     useEffect(() => {
         fetchTransaksiKonsumen();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (Object.keys(transaksiKonsumenData).length === 0) {

@@ -54,7 +54,7 @@ export default function TransaksiHarian() {
 
     useEffect(() => {
         fetchHarian();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (harianData.length === 0) {

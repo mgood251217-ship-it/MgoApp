@@ -58,7 +58,7 @@ export default function Keuangan() {
 
     useEffect(() => {
         fetchFinance();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (financeData.length === 0 && expenditureData.length === 0 && incomeData.length === 0) {

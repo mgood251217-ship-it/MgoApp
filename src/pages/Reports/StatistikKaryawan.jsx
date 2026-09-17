@@ -84,7 +84,7 @@ export default function StatistikKaryawan() {
 
     useEffect(() => {
         fetchStatistik();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (karyawanData.length === 0) {

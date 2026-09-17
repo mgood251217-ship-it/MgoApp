@@ -36,7 +36,7 @@ export default function TransaksiPerItem() {
 
     useEffect(() => {
         fetchTransaksiItem();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (Object.keys(transaksiItemData).length === 0) {

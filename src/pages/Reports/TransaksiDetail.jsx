@@ -69,7 +69,7 @@ export default function TransaksiDetail() {
 
     useEffect(() => {
         fetchTransactions();
-    }, [startDate, endDate, search]);
+    }, []);
 
     const handlePayClick = (order, totalTerbayar) => {
         setSelectedOrder({ ...order, total_paid: totalTerbayar });

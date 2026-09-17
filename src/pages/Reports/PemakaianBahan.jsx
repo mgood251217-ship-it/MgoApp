@@ -36,7 +36,7 @@ export default function PemakaianBahan() {
 
     useEffect(() => {
         fetchPemakaianBahan();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (pemakaianBahanData.length === 0) {

@@ -40,7 +40,7 @@ export default function Aktivitas() {
 
     useEffect(() => {
         fetchData();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (activityData.length === 0 && archiveData.length === 0) {

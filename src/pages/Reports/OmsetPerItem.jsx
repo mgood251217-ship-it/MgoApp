@@ -42,7 +42,7 @@ export default function OmsetPerItem() {
 
     useEffect(() => {
         fetchOmsetItem();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (omsetItemData.length === 0) {

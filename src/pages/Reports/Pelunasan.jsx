@@ -57,7 +57,7 @@ export default function Pelunasan() {
 
     useEffect(() => {
         fetchPelunasan();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (pelunasanData.length === 0) {

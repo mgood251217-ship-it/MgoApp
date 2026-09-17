@@ -58,7 +58,7 @@ export default function TransaksiBulanan() {
 
     useEffect(() => {
         fetchBulanan();
-    }, [startDate, endDate]);
+    }, []);
 
     const handleExportExcel = async () => {
         if (bulananData.length === 0) {
