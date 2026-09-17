@@ -87,7 +87,26 @@
 
 .modal-close:hover {
     background: #fff;
-    color: #000;
+}
+
+.modal-close.primary:hover {
+  color: var(--primary);
+}
+
+.modal-close.success:hover {
+  color: var(--success);
+}
+
+.modal-close.warning:hover {
+  color: var(--warning);
+}
+
+.modal-close.danger:hover {
+  color: var(--danger);
+}
+
+.modal-close.info:hover {
+  color: var(--info);
 }
 
 .modal-body {

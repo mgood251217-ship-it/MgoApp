@@ -47,7 +47,7 @@ export default function Modal({
                         {onClose && (
                             <button
                                 type="button"
-                                className="modal-close"
+                                className={`modal-close ${headerColor}`}
                                 onClick={onClose}
                             >
                                 ×
