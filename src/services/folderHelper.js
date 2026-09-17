@@ -144,8 +144,17 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
 
 export const extractQuantityFromFilename = (filename) => {
     const nameNoExt = String(filename).replace(/\.[^/.]+$/, "");
-    const qtyMatch = nameNoExt.match(/(\d+)\s*(PCS|KALI|SET|LBR|LEMBAR|QTY|BUAH|X\s*PRINT)/i);
-    return qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+
+    let match = nameNoExt.match(/(?:^|[^0-9a-zA-Z.])(\d+)(\s*)(PCS|PC|KALI|SET|LBR|LMB|LEMBAR|BUAH|BIJI|BOX|RIM|ROLL|BUKU|PLY|EKS|COPIES|COPY)(?![a-zA-Z])/i);
+    if (match) return parseInt(match[1], 10);
+
+    match = nameNoExt.match(/(?:^|[^a-zA-Z])(?:QTY|JUMLAH|JML)\s*[:=.-]?\s*(\d+)/i);
+    if (match) return parseInt(match[1], 10);
+
+    match = nameNoExt.match(/(?:^|[^0-9a-zA-Z.])(\d+)(\s*)(X)(?!\s*[0-9.a-zA-Z])/i);
+    if (match) return parseInt(match[1], 10);
+
+    return 1;
 };
 
 export const buildRenamedFilenameWithQuantity = (filename, newQuantity) => {
@@ -153,12 +162,27 @@ export const buildRenamedFilenameWithQuantity = (filename, newQuantity) => {
     const ext = extMatch ? extMatch[0] : "";
     const nameNoExt = ext ? filename.slice(0, -ext.length) : filename;
 
-    const qtyMatch = nameNoExt.match(/(\d+)(\s*)(PCS|KALI|SET|LBR|LEMBAR|QTY|BUAH|X\s*PRINT)/i);
-    if (qtyMatch) {
-        const before = nameNoExt.slice(0, qtyMatch.index);
-        const after = nameNoExt.slice(qtyMatch.index + qtyMatch[0].length);
-        return `${before}${newQuantity}${qtyMatch[2]}${qtyMatch[3]}${after}${ext}`;
+    let match = nameNoExt.match(/(^|[^0-9a-zA-Z.])(\d+)(\s*)(PCS|PC|KALI|SET|LBR|LMB|LEMBAR|BUAH|BIJI|BOX|RIM|ROLL|BUKU|PLY|EKS|COPIES|COPY)(?![a-zA-Z])/i);
+    if (match) {
+        const before = nameNoExt.slice(0, match.index) + match[1];
+        const after = nameNoExt.slice(match.index + match[0].length);
+        return `${before}${newQuantity}${match[3]}${match[4]}${after}${ext}`;
     }
+
+    match = nameNoExt.match(/(^|[^a-zA-Z])(QTY|JUMLAH|JML)(\s*[:=.-]?\s*)(\d+)/i);
+    if (match) {
+        const before = nameNoExt.slice(0, match.index) + match[1];
+        const after = nameNoExt.slice(match.index + match[0].length);
+        return `${before}${match[2]}${match[3]}${newQuantity}${after}${ext}`;
+    }
+
+    match = nameNoExt.match(/(^|[^0-9a-zA-Z.])(\d+)(\s*)(X)(?!\s*[0-9.a-zA-Z])/i);
+    if (match) {
+        const before = nameNoExt.slice(0, match.index) + match[1];
+        const after = nameNoExt.slice(match.index + match[0].length);
+        return `${before}${newQuantity}${match[3]}${match[4]}${after}${ext}`;
+    }
+
     return `${nameNoExt}_${newQuantity}PCS${ext}`;
 };
 
