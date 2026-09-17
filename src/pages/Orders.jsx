@@ -182,7 +182,10 @@ export default function Orders() {
 
     const handleViewOrder = useCallback(async (row) => {
         try {
-            const res = await getCachedOrderDetail(row.order_id);
+            const res = await getCachedOrderDetail(row.order_id, (fresh) => {
+                setViewOrderData(fresh || { total: 0, items: [], diskon_per_produk: {} });
+                setViewOrderDetails(row);
+            });
             setViewOrderData(res || { total: 0, items: [], diskon_per_produk: {} });
             setViewOrderDetails(row);
             setViewModalOpen(true);

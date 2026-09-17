@@ -99,14 +99,13 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
             payload.append("order_item_id", maklunData.order_item_id);
             payload.append("store_id", maklunData.store_id);
             const res = await api.post("", payload, { params: { action: "update_maklun" } });
-            setMaklunModalOpen(false);
             if (res.data?.success) {
+                setMaklunModalOpen(false);
                 setAlertConfig({ type: "success", message: res.data?.message || "Maklun berhasil diperbarui" });
-                return;
             }else{
                 setAlertConfig({ type: "error", message: res.data?.message || "Gagal memperbarui maklun" });
+                return;
             }
-            loadStores();
             onRefresh?.();
         } catch (err) {
             setAlertConfig({ type: "error", message: "Gagal memperbarui maklun" });
@@ -443,7 +442,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                         options={stores.map(store => ({
                             value: store.id || store.store_id,
                             label: store.name || store.store_name
-                        }))} 
+                        })).concat([{ value: "0", label: "Batal Maklun" }])}
                         placeholder="Pilih Store"
                         required
                     />
