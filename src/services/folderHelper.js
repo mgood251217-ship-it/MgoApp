@@ -100,6 +100,18 @@ const CATEGORY_PATH_MAP = {
     SUBLIM: ["sublim"],
 };
 
+const STANDARD_WIDTHS = {
+    sublim: [1.2, 1.5, 1.8],
+    dtf: [0.58],
+};
+
+export const roundUpToStandardWidth = (value, pathKey) => {
+    const sizes = STANDARD_WIDTHS[pathKey];
+    if (!sizes || value == null) return value;
+    const match = sizes.find(s => value <= s + 1e-9);
+    return match != null ? match : value;
+};
+
 export const checkFoldersForItems = async (settings, orderData, itemsList) => {
     const relevantItems = (itemsList || []).filter(i => i.category && !i.maklun_store);
     const categoriesInOrder = [...new Set(relevantItems.map(i => i.category))];
@@ -119,7 +131,7 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
             try {
                 const res = await window.electron.cariFolderOrder({ basePath, ...dateParts, nomorator });
                 if (res?.found) {
-                    results[cat] = { status: "ada", path: res.path, createPath: null, createInfo: null };
+                    results[cat] = { status: "ada", path: res.path, createPath: null, createInfo: null, pathKey: key };
                     return;
                 }
             } catch (err) {}
@@ -128,14 +140,14 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
         if (!results[cat]) {
             const configuredKey = pathKeys.find(key => settings?.[`path_${key}`]);
             if (!configuredKey) {
-                results[cat] = { status: "no-path", path: null, createPath: null, createInfo: null };
+                results[cat] = { status: "no-path", path: null, createPath: null, createInfo: null, pathKey: null };
                 return;
             }
             const basePath = settings[`path_${configuredKey}`];
             const folderName = buildFolderName(orderData);
             const createPath = joinPath(joinPath(basePath, dateSubPath), folderName);
             const createInfo = dateParts ? { basePath, ...dateParts, folderName } : null;
-            results[cat] = { status: "tidak-ada", path: null, createPath, createInfo };
+            results[cat] = { status: "tidak-ada", path: null, createPath, createInfo, pathKey: configuredKey };
         }
     }));
 
@@ -192,7 +204,7 @@ export const formatUkuran = (file) => {
     return `${file.panjangM} x ${file.lebarM} m${estimasi}`;
 };
 
-export const listFilesForFolder = async (folderPath) => {
+export const listFilesForFolder = async (folderPath, pathKey) => {
     if (!folderPath) return { success: false, message: "Path folder kosong.", data: [] };
 
     try {
@@ -203,9 +215,10 @@ export const listFilesForFolder = async (folderPath) => {
 
         const data = res.data.map((file) => {
             const quantity = extractQuantityFromFilename(file.nama);
-            const luas = (file.panjangM != null && file.lebarM != null) ? file.panjangM * file.lebarM : null;
+            const panjangM = roundUpToStandardWidth(file.panjangM, pathKey);
+            const luas = (panjangM != null && file.lebarM != null) ? panjangM * file.lebarM : null;
             const totalLuas = luas != null ? Math.round(luas * quantity * 100) / 100 : null;
-            return { ...file, quantity, luas, totalLuas };
+            return { ...file, panjangM, quantity, luas, totalLuas };
         });
 
         return { success: true, data };

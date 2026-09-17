@@ -296,7 +296,9 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
 
                                     {info.status === "tidak-ada" ? (
                                         <div style={{ fontSize: 13, color: "var(--secondary)", wordBreak: "break-all" }}>
-                                            Folder belum dibuat. Kalau dibuat, lokasinya: <strong style={{ color: "var(--text)" }}>{info.createPath}</strong>
+                                            Folder belum dibuat. Kalau dibuat, lokasinya:
+                                            <br />
+                                            <strong style={{ color: "var(--text)" }}>{info.createPath}</strong>
                                         </div>
                                     ) : isLoading ? (
                                         <div style={{ color: "var(--secondary)", fontSize: 13 }}>Membaca isi folder...</div>
@@ -442,7 +444,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                         options={stores.map(store => ({
                             value: store.id || store.store_id,
                             label: store.name || store.store_name
-                        })).concat([{ value: "0", label: "Batal Maklun" }])}
+                        })).concat([{ value: "0", label: "Batalkan Maklun" }])}
                         placeholder="Pilih Store"
                         required
                     />

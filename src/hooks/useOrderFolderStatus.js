@@ -27,9 +27,9 @@ export default function useOrderFolderStatus(setAlertConfig) {
             .catch(() => setSettingsLoaded(true));
     }, []);
 
-    const fetchFilesForPath = useCallback(async (folderPath) => {
+    const fetchFilesForPath = useCallback(async (folderPath, pathKey) => {
         setLoadingFilesByPath(prev => ({ ...prev, [folderPath]: true }));
-        const res = await listFilesForFolder(folderPath);
+        const res = await listFilesForFolder(folderPath, pathKey);
         setFolderFilesByPath(prev => ({ ...prev, [folderPath]: res.success ? res.data : [] }));
         setLoadingFilesByPath(prev => ({ ...prev, [folderPath]: false }));
     }, []);
@@ -56,7 +56,7 @@ export default function useOrderFolderStatus(setAlertConfig) {
         Object.values(results).forEach((info) => {
             if (info.status === "ada" && info.path && !fetchedPaths.has(info.path)) {
                 fetchedPaths.add(info.path);
-                fetchFilesForPath(info.path);
+                fetchFilesForPath(info.path, info.pathKey);
             }
         });
     }, [appSettings, fetchFilesForPath]);
