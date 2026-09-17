@@ -217,6 +217,22 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                             const isLoading = folderPath ? folder.loadingFilesByPath[folderPath] : false;
                             const totalSemua = files.reduce((sum, f) => sum + (f.totalLuas || 0), 0);
 
+                            const groupKey = info.path || info.createPath;
+                            const groupCategories = Object.entries(folder.itemFolderStatus)
+                                .filter(([, i]) => (i.path || i.createPath) === groupKey)
+                                .map(([c]) => c);
+                            const parseSizeArea = (sizeStr) => {
+                                const match = String(sizeStr || "").match(/(\d+(?:[.,]\d+)?)\s*[xX]\s*(\d+(?:[.,]\d+)?)/);
+                                if (!match) return 0;
+                                const a = parseFloat(match[1].replace(",", "."));
+                                const b = parseFloat(match[2].replace(",", "."));
+                                return a * b;
+                            };
+                            const orderMeterTotal = (viewOrderData?.items || [])
+                                .filter(i => groupCategories.includes(i.category) && !i.maklun_store)
+                                .reduce((sum, i) => sum + (parseSizeArea(i.size) * (Number(i.quantity) || 0)), 0);
+                            const meterDiff = Math.round((totalSemua - orderMeterTotal) * 100) / 100;
+
                             return (
                                 <div
                                     key={info.path || info.createPath}
@@ -394,6 +410,18 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                             </table>
                                             <div style={{ textAlign: "right", marginTop: 8, fontWeight: "bold", fontSize: 13 }}>
                                                 Total {cat}: {totalSemua.toFixed(2)} m²
+                                                {orderMeterTotal > 0 && (
+                                                    <span style={{
+                                                        marginLeft: 8,
+                                                        color: meterDiff === 0 ? "var(--success)" : "var(--danger)"
+                                                    }}>
+                                                        ({meterDiff === 0
+                                                            ? "sesuai"
+                                                            : meterDiff < 0
+                                                                ? `kurang ${Math.abs(meterDiff).toFixed(2)} m²`
+                                                                : `lebih ${meterDiff.toFixed(2)} m²`})
+                                                    </span>
+                                                )}
                                             </div>
                                         </>
                                     )}

@@ -234,7 +234,7 @@ export default function TransaksiDetail() {
                     
                     for (const cat of Object.keys(folderCheck)) {
                         if (folderCheck[cat].status === "ada" && folderCheck[cat].path) {
-                            const filesRes = await listFilesForFolder(folderCheck[cat].path);
+                            const filesRes = await listFilesForFolder(folderCheck[cat].path, folderCheck[cat].pathKey);
                             if (filesRes.success) {
                                 fileResults[cat] = filesRes.data;
                             } else {
@@ -451,6 +451,18 @@ export default function TransaksiDetail() {
                                                         
                                                         const totalLuasKategori = cFiles.reduce((sum, file) => sum + (Number(file.totalLuas) || 0), 0);
 
+                                                        const parseSizeArea = (sizeStr) => {
+                                                            const match = String(sizeStr || "").match(/(\d+(?:[.,]\d+)?)\s*[xX]\s*(\d+(?:[.,]\d+)?)/);
+                                                            if (!match) return 0;
+                                                            const a = parseFloat(match[1].replace(",", "."));
+                                                            const b = parseFloat(match[2].replace(",", "."));
+                                                            return a * b;
+                                                        };
+                                                        const orderMeterTotal = items
+                                                            .filter(i => i.category === cat && !i.maklun_store)
+                                                            .reduce((sum, i) => sum + (parseSizeArea(i.size) * (Number(i.quantity) || 0)), 0);
+                                                        const meterDiff = Math.round((totalLuasKategori - orderMeterTotal) * 100) / 100;
+
                                                         return (
                                                             <div key={cat} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px", background: "var(--background)" }}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -501,6 +513,20 @@ export default function TransaksiDetail() {
                                                                                 <span style={{ fontSize: "14px", fontWeight: "bold", color: "var(--primary)" }}>
                                                                                     {totalLuasKategori.toFixed(2).replace(/\.00$/, '')} m²
                                                                                 </span>
+                                                                                {orderMeterTotal > 0 && (
+                                                                                    <span style={{
+                                                                                        marginLeft: "8px",
+                                                                                        fontSize: "12px",
+                                                                                        fontWeight: "bold",
+                                                                                        color: meterDiff === 0 ? "var(--success)" : "var(--danger)"
+                                                                                    }}>
+                                                                                        ({meterDiff === 0
+                                                                                            ? "sesuai"
+                                                                                            : meterDiff < 0
+                                                                                                ? `kurang ${Math.abs(meterDiff).toFixed(2)} m²`
+                                                                                                : `lebih ${meterDiff.toFixed(2)} m²`})
+                                                                                    </span>
+                                                                                )}
                                                                             </div>
                                                                         )}
                                                                     </div>
