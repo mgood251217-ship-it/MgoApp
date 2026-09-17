@@ -36,6 +36,7 @@ export default function Orders() {
     
     const initialLoadRef = useRef(false);
     const debounceTimerRef = useRef(null);
+    const addOrderSubmittingRef = useRef(false);
     const isNameFocusedRef = useRef(false);
     const nameInputWrapperRef = useRef(null);
     
@@ -50,6 +51,7 @@ export default function Orders() {
     const [PrintPdfOrderId, setPrintPdfOrderId] = useState(null);
 
     const [addModalOpen, setAddModalOpen] = useState(false);
+    const [addOrderLoading, setAddOrderLoading] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
     
     const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -289,6 +291,8 @@ export default function Orders() {
 
     const handleAddSubmit = async (e) => {
         e.preventDefault();
+
+        if (addOrderSubmittingRef.current) return;
         
         const requiredFields = ["customer_name", "nomor", "deadline", "user_id", "system"];
         for (const field of requiredFields) {
@@ -298,6 +302,9 @@ export default function Orders() {
                 return;
             }
         }
+
+        addOrderSubmittingRef.current = true;
+        setAddOrderLoading(true);
 
         try {
             const payload = new FormData();
@@ -317,6 +324,10 @@ export default function Orders() {
                 loadData();
             }
         } catch (err) {}
+        finally {
+            addOrderSubmittingRef.current = false;
+            setAddOrderLoading(false);
+        }
     };
 
     const handleEditSubmit = async (e) => {
@@ -679,7 +690,7 @@ export default function Orders() {
                         options={systemOptions}
                         required
                     />
-                    <Button type="submit" size="full-lg" variant="success" icon={<Icon name="add" />}>
+                    <Button type="submit" size="full-lg" variant="success" icon={<Icon name="add" />} loading={addOrderLoading}>
                         Simpan Order
                     </Button>
                 </Form>
