@@ -259,7 +259,7 @@ export default function Orders() {
         return date.toISOString().slice(0, 16);
     };
 
-    const handleAddOrder = () => {
+    const handleAddOrder = useCallback(() => {
         const matchedOp = Object.entries(operators).find(([id, name]) => name === initial);
         const defaultOpId = (isOnlineRole && matchedOp) ? matchedOp[0] : "";
 
@@ -276,7 +276,21 @@ export default function Orders() {
         setCustomerSuggestions([]);
         setShowSuggestions(false);
         setAddModalOpen(true);
-    };
+    }, [operators, initial, isOnlineRole]);
+
+    useEffect(() => {
+        function handleKeyDown(e) {
+            if (!e.ctrlKey || e.key.toLowerCase() !== "n") return;
+            if (isProductionRole) return;
+            if (addModalOpen || editModalOpen || processModalOpen || paymentModalOpen || viewModalOpen) return;
+
+            e.preventDefault();
+            handleAddOrder();
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [handleAddOrder, isProductionRole, addModalOpen, editModalOpen, processModalOpen, paymentModalOpen, viewModalOpen]);
 
     const handleEditOrder = useCallback((row) => {
         setFormOrder({
