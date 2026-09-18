@@ -4,6 +4,7 @@
     gap: 6px;
     width: 100%;
     margin-bottom: 12px;
+    min-width: 0; 
 }
 
 .select-wrapper.select-left {
@@ -30,6 +31,7 @@
     flex-direction: column;
     gap: 6px;
     position: relative;
+    min-width: 0; 
 }
 
 .required {
@@ -52,6 +54,7 @@
     align-items: center;
     text-align: left;
     position: relative;
+    min-width: 0; 
 }
 
 .select-value {
@@ -138,4 +141,25 @@
 .select-option-empty {
     color: var(--text-muted, #9ca3af);
     cursor: default;
+}
+
+@media (max-width: 1100px) {
+    .select-wrapper.select-left {
+        --label-width: 90px !important;
+    }
+    .select-wrapper.select-left .select-label {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 700px) {
+    .select-wrapper.select-left {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .select-wrapper.select-left .select-label {
+        width: 100%;
+        min-width: 0;
+        padding-top: 0;
+    }
 }
