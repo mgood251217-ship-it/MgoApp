@@ -23,6 +23,7 @@ export default function Select({
     const id = useId();
     const triggerRef = useRef(null);
     const listRef = useRef(null);
+    const optionRefs = useRef([]);
 
     const [open, setOpen] = useState(false);
     const [highlighted, setHighlighted] = useState(-1);
@@ -60,6 +61,11 @@ export default function Select({
             document.removeEventListener("mousedown", onClickOutside);
         };
     }, [open]);
+
+    useEffect(() => {
+        if (!open || highlighted < 0) return;
+        optionRefs.current[highlighted]?.scrollIntoView({ block: "nearest" });
+    }, [open, highlighted]);
 
     const openList = () => {
         if (disabled) return;
@@ -158,6 +164,7 @@ export default function Select({
                         {options.map((option, idx) => (
                             <li
                                 key={option.value}
+                                ref={(el) => (optionRefs.current[idx] = el)}
                                 role="option"
                                 aria-selected={option.value === value}
                                 className={`select-option ${option.value === value ? "select-option-selected" : ""} ${idx === highlighted ? "select-option-highlighted" : ""}`}
