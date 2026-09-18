@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { buildFolderName, checkFoldersForItems, listFilesForFolder } from "../services/folderHelper";
+import { generateNotaPdfBase64 } from "../services/notaPdf";
 
 export default function useOrderFolderStatus(setAlertConfig) {
     const [appSettings, setAppSettings] = useState({});
@@ -17,6 +18,7 @@ export default function useOrderFolderStatus(setAlertConfig) {
     const [folderIconFound, setFolderIconFound] = useState(false);
     const [searchingFolder, setSearchingFolder] = useState(false);
     const [applyingIcon, setApplyingIcon] = useState(false);
+    const [uploadingNotaFor, setUploadingNotaFor] = useState(null);
 
     useEffect(() => {
         window.electron.getSettings()
@@ -150,6 +152,23 @@ export default function useOrderFolderStatus(setAlertConfig) {
         moveFilesToCategory(filePaths, info, orderRow, itemsList);
     }, [moveFilesToCategory]);
 
+    const handleUploadNota = useCallback(async (category, info, orderRow, itemsList) => {
+        setUploadingNotaFor(category);
+        try {
+            const { base64Data, fileName } = await generateNotaPdfBase64(orderRow.order_id);
+            const res = await window.electron.simpanTempFile({ fileName, base64Data });
+            if (!res.success) {
+                setAlertConfig({ show: true, type: "error", message: res.message || "Gagal membuat file nota." });
+                return;
+            }
+            await moveFilesToCategory([res.filePath], info, orderRow, itemsList);
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: err.message || "Gagal mengupload nota." });
+        } finally {
+            setUploadingNotaFor(null);
+        }
+    }, [setAlertConfig, moveFilesToCategory]);
+
     const handleOpenIconModalForCategory = useCallback((category, folderPath, orderRow) => {
         setIconModalOrder({ ...orderRow, kategori: category });
         setFolderIconTarget(folderPath);
@@ -219,5 +238,7 @@ export default function useOrderFolderStatus(setAlertConfig) {
         closeIconModal,
         handlePilihFolderManual,
         handleTerapkanIcon,
+        handleUploadNota,
+        uploadingNotaFor,
     };
 }

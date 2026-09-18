@@ -279,6 +279,16 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                                     >
                                                         Pilih File
                                                     </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="info"
+                                                        icon={<Icon name="receipt_long" />}
+                                                        style={{ whiteSpace: "nowrap" }}
+                                                        disabled={folder.uploadingNotaFor === cat}
+                                                        onClick={() => folder.handleUploadNota(cat, info, viewOrderDetails, viewOrderData.items)}
+                                                    >
+                                                        {folder.uploadingNotaFor === cat ? "Mengupload..." : "Upload Nota"}
+                                                    </Button>
                                                 </>
                                             ) : (
                                                 <>

@@ -145,3 +145,32 @@ pub fn save_pdf_data(args: SavePdfArgs) -> Value {
         Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
     }
 }
+
+#[derive(Deserialize)]
+pub struct SimpanTempFileArgs {
+    #[serde(rename = "fileName")]
+    pub file_name: String,
+    #[serde(rename = "base64Data")]
+    pub base64_data: String,
+}
+
+#[tauri::command]
+pub fn simpan_temp_file(args: SimpanTempFileArgs) -> Value {
+    let temp_dir = std::env::temp_dir().join("MgoDesktopNota");
+
+    if let Err(e) = fs::create_dir_all(&temp_dir) {
+        return serde_json::json!({ "success": false, "message": e.to_string() });
+    }
+
+    let file_path = temp_dir.join(&args.file_name);
+
+    let buffer = match base64::engine::general_purpose::STANDARD.decode(&args.base64_data) {
+        Ok(b) => b,
+        Err(e) => return serde_json::json!({ "success": false, "message": e.to_string() }),
+    };
+
+    match fs::write(&file_path, buffer) {
+        Ok(_) => serde_json::json!({ "success": true, "filePath": file_path.to_string_lossy() }),
+        Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
+    }
+}

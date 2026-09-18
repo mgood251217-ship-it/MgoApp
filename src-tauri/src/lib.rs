@@ -76,6 +76,7 @@ pub fn run() {
             misc::save_pdf_data,
             misc::simpan_file_dialog,
             misc::print_window,
+            misc::simpan_temp_file,
             settings::get_settings,
             settings::save_settings,
             settings::restart_app,
