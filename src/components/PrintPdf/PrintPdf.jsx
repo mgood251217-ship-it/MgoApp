@@ -45,7 +45,11 @@ export default function PrintPdf({ orderId, onClose }) {
     const baseUrl = config.serverUrl;
     
     const preferredLogo = store.logo_print || store.logo;
-    const logoImg = preferredLogo ? (preferredLogo.startsWith("http") ? preferredLogo : `${baseUrl}/api/middleware/serve_image.php?path=store/${preferredLogo}`) : "";
+    const logoImg = preferredLogo
+        ? (preferredLogo.startsWith("http")
+            ? preferredLogo
+            : `${baseUrl}/api/?action=store_logo&path=store/${preferredLogo}`)
+        : "";
 
     const orderData = data.order || {};
     const items = data.items || [];
