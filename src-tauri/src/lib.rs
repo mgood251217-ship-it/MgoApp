@@ -31,10 +31,9 @@ pub fn run() {
         tauri_plugin_global_shortcut::Builder::new()
             .with_handler(|app, shortcut, event| {
                 if event.state() == ShortcutState::Pressed {
-                    let f12 = Shortcut::new(None, Code::F12);
                     let ctrl_shift_i =
                         Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyI);
-                    if shortcut == &f12 || shortcut == &ctrl_shift_i {
+                    if shortcut == &ctrl_shift_i {
                         toggle_devtools(app);
                     }
                 }
@@ -56,9 +55,6 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 let shortcut_manager = handle.global_shortcut();
-                if let Err(e) = shortcut_manager.register(Shortcut::new(None, Code::F12)) {
-                    eprintln!("Gagal register shortcut F12: {}", e);
-                }
                 if let Err(e) = shortcut_manager.register(Shortcut::new(
                     Some(Modifiers::CONTROL | Modifiers::SHIFT),
                     Code::KeyI,
