@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import { FiBell, FiLogOut, FiMoon, FiSun, FiHelpCircle, FiInfo, FiMinus, FiPlus, FiZoomIn } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
 import { authStore, useSession } from "../../services/session";
 import { changeTheme } from "../../services/setting";
 import Modal from "../Modal/Modal";
@@ -51,7 +50,6 @@ async function logout() {
 }
 
 export default function Navbar() {
-    const navigate = useNavigate();
     const session = useSession();
     const [theme, setTheme] = useState(() => getInitialTheme(null));
     const [zoom, setZoom] = useState(() => Number(localStorage.getItem(ZOOM_KEY)) || 100);
@@ -131,7 +129,6 @@ export default function Navbar() {
     async function handleLogout() {
         try { await logout(); } catch (e) {}
         authStore.logout();
-        navigate("/login", { replace: true });
     }
 
     async function handleTheme() {

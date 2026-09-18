@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { GoogleReCaptchaProvider, useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 import Input from "../../components/Input/Input";
@@ -33,7 +32,6 @@ async function login(payload) {
 }
 
 function LoginInternal() {
-    const navigate = useNavigate();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(false);
@@ -114,8 +112,6 @@ function LoginInternal() {
             }
 
             authStore.setSession(response.data);
-
-            navigate("/orders", { replace: true });
         } catch (err) {
             setError("Server tidak dapat dihubungi.");
         } finally {

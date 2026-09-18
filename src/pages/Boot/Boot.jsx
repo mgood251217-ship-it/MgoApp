@@ -35,7 +35,9 @@ export default function Boot() {
                     return;
                 }
                 if (step.key === "session") {
-                    navigate(result ? "/orders" : "/login", { replace: true });
+                    if (!result) {
+                        navigate("/login", { replace: true });
+                    }
                     return;
                 }
             }
