@@ -171,6 +171,25 @@ export default function OrderItemForm({
         }
     };
 
+    useEffect(() => {
+        function handleKeyDown(e) {
+            if (e.ctrlKey && e.key === "Enter") {
+                e.preventDefault();
+                handleSubmit(e);
+                return;
+            }
+
+            if (e.key === "Escape" && showCancel && onCancel) {
+                e.preventDefault();
+                setFormItem({ order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "", qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "" });
+                onCancel();
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [handleSubmit, showCancel, onCancel]);
+
     const categoryOptions = useMemo(() => categories.map(c => ({ value: c.category_id, label: c.name })), [categories]);
     const productOptions = useMemo(() => products.map(p => ({ value: p.product_id, label: p.display_name })), [products]);
     const jerseySizeOptions = [
