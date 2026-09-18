@@ -111,7 +111,7 @@ function LoginInternal() {
                 localStorage.removeItem("mgo_remember_password");
             }
 
-            authStore.setSession(response.data);
+            await authStore.checkSession();
         } catch (err) {
             setError("Server tidak dapat dihubungi.");
         } finally {
