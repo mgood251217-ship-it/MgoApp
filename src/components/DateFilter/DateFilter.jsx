@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Icon from "../Icon/Icon";
 import Button from "../Button/Button";
 import Input from "../Input/Input";
@@ -15,6 +15,29 @@ export default function DateFilter({
     onExport,
     loading
 }) {
+    const searchInputRef = useRef(null);
+
+    useEffect(() => {
+        if (!onSearchChange) return;
+
+        function handleKeyDown(e) {
+            if (e.ctrlKey && e.key.toLowerCase() === "k") {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onSearchChange]);
+
+    const handleSearchKeyDown = (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            onFilter?.();
+        }
+    };
+
     return (
         <div style={{
             display: "flex",
@@ -34,9 +57,11 @@ export default function DateFilter({
                         Pencarian
                     </label>
                     <Input
+                        ref={searchInputRef}
                         type="text"
                         value={search}
                         onChange={(e) => onSearchChange(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
                         placeholder={searchPlaceholder}
                         margin="0"
                     />
