@@ -15,6 +15,11 @@ import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
 import { getCachedOrderDetail, getCachedStoreNames, clearCacheOrderDetail } from "../services/apiCache";
 import { formatTime } from "../services/helpers"
 
+const EMPTY_FORM_ITEM = {
+    order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
+    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
+};
+
 export default function Order() {
     const { order_id } = useParams();
     const navigate = useNavigate();
@@ -26,7 +31,7 @@ export default function Order() {
         diskon_per_produk: {},
         note: ""
     });
-    
+
     const [stores, setStores] = useState([]);
 
     const [noteInput, setNoteInput] = useState("");
@@ -35,17 +40,27 @@ export default function Order() {
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
     const [activeFormItem, setActiveFormItem] = useState({});
-    
-    const [initialFormItem, setInitialFormItem] = useState({
-        order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
-        qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
-    });
+
+    const [initialFormItem, setInitialFormItem] = useState({ ...EMPTY_FORM_ITEM });
 
     const [maklunModalOpen, setMaklunModalOpen] = useState(false);
     const [maklunData, setMaklunData] = useState({
         order_item_id: "",
         store_id: ""
     });
+
+    const [selectedItemId, setSelectedItemId] = useState(null);
+    const [visibleRows, setVisibleRows] = useState([]);
+
+    const notifyOrderUpdate = useCallback(() => {
+        if (!order_id) return;
+
+        const payload = new FormData();
+        payload.append("order_id", order_id);
+
+        api.post("", payload, { params: { action: "trigger_order_update" } })
+           .catch(() => {});
+    }, [order_id]);
 
     const focusCategoryField = () => {
         setTimeout(() => {
@@ -63,11 +78,11 @@ export default function Order() {
         setTimeout(() => {
             const panjangInput = document.querySelector('input[name="panjang"]');
             const qtyInput = document.querySelector('input[name="qty"]');
-            
+
             if (panjangInput && panjangInput.offsetParent !== null) {
                 panjangInput.focus();
                 if (typeof panjangInput.select === 'function') panjangInput.select();
-            } 
+            }
             else if (qtyInput && qtyInput.offsetParent !== null) {
                 qtyInput.focus();
                 if (typeof qtyInput.select === 'function') qtyInput.select();
@@ -154,23 +169,17 @@ export default function Order() {
     }, [activeFormItem, order_id]);
 
     useEffect(() => {
-        const notifyServerOnLeave = () => {
-            if (!order_id) return;
-            
-            const payload = new FormData();
-            payload.append("order_id", order_id);
-            
-            api.post("", payload, { params: { action: "trigger_order_update" } })
-               .catch(() => {});
-        };
-
-        window.addEventListener("beforeunload", notifyServerOnLeave);
+        window.addEventListener("beforeunload", notifyOrderUpdate);
 
         return () => {
-            window.removeEventListener("beforeunload", notifyServerOnLeave);
-            notifyServerOnLeave();
+            window.removeEventListener("beforeunload", notifyOrderUpdate);
+            notifyOrderUpdate();
         };
-    }, [order_id]);
+    }, [notifyOrderUpdate]);
+
+    const handleCancelEdit = useCallback(() => {
+        setInitialFormItem({ ...EMPTY_FORM_ITEM });
+    }, []);
 
     const handleAddItem = async (submittedForm) => {
         if (!submittedForm.category_id || !submittedForm.product_id || !submittedForm.qty) {
@@ -183,9 +192,9 @@ export default function Order() {
             const payload = new FormData();
             payload.append("order_id", order_id);
             if (submittedForm.order_item_id) payload.append("order_item_id", submittedForm.order_item_id);
-            
+
             payload.append("product_id", submittedForm.product_id);
-            payload.append("judul", submittedForm.selectedProductName || ""); 
+            payload.append("judul", submittedForm.selectedProductName || "");
             payload.append("quantity", submittedForm.qty || 0);
             payload.append("finishing", submittedForm.finishings.join(","));
             payload.append("panjang", submittedForm.panjang || 0);
@@ -199,20 +208,19 @@ export default function Order() {
             const endpointAction = submittedForm.order_item_id ? "update_item" : "create_order_item";
 
             const res = await api.post("", payload, { params: { action: endpointAction } });
-            
+
             if (!res.data?.success) {
                 setAlertConfig({ show: true, type: "error", message: res.data.message || "Gagal menyimpan item." });
             } else {
                 setInitialFormItem({
-                    order_item_id: "", 
-                    category_id: submittedForm.category_id, 
-                    product_id: submittedForm.product_id, 
-                    panjang: "", lebar: "",
-                    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
+                    ...EMPTY_FORM_ITEM,
+                    category_id: submittedForm.category_id,
+                    product_id: submittedForm.product_id
                 });
                 await clearCacheOrderDetail(order_id);
                 loadOrderData();
-                
+                notifyOrderUpdate();
+
                 focusNextField();
             }
         } catch (err) {
@@ -223,23 +231,24 @@ export default function Order() {
         }
     };
 
-    const handleDeleteItem = async (itemId) => {
+    const handleDeleteItem = useCallback(async (itemId) => {
         try {
             const payload = new FormData();
             payload.append("order_item_id", itemId);
             await api.post("", payload, { params: { action: "delete_order_item" } });
             await clearCacheOrderDetail(order_id);
             loadOrderData();
+            notifyOrderUpdate();
         } catch (err) {}
-    };
+    }, [order_id, loadOrderData, notifyOrderUpdate]);
 
-    const handleOpenMaklun = (row) => {
+    const handleOpenMaklun = useCallback((row) => {
         setMaklunData({
             order_item_id: row.order_item_id,
             store_id: row.store_id || ""
         });
         setMaklunModalOpen(true);
-    };
+    }, []);
 
     const handleMaklunSubmit = async (e) => {
         e.preventDefault();
@@ -252,6 +261,7 @@ export default function Order() {
             setMaklunModalOpen(false);
             await clearCacheOrderDetail(order_id);
             loadOrderData();
+            notifyOrderUpdate();
         } catch (err) {}
     };
 
@@ -268,8 +278,8 @@ export default function Order() {
     };
 
     const handleRowDoubleClick = (row) => {
-        const currentFinishings = row.finishing 
-            ? String(row.finishing).split(",").map(f => f.trim()) 
+        const currentFinishings = row.finishing
+            ? String(row.finishing).split(",").map(f => f.trim())
             : [];
 
         let w = row.lebar || "";
@@ -283,7 +293,7 @@ export default function Order() {
 
         setInitialFormItem({
             order_item_id: row.order_item_id,
-            category_id: row.category_id || "", 
+            category_id: row.category_id || "",
             product_id: row.product_id || "",
             panjang: p,
             lebar: w,
@@ -299,6 +309,53 @@ export default function Order() {
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
+
+    const handleRowSelect = useCallback((row) => {
+        setSelectedItemId(row.order_item_id);
+    }, []);
+
+    useEffect(() => {
+        function handleKeyDown(e) {
+            if (e.ctrlKey && e.key.toLowerCase() === "b") {
+                e.preventDefault();
+                navigate("/orders");
+                return;
+            }
+
+            if (e.altKey && /^[0-9]$/.test(e.key)) {
+                e.preventDefault();
+                const idx = e.key === "0" ? 9 : Number(e.key) - 1;
+                const row = visibleRows[idx];
+                if (row) setSelectedItemId(row.order_item_id);
+                return;
+            }
+
+            if (e.altKey && e.key.toLowerCase() === "m") {
+                e.preventDefault();
+                const row = visibleRows.find(r => r.order_item_id === selectedItemId);
+                if (row) handleOpenMaklun(row);
+                return;
+            }
+
+            if (e.altKey && e.key === "Delete") {
+                e.preventDefault();
+
+                if (selectedItemId) {
+                    handleDeleteItem(selectedItemId);
+                    setSelectedItemId(null);
+                    return;
+                }
+
+                if (initialFormItem.order_item_id) {
+                    handleDeleteItem(initialFormItem.order_item_id);
+                    handleCancelEdit();
+                }
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [navigate, visibleRows, selectedItemId, handleOpenMaklun, initialFormItem.order_item_id, handleDeleteItem, handleCancelEdit]);
 
     const storeOptions = useMemo(() => stores.map(s => ({ value: s.store_id, label: s.name })), [stores]);
 
@@ -335,26 +392,26 @@ export default function Order() {
                 onClick={(e) => { e.stopPropagation(); handleDeleteItem(row.order_item_id); }}
             />
         </div>
-    ), []);
+    ), [handleDeleteItem]);
 
     return (
         <>
             {alertConfig.show && (
-                <Alert 
-                    type={alertConfig.type} 
-                    message={alertConfig.message} 
-                    onClose={() => setAlertConfig({ ...alertConfig, show: false, message: "" })} 
+                <Alert
+                    type={alertConfig.type}
+                    message={alertConfig.message}
+                    onClose={() => setAlertConfig({ ...alertConfig, show: false, message: "" })}
                 />
             )}
-            
+
             <Header
                 title={`Input Order Item #${order_id}`}
                 subtitle="Tambahkan produk ke dalam pesanan"
                 actions={
-                    <Button 
-                        variant="secondary" 
+                    <Button
+                        variant="secondary"
                         size="full-lg"
-                        icon={<Icon name="arrow_back" />} 
+                        icon={<Icon name="arrow_back" />}
                         onClick={() => navigate("/orders")}
                     >
                         Kembali
@@ -366,7 +423,7 @@ export default function Order() {
                 <div style={{ width: "30%", display: "flex", flexDirection: "column", gap: "20px" }}>
                     <div style={{ background: "color-mix(in srgb, var(--background) 10%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                         <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
-                        <OrderItemForm 
+                        <OrderItemForm
                             initialData={initialFormItem}
                             isSubmitting={isSubmitting}
                             onSubmit={handleAddItem}
@@ -375,10 +432,7 @@ export default function Order() {
                             submitIcon={initialFormItem.order_item_id ? "edit" : "add"}
                             submitVariant={initialFormItem.order_item_id ? "warning" : "success"}
                             showCancel={!!initialFormItem.order_item_id}
-                            onCancel={() => setInitialFormItem({
-                                order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
-                                qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
-                            })} 
+                            onCancel={handleCancelEdit}
                         >
                             <div style={{ padding: "12px", background: "color-mix(in srgb, var(--background) 30%, transparent)", borderRadius: "var(--radius)", marginBottom: "16px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--text)" }}>Estimasi Harga:</span>
@@ -412,7 +466,6 @@ export default function Order() {
                     </div>
                 </div>
 
-                {/* Kolom Kanan: Tabel Daftar Item & Total */}
                 <div style={{ width: "70%" }}>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginBottom: "20px" }}>
@@ -430,12 +483,12 @@ export default function Order() {
                         </div>
                         <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Deadline</div>
-                            <div style={{ fontSize: "14px", fontWeight: "bol    d", color: "var(--warning)" }}>{formatTime(orderMeta.deadline) || "-"}</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--warning)" }}>{formatTime(orderMeta.deadline) || "-"}</div>
                         </div>
                         <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Operator</div>
                             <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--primary)" }}>{orderMeta.operator_initial || "-"}</div>
-                        </div>  
+                        </div>
                     </div>
 
                     <div style={{ backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
@@ -443,13 +496,16 @@ export default function Order() {
                         <Table
                             id="tableOrderItems"
                             showNumber
-                            size="md    "
+                            size="md"
                             rowKey="order_item_id"
                             rowDataKey="order_item_id"
                             columns={tableColumns}
                             rows={tableDataMapped}
                             actions={tableActions}
                             onRowDoubleClick={handleRowDoubleClick}
+                            onRowSelect={handleRowSelect}
+                            selectedRowKey={selectedItemId}
+                            onVisibleRowsChange={setVisibleRows}
                         />
 
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)", alignItems: "center"}}>
