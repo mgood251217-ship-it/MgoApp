@@ -321,7 +321,7 @@ export default function OrderItemForm({
         { value: '3XL', label: '3XL' }, { value: '4XL', label: '4XL' }, { value: '5XL', label: '5XL' }
     ];
     const sublimLebarOptions = [
-        { value: "1.1", label: "1.1" }, { value: "1.2", label: "1.2" },
+        { value: "1.1", label: "1.1" }, { value: "1.2", label: "1.2" }, { value: "1.3", label: "1.3" },
         { value: "1.5", label: "1.5" }, { value: "1.6", label: "1.6" }, { value: "1.8", label: "1.8" }
     ];
 
