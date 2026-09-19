@@ -33,16 +33,27 @@ export default function Modal({
         if (!open) return;
 
         const focusTimeout = setTimeout(() => {
-            if (initialFocusRef?.current) {
-                initialFocusRef.current.focus();
-                return;
+            let target = initialFocusRef?.current;
+
+            if (!target) {
+                const focusableSelector =
+                    'input, textarea, select, [contenteditable="true"], button:not(.modal-close), [tabindex]:not([tabindex="-1"])';
+                target = modalRef.current?.querySelector(focusableSelector);
             }
 
-            const focusableSelector =
-                'input, textarea, select, [contenteditable="true"], button:not(.modal-close), [tabindex]:not([tabindex="-1"])';
+            if (!target) return;
 
-            const focusable = modalRef.current?.querySelector(focusableSelector);
-            focusable?.focus();
+            target.focus();
+
+            if (target.tagName === "BUTTON") {
+                target.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                        key: "ArrowDown",
+                        bubbles: true,
+                        cancelable: true,
+                    })
+                );
+            }
         }, 0);
 
         return () => clearTimeout(focusTimeout);
