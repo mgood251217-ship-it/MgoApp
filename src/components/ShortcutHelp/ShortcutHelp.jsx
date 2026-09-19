@@ -10,7 +10,6 @@ const SHORTCUT_GROUPS = [
             { keys: "Ctrl + Tab", desc: "Beralih ke tab berikutnya" },
             { keys: "Ctrl + Shift + Tab", desc: "Beralih ke tab sebelumnya" },
             { keys: "Ctrl + W", desc: "Tutup tab saat ini" },
-            { keys: "Ctrl + R", desc: "Refresh tab saat ini" },
         ],
     },
     {
