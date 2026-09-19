@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import "./Modal.css";
 
 export default function Modal({
@@ -9,7 +9,10 @@ export default function Modal({
     onClose,
     children,
     headerColor = "primary",
+    initialFocusRef,
 }) {
+    const modalRef = useRef(null);
+
     useEffect(() => {
         if (!open) return;
 
@@ -26,6 +29,25 @@ export default function Modal({
         };
     }, [open, onClose]);
 
+    useEffect(() => {
+        if (!open) return;
+
+        const focusTimeout = setTimeout(() => {
+            if (initialFocusRef?.current) {
+                initialFocusRef.current.focus();
+                return;
+            }
+
+            const focusableSelector =
+                'input, textarea, select, [contenteditable="true"], button:not(.modal-close), [tabindex]:not([tabindex="-1"])';
+
+            const focusable = modalRef.current?.querySelector(focusableSelector);
+            focusable?.focus();
+        }, 0);
+
+        return () => clearTimeout(focusTimeout);
+    }, [open, initialFocusRef]);
+
     if (!open) return null;
 
     const handleOverlayClick = (e) => {
@@ -39,7 +61,7 @@ export default function Modal({
             className="modal-overlay"
             onClick={handleOverlayClick}
         >
-            <div className={`modal modal-${size}`}>
+            <div className={`modal modal-${size}`} ref={modalRef}>
                 {(title || onClose) && (
                     <div className={`modal-header modal-header-${headerColor}`}>
                         <h3 className="modal-title">{title}</h3>
