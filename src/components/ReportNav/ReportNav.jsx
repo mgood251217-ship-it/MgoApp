@@ -1,9 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTabs } from "../../context/TabsContext";
 import "./ReportNav.css";
 
 export default function ReportNav() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { openTab } = useTabs();
 
     const navItems = [
         { label: "Transaksi Detail", path: "/reports/transaksi-detail" },
@@ -20,6 +22,20 @@ export default function ReportNav() {
         { label: "Aktivitas", path: "/reports/aktivitas" }
     ];
 
+    const handleNavClick = (e, item) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            openTab(item.path, item.label);
+            return;
+        }
+
+        if (e.type === "click") {
+            navigate(item.path);
+        }
+    };
+
     return (
         <div className="report-nav-wrapper">
             <div className="report-nav-scroll">
@@ -28,7 +44,9 @@ export default function ReportNav() {
                     return (
                         <button
                             key={index}
-                            onClick={() => navigate(item.path)}
+                            title="Ctrl+Klik atau klik tengah untuk buka di tab baru"
+                            onClick={(e) => handleNavClick(e, item)}
+                            onAuxClick={(e) => handleNavClick(e, item)}
                             className={`report-nav-item${isActive ? " active" : ""}`}
                         >
                             {item.label}

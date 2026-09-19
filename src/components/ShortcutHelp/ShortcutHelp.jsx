@@ -7,6 +7,7 @@ const SHORTCUT_GROUPS = [
         items: [
             { keys: "F1", desc: "Buka panduan shortcut" },
             { keys: "Ctrl + T", desc: "Membuat tab baru" },
+            { keys: "Ctrl + Klik", desc: "Buka di tab baru" },
             { keys: "Ctrl + Tab", desc: "Beralih ke tab berikutnya" },
             { keys: "Ctrl + Shift + Tab", desc: "Beralih ke tab sebelumnya" },
             { keys: "Ctrl + W", desc: "Tutup tab saat ini" },

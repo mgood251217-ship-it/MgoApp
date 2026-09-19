@@ -4,10 +4,12 @@ import Header from "../components/Header/Header";
 import Card from "../components/Card/Card";
 import { formatRupiah } from "../services/helpers";
 import { getCachedReport } from "../services/apiCache";
+import { useTabs } from "../context/TabsContext";
 
 export default function Report() {
     const [data, setData] = useState(null);
     const navigate = useNavigate();
+    const { openTab } = useTabs();
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -129,6 +131,21 @@ export default function Report() {
         }
     ];
 
+    const handleCardClick = (e, card) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            e.preventDefault();
+            openTab(card.path, card.title);
+            return;
+        }
+
+        if (e.type === "click") {
+            navigate(card.path);
+        }
+    };
+
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%", maxHeight: "100vh", overflow: "hidden" }}>
             <style>
@@ -164,15 +181,21 @@ export default function Report() {
 
             <div className="report-grid-container">
                 {reportCards.map((card, index) => (
-                    <Card 
+                    <div
                         key={index}
-                        bgColor={colors[index]}
-                        bgIcon={icons[index]}
-                        title={card.title}
-                        description1={card.description1}
-                        description2={card.description2}
-                        onClick={() => navigate(card.path)}
-                    />
+                        onClick={(e) => handleCardClick(e, card)}
+                        onAuxClick={(e) => handleCardClick(e, card)}
+                        title="Ctrl+Klik atau klik tengah untuk buka di tab baru"
+                        style={{ display: "contents" }}
+                    >
+                        <Card 
+                            bgColor={colors[index]}
+                            bgIcon={icons[index]}
+                            title={card.title}
+                            description1={card.description1}
+                            description2={card.description2}
+                        />
+                    </div>
                 ))}
             </div>
         </div>

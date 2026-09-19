@@ -9,6 +9,7 @@ import { MdOutlineErrorOutline } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 import { LiaWindowRestore } from "react-icons/lia";
 import { authStore, useSession } from "../../services/session";
+import { useTabs } from "../../context/TabsContext";
 
 const menus = [
     { title: "Store", path: "/store", icon: <RiStore2Line />, restrict: true },
@@ -24,6 +25,7 @@ const menus = [
 
 export default function Sidebar() {
     const session = useSession();
+    const { openTab } = useTabs();
     
     const role = (session?.user?.role || "GUEST").toUpperCase();
     const name = session?.user?.name ?? "Guest";
@@ -38,6 +40,16 @@ export default function Sidebar() {
         }
         return true; 
     });
+
+    const handleMenuClick = (e, menu) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            e.preventDefault();
+            openTab(menu.path, menu.title);
+        }
+    };
 
     return (
         <aside className="sidebar">
@@ -58,9 +70,12 @@ export default function Sidebar() {
                     <NavLink
                         key={menu.path}
                         to={menu.path}
+                        title="Ctrl+Klik atau klik tengah untuk buka di tab baru"
                         className={({ isActive }) =>
                             isActive ? "sidebar-item active" : "sidebar-item"
                         }
+                        onClick={(e) => handleMenuClick(e, menu)}
+                        onAuxClick={(e) => handleMenuClick(e, menu)}
                     >
                         <div className="sidebar-icon">
                             {menu.icon}
