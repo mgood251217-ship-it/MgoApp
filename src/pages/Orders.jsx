@@ -802,10 +802,10 @@ export default function Orders() {
                 onClose={() => setProcessModalOpen(false)}
                 title="Proses Order"
                 size="sm"
-                headerColor="secondary"
+                variant="secondary"
             >
                 <Form id="formProcessOrder" onSubmit={handleProcessSubmit}>
-                    <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px", marginBottom: "16px" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                         {["BELUM DIPROSES", "DIPROSES", "DIAMBIL", "LAINYA"].map((statusItem) => (
                             <Button
                                 key={statusItem}
