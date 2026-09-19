@@ -12,8 +12,10 @@
 
 .modal {
     width: 100%;
-    max-height: calc(100vh - 40px);
-    overflow: auto;
+    max-height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background: var(--background);
     border-radius: var(--radius);
     box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
@@ -42,6 +44,7 @@
     justify-content: space-between;
     padding: 16px 20px;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
 .modal-header-primary {
@@ -111,6 +114,8 @@
 
 .modal-body {
     padding: 20px;
+    flex: 1;
+    overflow-y: auto;
 }
 
 @keyframes modalFade {
