@@ -1,0 +1,44 @@
+.shortcut-help {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.shortcut-help-group-title {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+
+.shortcut-help-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shortcut-help-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.shortcut-help-keys {
+    flex-shrink: 0;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.shortcut-help-desc {
+    color: var(--text);
+    font-size: 14px;
+    text-align: right;
+}

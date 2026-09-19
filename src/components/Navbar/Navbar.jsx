@@ -1,7 +1,7 @@
 ﻿import "./Navbar.css";
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
-import { FiBell, FiLogOut, FiMoon, FiSun, FiHelpCircle, FiInfo, FiMinus, FiPlus, FiZoomIn } from "react-icons/fi";
+import { FiBell, FiLogOut, FiMoon, FiSun, FiHelpCircle, FiInfo, FiMinus, FiPlus, FiZoomIn, FiCommand } from "react-icons/fi";
 import { authStore, useSession } from "../../services/session";
 import { changeTheme } from "../../services/setting";
 import Modal from "../Modal/Modal";
@@ -11,6 +11,7 @@ import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
 import Alert from "../Alert/Alert";
 import Table from "../Table/Table";
+import ShortcutHelp from "../ShortcutHelp/ShortcutHelp";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -97,6 +98,8 @@ export default function Navbar() {
     const [changelogLoading, setChangelogLoading] = useState(false);
     const [changelogError, setChangelogError] = useState("");
 
+    const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
+
     useEffect(() => {
         setTheme(getInitialTheme(session));
     }, [session]);
@@ -114,6 +117,18 @@ export default function Navbar() {
             document.documentElement.style.zoom = "";
         };
     }, [zoom]);
+
+    useEffect(() => {
+        function handleKeyDown(e) {
+            if (e.key === "F1") {
+                e.preventDefault();
+                setShortcutHelpOpen((prev) => !prev);
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, []);
 
     const changeZoom = (direction) => {
         setZoom((currentZoom) => {
@@ -282,6 +297,14 @@ export default function Navbar() {
                     >
                         {theme === "dark" ? <FiSun /> : <FiMoon />}
                     </button>
+                    <button
+                        className="navbar-button"
+                        onClick={() => setShortcutHelpOpen(true)}
+                        title="Panduan Keyboard Shortcut (F1)"
+                        aria-label="Panduan Keyboard Shortcut"
+                    >
+                        <FiCommand />
+                    </button>
                     <button 
                         className="navbar-button" 
                         onClick={handleOpenChangelog}
@@ -302,6 +325,8 @@ export default function Navbar() {
                     </button>
                 </div>
             </header>
+
+            <ShortcutHelp open={shortcutHelpOpen} onClose={() => setShortcutHelpOpen(false)} />
 
             <Modal 
                 open={helpModalOpen} 
