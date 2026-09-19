@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Input from "../Input/Input";
 import Select from "../Select/Select";
 import Button from "../Button/Button";
@@ -8,6 +8,32 @@ import {
     getCachedProductsByCategory, 
     getCachedFinishingsByCategory 
 } from "../../services/apiCache";
+
+const EMPTY_ITEM = {
+    order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
+    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "",
+    paketSize: "", size: ""
+};
+
+const focusField = (fieldName, delay = 100) => {
+    if (!fieldName) return;
+    setTimeout(() => {
+        const el = document.querySelector(`[name="${fieldName}"]`);
+        if (!el) return;
+
+        el.focus();
+
+        if (el.tagName === "BUTTON") {
+            el.dispatchEvent(
+                new KeyboardEvent("keydown", {
+                    key: "ArrowDown",
+                    bubbles: true,
+                    cancelable: true,
+                })
+            );
+        }
+    }, delay);
+};
 
 export default function OrderItemForm({ 
     initialData,
@@ -25,23 +51,10 @@ export default function OrderItemForm({
     const [products, setProducts] = useState([]);
     const [paketSizesMap, setPaketSizesMap] = useState({});
     const [finishings, setFinishings] = useState([]);
+    const finishingRefs = useRef([]);
+    const isFirstRenderRef = useRef(true);
 
-    const [formItem, setFormItem] = useState({
-        order_item_id: "",
-        category_id: "",
-        product_id: "",
-        panjang: "",
-        lebar: "",
-        qty: "",
-        diskon: "",
-        finishings: [],
-        kiloan: "",
-        waktu: "",
-        ukuranJersey: "",
-        paketSize: "",
-        size: "",
-        ...initialData
-    });
+    const [formItem, setFormItem] = useState({ ...EMPTY_ITEM, ...initialData });
 
     useEffect(() => {
         if (initialData) {
@@ -117,6 +130,56 @@ export default function OrderItemForm({
         setFormItem(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleCategoryChange = (e) => {
+        handleFormChange(e);
+        focusField("product_id");
+    };
+
+    const resolveNextFieldAfterProduct = (pId) => {
+        const prod = products.find(p => String(p.product_id) === String(pId));
+        const pName = (prod?.display_name || prod?.name || "").toUpperCase();
+        const pUnit = prod?.unit_type?.toUpperCase();
+        const noSizeCheck = pUnit === "PCS" || pUnit === "~";
+
+        if (selectedCategoryName === "PAKET INDOOR OUTDOOR" && paketSizesMap[pName]?.length > 0) {
+            return "paketSize";
+        }
+        if (pName === "SETTING" || pName === "POTONG AKRILIK") {
+            return "waktu";
+        }
+        if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN") && pUnit !== "M2") {
+            return "kiloan";
+        }
+        if (selectedCategoryName === "JERSEY") {
+            return "ukuranJersey";
+        }
+        if (noSizeCheck) {
+            return "qty";
+        }
+        return "panjang";
+    };
+
+    const handleProductChange = (e) => {
+        handleFormChange(e);
+        focusField(resolveNextFieldAfterProduct(e.target.value));
+    };
+
+    useEffect(() => {
+        if (isFirstRenderRef.current) {
+            isFirstRenderRef.current = false;
+            return;
+        }
+        if (!initialData) return;
+
+        if (!initialData.category_id) {
+            focusField("category_id");
+        } else if (!initialData.product_id) {
+            focusField("product_id");
+        } else {
+            focusField(resolveNextFieldAfterProduct(initialData.product_id));
+        }
+    }, [initialData]);
+
     const handlePaketSizeChange = (e) => {
         const val = e.target.value;
         setFormItem(prev => {
@@ -128,6 +191,7 @@ export default function OrderItemForm({
             }
             return next;
         });
+        focusField("qty");
     };
 
     const handleFinishingChange = (e) => {
@@ -138,6 +202,46 @@ export default function OrderItemForm({
                 : prev.finishings.filter(f => f !== value);
             return { ...prev, finishings: newFinishings };
         });
+    };
+
+    const toggleFinishingByIndex = (idx) => {
+        const f = finishings[idx];
+        if (!f) return;
+        const fid = String(f.finishing_id);
+        setFormItem(prev => {
+            const has = prev.finishings.includes(fid);
+            const newFinishings = has
+                ? prev.finishings.filter(x => x !== fid)
+                : [...prev.finishings, fid];
+            return { ...prev, finishings: newFinishings };
+        });
+    };
+
+    const handleFinishingKeyDown = (e) => {
+        const key = e.key;
+
+        if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[0-9]$/.test(key)) {
+            const idx = key === "0" ? 9 : Number(key) - 1;
+            if (idx < finishings.length) {
+                e.preventDefault();
+                toggleFinishingByIndex(idx);
+                finishingRefs.current[idx]?.focus();
+            }
+            return;
+        }
+
+        const currentIdx = finishingRefs.current.findIndex(el => el === document.activeElement);
+        if (currentIdx === -1) return;
+
+        if (key === "ArrowRight" || key === "ArrowDown") {
+            e.preventDefault();
+            const next = Math.min(currentIdx + 1, finishings.length - 1);
+            finishingRefs.current[next]?.focus();
+        } else if (key === "ArrowLeft" || key === "ArrowUp") {
+            e.preventDefault();
+            const prev = Math.max(currentIdx - 1, 0);
+            finishingRefs.current[prev]?.focus();
+        }
     };
 
     const selectedProduct = products.find(p => String(p.product_id) === String(formItem.product_id));
@@ -157,6 +261,7 @@ export default function OrderItemForm({
     const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
 
     const hideFinishing = ["PAKET INDOOR OUTDOOR", "STAMP", "MERCENDISE", "MERCENDISE AKRILIK"].includes(selectedCategoryName);
+    const showFinishing = !hideFinishing && finishings.length > 0;
 
     useEffect(() => {
         if (isDTF && formItem.lebar !== "0.58") {
@@ -179,9 +284,27 @@ export default function OrderItemForm({
                 return;
             }
 
+            if (e.altKey && e.key.toLowerCase() === "k") {
+                e.preventDefault();
+                focusField("category_id", 0);
+                return;
+            }
+
+            if (e.altKey && e.key.toLowerCase() === "p") {
+                e.preventDefault();
+                focusField("product_id", 0);
+                return;
+            }
+
+            if (e.altKey && e.key.toLowerCase() === "d") {
+                e.preventDefault();
+                focusField("diskon", 0);
+                return;
+            }
+
             if (e.key === "Escape" && showCancel && onCancel) {
                 e.preventDefault();
-                setFormItem({ order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "", qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "" });
+                setFormItem({ ...EMPTY_ITEM });
                 onCancel();
             }
         }
@@ -211,7 +334,7 @@ export default function OrderItemForm({
                     name="category_id"
                     label="Kategori"
                     value={formItem.category_id}
-                    onChange={handleFormChange}
+                    onChange={handleCategoryChange}
                     options={categoryOptions}
                     placeholder="Pilih Kategori"
                     required
@@ -223,28 +346,7 @@ export default function OrderItemForm({
                 name="product_id"
                 label="Produk"
                 value={formItem.product_id}
-                onChange={(e) => {
-                    handleFormChange(e);
-                    setTimeout(() => {
-                        const pId = e.target.value;
-                        const prod = products.find(p => String(p.product_id) === String(pId));
-                        const pName = (prod?.display_name || prod?.name || "").toUpperCase();
-                        const pUnit = prod?.unit_type?.toUpperCase();
-                        const noSizeCheck = pUnit === "PCS" || pUnit === "~";
-
-                        if (pName === "SETTING" || pName === "POTONG AKRILIK") {
-                            document.querySelector('input[name="waktu"]')?.focus();
-                        } else if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN") && pUnit !== "M2") {
-                            document.querySelector('input[name="kiloan"]')?.focus();
-                        } else if (selectedCategoryName === "JERSEY") {
-                            document.querySelector('select[name="ukuranJersey"]')?.focus();
-                        } else if (noSizeCheck) {
-                            document.querySelector('input[name="qty"]')?.focus();
-                        } else {
-                            document.querySelector('input[name="panjang"]')?.focus();
-                        }
-                    }, 100);
-                }}
+                onChange={handleProductChange}
                 options={productOptions}
                 placeholder="Pilih Produk"
                 required
@@ -316,7 +418,7 @@ export default function OrderItemForm({
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
                                             e.preventDefault();
-                                            document.querySelector('input[name="lebar"]')?.focus();
+                                            focusField("lebar", 0);
                                         }
                                     }}
                                 />
@@ -343,7 +445,7 @@ export default function OrderItemForm({
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") {
                                                 e.preventDefault();
-                                                document.querySelector('input[name="qty"]')?.focus();
+                                                focusField("qty", 0);
                                             }
                                         }}
                                     />
@@ -362,23 +464,51 @@ export default function OrderItemForm({
                 label="Quantity"
                 value={formItem.qty}
                 onChange={handleFormChange}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.ctrlKey && showFinishing) {
+                        e.preventDefault();
+                        finishingRefs.current[0]?.focus();
+                    }
+                }}
                 required
             />
 
-            {!hideFinishing && finishings.length > 0 && (
+            {showFinishing && (
                 <div style={{ marginBottom: "16px" }}>
                     <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", fontSize: "14px" }}>
                         Finishing
                     </label>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "6px" }}>
-                        {finishings.map((f) => (
+                    <div
+                        onKeyDown={handleFinishingKeyDown}
+                        style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "6px" }}
+                    >
+                        {finishings.map((f, idx) => (
                             <label key={f.finishing_id} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px" }}>
                                 <input
                                     type="checkbox"
+                                    ref={(el) => (finishingRefs.current[idx] = el)}
                                     value={f.finishing_id}
                                     checked={formItem.finishings.includes(String(f.finishing_id))}
                                     onChange={handleFinishingChange}
                                 />
+                                {idx < 10 && (
+                                    <span
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            minWidth: "16px",
+                                            height: "16px",
+                                            padding: "0 4px",
+                                            borderRadius: "4px",
+                                            background: "var(--border)",
+                                            fontSize: "11px",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {idx === 9 ? "0" : idx + 1}
+                                    </span>
+                                )}
                                 {f.name}
                             </label>
                         ))}
@@ -408,7 +538,7 @@ export default function OrderItemForm({
                         size="full-lg" 
                         variant="secondary" 
                         onClick={() => {
-                            setFormItem({ order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "", qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "" });
+                            setFormItem({ ...EMPTY_ITEM });
                             onCancel();
                         }}
                     >
