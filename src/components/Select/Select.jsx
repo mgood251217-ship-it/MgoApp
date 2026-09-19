@@ -2,6 +2,8 @@ import { useId, useRef, useState, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import "./Select.css";
 
+const TYPEAHEAD_RESET_MS = 600;
+
 export default function Select({
     name,
     label,
@@ -24,6 +26,7 @@ export default function Select({
     const triggerRef = useRef(null);
     const listRef = useRef(null);
     const optionRefs = useRef([]);
+    const typeaheadRef = useRef({ text: "", timeoutId: null });
 
     const [open, setOpen] = useState(false);
     const [highlighted, setHighlighted] = useState(-1);
@@ -67,6 +70,10 @@ export default function Select({
         optionRefs.current[highlighted]?.scrollIntoView({ block: "nearest" });
     }, [open, highlighted]);
 
+    useEffect(() => {
+        return () => clearTimeout(typeaheadRef.current.timeoutId);
+    }, []);
+
     const openList = () => {
         if (disabled) return;
         const idx = options.findIndex((o) => o.value === value);
@@ -80,13 +87,42 @@ export default function Select({
         triggerRef.current?.focus();
     };
 
+    const handleTypeahead = (key) => {
+        clearTimeout(typeaheadRef.current.timeoutId);
+
+        const nextText = typeaheadRef.current.text + key.toLowerCase();
+        typeaheadRef.current.text = nextText;
+        typeaheadRef.current.timeoutId = setTimeout(() => {
+            typeaheadRef.current.text = "";
+        }, TYPEAHEAD_RESET_MS);
+
+        const matchIdx = options.findIndex((o) =>
+            o.label.toLowerCase().startsWith(nextText)
+        );
+        if (matchIdx === -1) return;
+
+        if (open) {
+            setHighlighted(matchIdx);
+        } else {
+            commit(options[matchIdx]);
+        }
+    };
+
     const onKeyDown = (e) => {
         if (disabled) return;
+
+        const isPrintable =
+            e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey;
 
         if (!open) {
             if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
                 e.preventDefault();
                 openList();
+                return;
+            }
+            if (isPrintable) {
+                e.preventDefault();
+                handleTypeahead(e.key);
             }
             return;
         }
@@ -105,7 +141,17 @@ export default function Select({
             setOpen(false);
         } else if (e.key === "Tab") {
             setOpen(false);
+        } else if (isPrintable) {
+            e.preventDefault();
+            handleTypeahead(e.key);
         }
+    };
+
+    const handleBlur = () => {
+        requestAnimationFrame(() => {
+            if (listRef.current?.contains(document.activeElement)) return;
+            setOpen(false);
+        });
     };
 
     return (
@@ -128,12 +174,14 @@ export default function Select({
                 <button
                     type="button"
                     id={id}
+                    name={name}
                     ref={triggerRef}
                     disabled={disabled}
                     autoFocus={autoFocus}
                     className={`select ${error ? "select-error" : ""} ${open ? "select-open" : ""}`}
                     onClick={() => (open ? setOpen(false) : openList())}
                     onKeyDown={onKeyDown}
+                    onBlur={handleBlur}
                     aria-haspopup="listbox"
                     aria-expanded={open}
                     aria-required={required}
@@ -157,6 +205,7 @@ export default function Select({
                         role="listbox"
                         className="select-options"
                         style={{ top: coords.top, left: coords.left, width: coords.width }}
+                        onMouseDown={(e) => e.preventDefault()}
                     >
                         {options.length === 0 && (
                             <li className="select-option select-option-empty">Tidak ada opsi</li>
