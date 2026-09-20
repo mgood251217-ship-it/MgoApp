@@ -1064,6 +1064,10 @@ export const clearCacheOrderDetail = (orderId) => {
     setStorage("orderDetail", orderMap);
 };
 
+export const clearOrdersCache = () => {
+    localStorage.removeItem("mgo_cache_orders");
+};
+
 export const clearCache = () => {
     localStorage.removeItem("mgo_cache_categories");
     localStorage.removeItem("mgo_cache_categories_time");

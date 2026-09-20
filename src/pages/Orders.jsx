@@ -17,7 +17,7 @@ import PaymentModal from "../components/PaymentModal/PaymentModal";
 import OrderDetailModal from "../components/OrderDetailModal/OrderDetailModal";
 import PrintStruk from "../components/PrintStruk/PrintStruk";
 import PrintPdf from "../components/PrintPdf/PrintPdf";
-import { getCachedInitials, getCachedOrders, getCachedOrderDetail } from "../services/apiCache";
+import { getCachedInitials, getCachedOrders, getCachedOrderDetail, clearOrdersCache } from "../services/apiCache";
 import { useSession } from "../services/session";
 import { isDesktop } from "../services/platform";
 
@@ -110,6 +110,7 @@ export default function Orders() {
 
     const handleRefresh = useCallback(async () => {
         try {
+            await clearOrdersCache();
             await loadData();
             setAlertConfig({
                 show: true,
