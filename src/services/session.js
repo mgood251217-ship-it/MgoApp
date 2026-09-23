@@ -67,22 +67,31 @@ export const authStore = {
     checkSession: async () => {
         try {
             const response = await api.get("?action=session");
-            currentUser = response.data.data;
-            writeLocalSession(currentUser);
-            notify();
-            return response.data.success;
+            if (response.data?.success) {
+                currentUser = response.data.data;
+                writeLocalSession(currentUser);
+                notify();
+                return true;
+            }
+            authStore.logout();
+            return false;
         } catch (err) {
-            if (err.response?.status === 401) return false;
-            throw err;
+            authStore.logout();
+            return false;
         }
     },
 
     refreshSession: async () => {
-        const { data } = await api.get("/?action=session");
-        currentUser = data.data;
-        writeLocalSession(data.data);
-        notify();
-        return data.data;
+        try {
+            const { data } = await api.get("/?action=session");
+            currentUser = data.data;
+            writeLocalSession(data.data);
+            notify();
+            return data.data;
+        } catch (err) {
+            authStore.logout();
+            throw err;
+        }
     },
 };
 
