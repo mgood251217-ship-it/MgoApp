@@ -9,7 +9,7 @@ export default function ChangeFolderIconModal({ open, onClose, orderInfo, folder
             onClose={onClose}
             title={`Ganti Icon Folder - ${orderInfo?.kategori || ""} - ${orderInfo?.nomorator || ""}`}
             size="sm"
-            headerColor="secondary"
+            variant="secondary"
         >
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {searching ? (
