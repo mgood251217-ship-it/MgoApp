@@ -249,14 +249,40 @@ pub struct AnalisisItem {
 }
 
 // ---------- commands ----------
-// Semua dibungkus spawn_blocking supaya kerjaan I/O berat (readdir, scan
-// rekursif, baca metadata gambar) tidak jalan di main thread dan bikin
-// window freeze/"not responding" saat folder besar atau di network drive.
 
 #[tauri::command]
 pub async fn cek_folder_order(folder_path: String) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
         serde_json::json!({ "exists": Path::new(&folder_path).exists() })
+    })
+    .await
+    .unwrap()
+}
+
+#[tauri::command]
+pub async fn buka_folder(folder_path: String) -> SimpleResult {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = Path::new(&folder_path);
+        if !path.exists() {
+            return SimpleResult {
+                success: false,
+                message: Some("Folder tidak ditemukan.".into()),
+            };
+        }
+
+        #[cfg(target_os = "windows")]
+        let res = std::process::Command::new("explorer").arg(&folder_path).spawn();
+
+        #[cfg(target_os = "macos")]
+        let res = std::process::Command::new("open").arg(&folder_path).spawn();
+
+        #[cfg(target_os = "linux")]
+        let res = std::process::Command::new("xdg-open").arg(&folder_path).spawn();
+
+        match res {
+            Ok(_) => SimpleResult { success: true, message: None },
+            Err(e) => SimpleResult { success: false, message: Some(e.to_string()) },
+        }
     })
     .await
     .unwrap()

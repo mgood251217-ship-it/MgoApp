@@ -79,6 +79,7 @@ pub fn run() {
             folder_order::cek_folder_order,
             folder_order::cari_folder_order,
             folder_order::buat_folder_order,
+            folder_order::buka_folder,
             folder_order::analisis_folder_order,
             folder_order::pindah_file_ke_folder,
             folder_order::rename_file_order,

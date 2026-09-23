@@ -14,6 +14,7 @@ export const tauriApi = {
     setIconFolderOrder: (args) => invoke("set_icon_folder_order", args),
     cekFolderOrder: (folderPath) => invoke("cek_folder_order", { folderPath }),
     cariFolderOrder: (args) => invoke("cari_folder_order", { args }),
+    openFolder: (folderPath) => invoke("buka_folder", { folderPath }),
 
     pilihFolder: () => invoke("pilih_folder"),
     pilihFileOrder: () => invoke("pilih_file_order"),
@@ -34,7 +35,7 @@ export const tauriApi = {
     restartApp: () => invoke("restart_app"),
 
     savePdfData: (args) => invoke("save_pdf_data", { args }),
-    simpanTempFile: (args) => invoke('simpan_temp_file', { args }),
+    simpanTempFile: (args) => invoke("simpan_temp_file", { args }),
 
     simpanFile: async (blob, defaultFileName, filters = null) => {
         const path = await save({
@@ -53,7 +54,6 @@ export const tauriApi = {
     },
 
     cetakStruk: () => invoke("print_window"),
-
 };
 
 if (typeof window !== "undefined") {

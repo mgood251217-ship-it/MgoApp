@@ -118,6 +118,14 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         }
     };
 
+    const handleOpenFolder = (folderPath) => {
+        if (window.electron?.openFolder) {
+            window.electron.openFolder(folderPath);
+        } else if (folder.handleOpenFolder) {
+            folder.handleOpenFolder(folderPath);
+        }
+    };
+
     const handleStartRename = (file, folderPath) => {
         setRenamingPath(`${folderPath}\\${file.nama}`);
         setRenameValue(file.nama);
@@ -261,6 +269,15 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                             </Button>
                                             {info.status === "ada" ? (
                                                 <>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        icon={<Icon name="folder_open" />}
+                                                        style={{ whiteSpace: "nowrap" }}
+                                                        onClick={() => handleOpenFolder(info.path)}
+                                                    >
+                                                        Buka Folder
+                                                    </Button>
                                                     <Button
                                                         size="sm"
                                                         variant="secondary"
