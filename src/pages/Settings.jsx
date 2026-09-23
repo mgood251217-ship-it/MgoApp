@@ -6,6 +6,7 @@ import Form from "../components/Form/Form";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { applyTheme } from "../services/theme";
+import { clearAllCache } from "../services/apiCache";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
@@ -616,6 +617,24 @@ export default function Settings() {
         }
     };
 
+    const handleClearCache = () => {
+        const yakin = window.confirm(
+            "Yakin ingin membersihkan semua cache?\n\nSemua data yang tersimpan sementara (produk, kategori, pengguna, mesin, statistik, dll) akan dihapus dan diambil ulang dari server saat dibutuhkan."
+        );
+        if (!yakin) return;
+
+        const result = clearAllCache();
+        if (result.success) {
+            setAlertConfig({
+                show: true,
+                type: "success",
+                message: `Cache berhasil dibersihkan (${result.cleared} item). Data akan dimuat ulang dari server saat dibutuhkan.`,
+            });
+        } else {
+            setAlertConfig({ show: true, type: "error", message: "Gagal membersihkan cache." });
+        }
+    };
+
     const handleExportSettings = () => {
         try {
             const dataStr = JSON.stringify(settings, null, 2);
@@ -997,6 +1016,15 @@ export default function Settings() {
                             icon={<Icon name="download" />}
                         >
                             Export Tema
+                        </Button>
+                        <Button
+                            type="button"
+                            size="lg"
+                            variant="danger"
+                            onClick={handleClearCache}
+                            icon={<Icon name="delete" />}
+                        >
+                            Bersihkan Cache
                         </Button>
                         <Button
                             type="button"

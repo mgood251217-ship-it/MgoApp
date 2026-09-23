@@ -1077,3 +1077,24 @@ export const clearCache = () => {
     localStorage.removeItem("mgo_cache_finishings");
     localStorage.removeItem("mgo_cache_finishings_time");
 };
+
+export const clearAllCache = () => {
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("mgo_cache_")) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+        datasetCache = null;
+        datasetPromise = null;
+        lastFetchTime = 0;
+
+        return { success: true, cleared: keysToRemove.length };
+    } catch (e) {
+        return { success: false, cleared: 0 };
+    }
+};
