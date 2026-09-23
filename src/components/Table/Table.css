@@ -87,7 +87,8 @@
 
 @media (max-width: 768px) {
     .table thead th {
-        top: -12px;
+        position: static;
+        top: auto;
     }
 
     .table-sm th,
