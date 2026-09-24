@@ -12,6 +12,7 @@ import { exportPelunasanExcel } from "../../services/excelService";
 import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
 import { isMobile } from "../../services/platform";
+import { useTabs } from "../../context/TabsContext";
 
 export default function Pelunasan() {
     const { showAlert, alertElement } = usePageAlert();
@@ -19,6 +20,7 @@ export default function Pelunasan() {
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
+    const { openTab } = useTabs();
     
     const [pelunasanData, setPelunasanData] = useState([]);
     const [summary, setSummary] = useState({ 
@@ -75,6 +77,21 @@ export default function Pelunasan() {
         } catch (error) {
             console.error("Gagal export excel:", error);
             showAlert("Terjadi kesalahan saat melakukan export.");
+        }
+    };
+
+    const handleNavClick = (e, path, title) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            e.preventDefault();
+            openTab(path, title);
+            return;
+        }
+
+        if (e.type === "click") {
+            navigate(path);
         }
     };
 
@@ -180,14 +197,14 @@ export default function Pelunasan() {
                         <Button 
                             icon={<Icon name="next" />}
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
                                 const params = new URLSearchParams({
                                     search: row.nomorator,
                                     start_date: row.order_date,
                                     end_date: row.order_date 
                                 }).toString();
 
-                                navigate(`/reports/transaksi-detail?${params}`);
+                                handleNavClick(e, `/reports/transaksi-detail?${params}`, 'Report');
                             }}
                         >
                             Lihat

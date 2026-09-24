@@ -10,12 +10,14 @@ import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerKonsumenExcel } from "../../services/excelService";
 import { getCachedAllOrderDetail } from "../../services/apiCache";
 import Alert from "../../components/Alert/Alert";
+import { useTabs } from "../../context/TabsContext";
 
 export default function TransaksiPerKonsumen() {
     const navigate = useNavigate();
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
+    const { openTab } = useTabs();
     
     const [transaksiKonsumenData, setTransaksiKonsumenData] = useState({});
 
@@ -53,6 +55,21 @@ export default function TransaksiPerKonsumen() {
         } catch (error) {
             console.error("Gagal export excel:", error);
             setAlertConfig({ show: true, type: "error", message: "Gagal export excel. Silakan coba lagi." });
+        }
+    };
+
+    const handleNavClick = (e, path, title) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            e.preventDefault();
+            openTab(path, title);
+            return;
+        }
+
+        if (e.type === "click") {
+            navigate(path);
         }
     };
 
@@ -165,14 +182,14 @@ export default function TransaksiPerKonsumen() {
                                     <Button 
                                         icon={<Icon name="next" />}
                                         size="sm"
-                                        onClick={() => {
+                                        onClick={(e) => {
                                             const params = new URLSearchParams({
                                                 search: row.nomorator,
                                                 start_date: row.date,
                                                 end_date: row.date 
                                             }).toString();
 
-                                            navigate(`/reports/transaksi-detail?${params}`);
+                                            handleNavClick(e, `/reports/transaksi-detail?${params}`, 'Report');
                                         }}
                                     >
                                         Lihat

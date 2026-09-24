@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api/axios";
 import Header from "../../components/Header/Header";
 import ReportNav from "../../components/ReportNav/ReportNav";
 import Table from "../../components/Table/Table";
@@ -10,11 +9,13 @@ import { formatTime, formatRupiah, formatKeInternasional } from "../../services/
 import { exportPiutangExcel } from "../../services/excelService";
 import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedPiutang } from "../../services/apiCache";
+import { useTabs } from "../../context/TabsContext";
 
 export default function Piutang() {
     const { showAlert, alertElement } = usePageAlert();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const { openTab } = useTabs();
     
     const [piutangData, setPiutangData] = useState([]);
     const [totalPiutang, setTotalPiutang] = useState(0);
@@ -57,6 +58,21 @@ export default function Piutang() {
         } catch (error) {
             console.error("Gagal export excel:", error);
             showAlert("Terjadi kesalahan saat melakukan export.");
+        }
+    };
+
+    const handleNavClick = (e, path, title) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            e.preventDefault();
+            openTab(path, title);
+            return;
+        }
+
+        if (e.type === "click") {
+            navigate(path);
         }
     };
 
@@ -154,14 +170,14 @@ export default function Piutang() {
                             <Button 
                                 icon={<Icon name="next" />}
                                 size="sm"
-                                onClick={() => {
+                                onClick={(e) => {
                                     const params = new URLSearchParams({
                                         search: row.nomorator,
                                         start_date: row.date,
                                         end_date: row.date 
                                     }).toString();
 
-                                    navigate(`/reports/transaksi-detail?${params}`);
+                                    handleNavClick(e, `/reports/transaksi-detail?${params}`, 'Report');
                                 }}
                             >
                                 Detail

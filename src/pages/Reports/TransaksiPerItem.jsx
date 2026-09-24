@@ -10,6 +10,7 @@ import { formatTime, formatRupiah, getTodayDate } from "../../services/helpers";
 import { exportTransaksiPerItemExcel } from "../../services/excelService";
 import usePageAlert from "../../hooks/usePageAlert";
 import { getCachedAllOrderDetail } from "../../services/apiCache";
+import { useTabs } from "../../context/TabsContext";
 
 export default function TransaksiPerItem() {
     const { showAlert, alertElement } = usePageAlert();
@@ -17,6 +18,7 @@ export default function TransaksiPerItem() {
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
+    const { openTab } = useTabs();
     
     const [transaksiItemData, setTransaksiItemData] = useState({});
 
@@ -55,6 +57,21 @@ export default function TransaksiPerItem() {
         }
     };
 
+    const handleNavClick = (e, path, title) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            e.preventDefault();
+            openTab(path, title);
+            return;
+        }
+
+        if (e.type === "click") {
+            navigate(path);
+        }
+    };
+
     const columns = useMemo(() => [
         { 
             key: "nomorator", 
@@ -82,7 +99,7 @@ export default function TransaksiPerItem() {
         },
         { 
             key: "price", 
-            title: "Harga Produk", // Disesuaikan menjadi "Harga Produk"
+            title: "Harga Produk", 
             render: (row) => (
                 <span style={{ fontWeight: "500" }}>
                     {formatRupiah(row.price)}
@@ -158,14 +175,14 @@ export default function TransaksiPerItem() {
                                     <Button 
                                         icon={<Icon name="next" />}
                                         size="sm"
-                                        onClick={() => {
+                                        onClick={(e) => {
                                             const params = new URLSearchParams({
                                                 search: row.nomorator,
                                                 start_date: row.date,
                                                 end_date: row.date 
                                             }).toString();
 
-                                            navigate(`/reports/transaksi-detail?${params}`);
+                                            handleNavClick(e, `/reports/transaksi-detail?${params}`, 'Report');
                                         }}
                                     >
                                         Lihat

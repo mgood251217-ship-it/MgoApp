@@ -12,6 +12,7 @@ import Tag from "../../components/Tag/Tag";
 import Icon from "../../components/Icon/Icon";
 import { getCachedTransactionsCapture } from "../../services/apiCache";
 import { isMobile } from "../../services/platform";
+import { useTabs } from "../../context/TabsContext";
 
 export default function TransaksiHarian() {
     const { showAlert, alertElement } = usePageAlert();
@@ -19,6 +20,7 @@ export default function TransaksiHarian() {
     const [startDate, setStartDate] = useState(getTodayDate());
     const [endDate, setEndDate] = useState(getTodayDate());
     const [loading, setLoading] = useState(false);
+    const { openTab } = useTabs();
     
     const [harianData, setHarianData] = useState([]);
     const [summary, setSummary] = useState({ 
@@ -71,6 +73,21 @@ export default function TransaksiHarian() {
         } catch (error) {
             console.error("Gagal export:", error);
             showAlert("Terjadi kesalahan saat export.");
+        }
+    };
+
+    const handleNavClick = (e, path, title) => {
+        const isMiddleClick = e.type === "auxclick" && e.button === 1;
+        const isCtrlOrCmdClick = e.type === "click" && (e.ctrlKey || e.metaKey);
+
+        if (isMiddleClick || isCtrlOrCmdClick) {
+            e.preventDefault();
+            openTab(path, title);
+            return;
+        }
+
+        if (e.type === "click") {
+            navigate(path);
         }
     };
 
@@ -161,14 +178,14 @@ export default function TransaksiHarian() {
                             <Button 
                                 icon={<Icon name="next" />}
                                 size="sm"
-                                onClick={() => {
+                                onClick={(e) => {
                                     const params = new URLSearchParams({
                                         search: row.nomorator,
-                                        start_date: startDate,
-                                        end_date: endDate 
+                                        start_date: row.order_date,
+                                        end_date: row.order_date 
                                     }).toString();
 
-                                    navigate(`/reports/transaksi-detail?${params}`);
+                                    handleNavClick(e, `/reports/transaksi-detail?${params}`, 'Report');
                                 }}
                             >
                                 Lihat
