@@ -181,6 +181,39 @@ export default function Orders() {
         loadData();
     }, [loadData]);
 
+    const getOrderTooltipData = useCallback((row) => {
+        return getCachedOrderDetail(row.order_id);
+    }, []);
+
+    const renderOrderTooltip = useCallback((data) => {
+        const items = data?.items ?? [];
+
+        if (items.length === 0) {
+            return <div style={{ opacity: 0.7 }}>Tidak ada item</div>;
+        }
+
+        return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {items.map((item, idx) => (
+                    <div
+                        key={idx}
+                        style={{
+                            paddingTop: idx === 0 ? 0 : "6px",
+                            borderTop: idx === 0 ? undefined : "1px solid var(--border)"
+                        }}
+                    >
+                        <div style={{ fontWeight: 600 }}>
+                            {item.judul} <span style={{ fontWeight: 400, opacity: 0.7 }}>({item.size})</span>
+                        </div>
+                        <div style={{ opacity: 0.85 }}>
+                            {item.quantity} X {item.finishing_names}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }, []);
+
     const handleViewOrder = useCallback(async (row) => {
         try {
             const res = await getCachedOrderDetail(row.order_id, (fresh) => {
@@ -544,6 +577,9 @@ export default function Orders() {
                     columns={tableColumns}
                     rows={ordersOffline}
                     actions={tableActions}
+                    getRowTooltip={getOrderTooltipData}
+                    renderTooltip={renderOrderTooltip}
+                    tooltipDebounce={700}
                     onRowDoubleClick={(row) => {
                         if (row.total > 0 || isProductionRole || !isDesktop) {
                             setAlertConfig({
@@ -569,6 +605,9 @@ export default function Orders() {
                     columns={tableColumns}
                     rows={ordersOnline}
                     actions={tableActions}
+                    getRowTooltip={getOrderTooltipData}
+                    renderTooltip={renderOrderTooltip}
+                    tooltipDebounce={700}
                     onRowDoubleClick={(row) => {    
                         if (row.total > 0) {
                             setAlertConfig({
