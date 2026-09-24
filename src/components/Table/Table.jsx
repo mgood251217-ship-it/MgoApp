@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useId } from "react";
+import { useState, useMemo, useEffect, useId, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import "./Table.css";
 
 const rowSelectionBus = (() => {
@@ -28,10 +29,71 @@ export default function Table({
     sortable = true,
     selectedRowKey,
     onVisibleRowsChange,
+    getRowTooltip,
+    renderTooltip,
+    tooltipDebounce = 700,
 }) {
     const instanceId = useId();
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
     const [internalSelectedKey, setInternalSelectedKey] = useState(null);
+
+    const [hoveredKey, setHoveredKey] = useState(null);
+    const [tooltipData, setTooltipData] = useState(null);
+    const [tooltipLoading, setTooltipLoading] = useState(false);
+    const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+
+    const hoverTimerRef = useRef(null);
+    const hoverKeyRef = useRef(null);
+
+    const clearHoverTimer = useCallback(() => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+        }
+    }, []);
+
+    useEffect(() => {
+        return () => clearHoverTimer();
+    }, [clearHoverTimer]);
+
+    const handleRowMouseEnter = useCallback((row, e) => {
+        if (!getRowTooltip) return;
+
+        const rowKeyValue = row[rowKey];
+        hoverKeyRef.current = rowKeyValue;
+
+        setTooltipPos({ top: e.clientY + 16, left: e.clientX + 16 });
+
+        clearHoverTimer();
+        hoverTimerRef.current = setTimeout(async () => {
+            setHoveredKey(rowKeyValue);
+            setTooltipLoading(true);
+            setTooltipData(null);
+
+            try {
+                const data = await getRowTooltip(row);
+                if (hoverKeyRef.current === rowKeyValue) {
+                    setTooltipData(data);
+                }
+            } catch (err) {
+                if (hoverKeyRef.current === rowKeyValue) {
+                    setTooltipData(null);
+                }
+            } finally {
+                if (hoverKeyRef.current === rowKeyValue) {
+                    setTooltipLoading(false);
+                }
+            }
+        }, tooltipDebounce);
+    }, [getRowTooltip, rowKey, tooltipDebounce, clearHoverTimer]);
+
+    const handleRowMouseLeave = useCallback(() => {
+        clearHoverTimer();
+        hoverKeyRef.current = null;
+        setHoveredKey(null);
+        setTooltipData(null);
+        setTooltipLoading(false);
+    }, [clearHoverTimer]);
 
     const isControlled = selectedRowKey !== undefined;
     const activeSelectedKey = isControlled ? selectedRowKey : internalSelectedKey;
@@ -158,6 +220,8 @@ export default function Table({
                                             onRowDoubleClick(row);
                                         }
                                     }}
+                                    onMouseEnter={(e) => handleRowMouseEnter(row, e)}
+                                    onMouseLeave={handleRowMouseLeave}
                                     style={{
                                         cursor: onRowDoubleClick ? "pointer" : undefined,
                                         backgroundColor: isSelected
@@ -198,6 +262,33 @@ export default function Table({
                     )}
                 </tbody>
             </table>
+
+            {getRowTooltip && hoveredKey !== null && createPortal(
+                <div
+                    style={{
+                        position: "fixed",
+                        top: tooltipPos.top,
+                        left: tooltipPos.left,
+                        zIndex: 999999,
+                        background: "var(--background)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "6px",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                        padding: "10px 12px",
+                        minWidth: "220px",
+                        maxWidth: "320px",
+                        fontSize: "0.85rem",
+                        pointerEvents: "none",
+                    }}
+                >
+                    {tooltipLoading && !tooltipData ? (
+                        <div style={{ opacity: 0.7 }}>Memuat...</div>
+                    ) : (
+                        renderTooltip ? renderTooltip(tooltipData) : null
+                    )}
+                </div>,
+                document.body
+            )}
         </div>
     );
 }
