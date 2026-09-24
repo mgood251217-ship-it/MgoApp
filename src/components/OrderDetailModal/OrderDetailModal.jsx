@@ -5,6 +5,7 @@ import Table from "../Table/Table";
 import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
 import Select from "../Select/Select";
+import Input from "../Input/Input";
 import Form from "../Form/Form";
 import { formatRupiah, formatTime } from "../../services/helpers";
 import { FOLDER_STATUS_LABEL, formatUkuran, buildRenamedFilenameWithQuantity } from "../../services/folderHelper";
@@ -12,7 +13,7 @@ import useOrderFolderStatus from "../../hooks/useOrderFolderStatus";
 import ChangeFolderIconModal from "../ChangeFolderIconModal/ChangeFolderIconModal";
 import { getCachedStoreNames } from "../../services/apiCache";
 
-export default function OrderDetailModal({ open, onClose, viewOrderDetails, viewOrderData, setAlertConfig, onRefresh }) {
+export default function OrderDetailModal({ open, onClose, viewOrderDetails, viewOrderData, setAlertConfig, onRefresh, operatorOptions = [], onProcessed }) {
     const folder = useOrderFolderStatus(setAlertConfig);
     const [stores, setStores] = useState([]);
 
@@ -20,6 +21,14 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
     const [maklunData, setMaklunData] = useState({
         order_item_id: "",
         store_id: ""
+    });
+
+    const [processModalOpen, setProcessModalOpen] = useState(false);
+    const [processOrderData, setProcessOrderData] = useState({
+        order_id: "",
+        status: "",
+        customStatus: "",
+        user_id: ""
     });
 
     const [renamingPath, setRenamingPath] = useState(null);
@@ -66,6 +75,38 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
             store_id: row.store_id || ""
         });
         setMaklunModalOpen(true);
+    };
+
+    const handleOpenProcess = () => {
+        setProcessOrderData({
+            order_id: viewOrderDetails?.order_id || "",
+            status: "",
+            customStatus: "",
+            user_id: ""
+        });
+        setProcessModalOpen(true);
+    };
+
+    const handleProcessSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = new FormData();
+            payload.append("order_id", processOrderData.order_id);
+
+            const finalStatus = processOrderData.status === "LAINYA" ? processOrderData.customStatus : processOrderData.status;
+            payload.append("status", finalStatus);
+
+            if (processOrderData.status === "DIAMBIL") {
+                payload.append("user_id", processOrderData.user_id);
+            } else {
+                payload.append("user_id", "");
+            }
+
+            await api.post("", payload, { params: { action: "update_project" } });
+            setProcessModalOpen(false);
+            onProcessed?.();
+            onRefresh?.();
+        } catch (err) {}
     };
 
     const viewItemsMapped = (viewOrderData?.items || []).map(item => {
@@ -200,8 +241,19 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                 size="lg"
                 headerColor="info"
             >
-                <div style={{ fontSize: 13, color: "var(--secondary)", marginBottom: 16 }}>
-                    Dibuat: {viewOrderData?.order?.date ? formatTime(viewOrderData.order.date) : "-"}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ fontSize: 13, color: "var(--secondary)" }}>
+                        Dibuat: {viewOrderData?.order?.date ? formatTime(viewOrderData.order.date) : "-"}
+                    </div>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<Icon name="engineering" />}
+                        disabled={viewOrderDetails?.project_initial !== ""}
+                        onClick={handleOpenProcess}
+                    >
+                        Proses Order
+                    </Button>
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
@@ -505,6 +557,71 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                     />
                     <Button type="submit" size="full-lg" variant="info" icon={<Icon name="save" />}>
                         Simpan Maklun
+                    </Button>
+                </Form>
+            </Modal>
+
+            <Modal
+                open={processModalOpen}
+                onClose={() => setProcessModalOpen(false)}
+                title="Proses Order"
+                size="sm"
+                variant="secondary"
+            >
+                <Form id="formProcessOrder" onSubmit={handleProcessSubmit}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
+                        {["BELUM DIPROSES", "DIPROSES", "DIAMBIL", "LAINYA"].map((statusItem) => (
+                            <Button
+                                key={statusItem}
+                                type="button"
+                                variant={processOrderData.status === statusItem ? "primary" : "secondary"}
+                                onClick={() => setProcessOrderData(prev => ({ ...prev, status: statusItem }))}
+                                size="md"
+                            >
+                                {statusItem}
+                            </Button>
+                        ))}
+                    </div>
+
+                    {processOrderData.status === "LAINYA" && (
+                        <div style={{ marginBottom: "16px" }}>
+                            <Input
+                                labelPosition="left"
+                                labelWidth={130}
+                                name="customStatus"
+                                value={processOrderData.customStatus}
+                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, customStatus: e.target.value }))}
+                                label="Status Lainnya"
+                                placeholder="Ketik status manual..."
+                                required
+                            />
+                        </div>
+                    )}
+
+                    {processOrderData.status === "DIAMBIL" && (
+                        <div style={{ marginBottom: "16px" }}>
+                            <Select
+                                labelPosition="left"
+                                labelWidth={130}
+                                name="user_id"
+                                label="Operator"
+                                value={processOrderData.user_id}
+                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, user_id: e.target.value }))}
+                                options={operatorOptions}
+                                placeholder="Pilih Operator"
+                                required
+                            />
+                        </div>
+                    )}
+
+                    <Button
+                        type="submit"
+                        size="full-lg"
+                        variant="primary"
+                        icon={<Icon name="save" />}
+                        disabled={!processOrderData.status}
+                    >
+                        Update Proses
                     </Button>
                 </Form>
             </Modal>

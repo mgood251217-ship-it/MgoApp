@@ -60,13 +60,6 @@ export default function Orders() {
 
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
-    const [processModalOpen, setProcessModalOpen] = useState(false);
-    const [processOrderData, setProcessOrderData] = useState({
-        order_id: "",
-        status: "",
-        customStatus: "",
-        user_id: ""
-    });
 
     const [formOrder, setFormOrder] = useState({
         order_id: "",
@@ -226,16 +219,6 @@ export default function Orders() {
         } catch (err) {}
     }, []);
 
-    const handleProcessClick = useCallback((row) => {
-        setProcessOrderData({
-            order_id: row.order_id,
-            status: "",
-            customStatus: "",
-            user_id: ""
-        });
-        setProcessModalOpen(true);
-    }, []);
-
     const fetchCustomerHistory = async (nameQuery) => {
         try {
             const res = await api.get("", {
@@ -316,7 +299,7 @@ export default function Orders() {
         function handleKeyDown(e) {
             if (!e.ctrlKey || e.key.toLowerCase() !== "n") return;
             if (isProductionRole) return;
-            if (addModalOpen || editModalOpen || processModalOpen || paymentModalOpen || viewModalOpen) return;
+            if (addModalOpen || editModalOpen || paymentModalOpen || viewModalOpen) return;
 
             e.preventDefault();
             handleAddOrder();
@@ -324,7 +307,7 @@ export default function Orders() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [handleAddOrder, isProductionRole, addModalOpen, editModalOpen, processModalOpen, paymentModalOpen, viewModalOpen]);
+    }, [handleAddOrder, isProductionRole, addModalOpen, editModalOpen, paymentModalOpen, viewModalOpen]);
 
     const handleEditOrder = useCallback((row) => {
         setFormOrder({
@@ -399,27 +382,6 @@ export default function Orders() {
         } catch (err) {}
     };
 
-    const handleProcessSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const payload = new FormData();
-            payload.append("order_id", processOrderData.order_id);
-            
-            const finalStatus = processOrderData.status === "LAINYA" ? processOrderData.customStatus : processOrderData.status;
-            payload.append("status", finalStatus);
-            
-            if (processOrderData.status === "DIAMBIL") {
-                payload.append("user_id", processOrderData.user_id);
-            } else {
-                payload.append("user_id", "");
-            }
-
-            await api.post("", payload, { params: { action: "update_project" } });
-            setProcessModalOpen(false);
-            loadData();
-        } catch (err) {}
-    };
-
     const handleNavigate = async (search) => {
         navigate(search);
     }
@@ -482,14 +444,6 @@ export default function Orders() {
                     />
                 )}
                 
-                <Button
-                    size="sm"
-                    variant="secondary"
-                    icon={<Icon name="engineering" />}
-                    disabled={row.project_initial !== ""}
-                    onClick={(e) => { e.stopPropagation(); handleProcessClick(row); }}
-                />
-                
                 {isPrivileged && (
                     <Button
                         size="sm"
@@ -500,7 +454,7 @@ export default function Orders() {
                 )}
             </div>
         );
-    }, [role, handlePayClick, handleViewOrder, handleEditOrder, handleProcessClick, handleNavigate, setPrintStrukOrderId, setPrintPdfOrderId]);
+    }, [role, handlePayClick, handleViewOrder, handleEditOrder, handleNavigate, setPrintStrukOrderId, setPrintPdfOrderId]);
 
     const operatorOptions = useMemo(() => {
         let options = Object.entries(operators).map(([id, name]) => ({
@@ -636,6 +590,8 @@ export default function Orders() {
                 viewOrderData={viewOrderData}
                 setAlertConfig={setAlertConfig}
                 onRefresh={() => handleViewOrder(viewOrderDetails)}
+                operatorOptions={operatorOptions}
+                onProcessed={loadData}
             />
 
             <Modal
@@ -833,71 +789,6 @@ export default function Orders() {
                     />
                     <Button type="submit" size="full-lg" variant="warning" icon={<Icon name="edit" />}>
                         Update Order
-                    </Button>
-                </Form>
-            </Modal>
-
-            <Modal
-                open={processModalOpen}
-                onClose={() => setProcessModalOpen(false)}
-                title="Proses Order"
-                size="sm"
-                variant="secondary"
-            >
-                <Form id="formProcessOrder" onSubmit={handleProcessSubmit}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
-                        {["BELUM DIPROSES", "DIPROSES", "DIAMBIL", "LAINYA"].map((statusItem) => (
-                            <Button
-                                key={statusItem}
-                                type="button"
-                                variant={processOrderData.status === statusItem ? "primary" : "secondary"}
-                                onClick={() => setProcessOrderData(prev => ({ ...prev, status: statusItem }))}
-                                size="md"
-                            >
-                                {statusItem}
-                            </Button>
-                        ))}
-                    </div>
-
-                    {processOrderData.status === "LAINYA" && (
-                        <div style={{ marginBottom: "16px" }}>
-                            <Input
-                                labelPosition="left"
-                                labelWidth={130}
-                                name="customStatus"
-                                value={processOrderData.customStatus}
-                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, customStatus: e.target.value }))}
-                                label="Status Lainnya"
-                                placeholder="Ketik status manual..."
-                                required
-                            />
-                        </div>
-                    )}
-
-                    {processOrderData.status === "DIAMBIL" && (
-                        <div style={{ marginBottom: "16px" }}>
-                            <Select
-                                labelPosition="left"
-                                labelWidth={130}
-                                name="user_id"
-                                label="Operator"
-                                value={processOrderData.user_id}
-                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, user_id: e.target.value }))}
-                                options={operatorOptions}
-                                placeholder="Pilih Operator"
-                                required
-                            />
-                        </div>
-                    )}
-
-                    <Button 
-                        type="submit" 
-                        size="full-lg" 
-                        variant="primary" 
-                        icon={<Icon name="save" />}
-                        disabled={!processOrderData.status}
-                    >
-                        Update Proses
                     </Button>
                 </Form>
             </Modal>
