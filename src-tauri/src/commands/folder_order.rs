@@ -252,6 +252,10 @@ pub struct AnalisisItem {
 
 #[tauri::command]
 pub async fn cek_folder_order(folder_path: String) -> serde_json::Value {
+    if cfg!(target_os = "android") {
+        return serde_json::json!({ "exists": false, "unsupported": true });
+    }
+
     tauri::async_runtime::spawn_blocking(move || {
         serde_json::json!({ "exists": Path::new(&folder_path).exists() })
     })
@@ -261,6 +265,13 @@ pub async fn cek_folder_order(folder_path: String) -> serde_json::Value {
 
 #[tauri::command]
 pub async fn buka_folder(folder_path: String) -> SimpleResult {
+    if cfg!(target_os = "android") || cfg!(target_os = "ios") {
+        return SimpleResult {
+            success: false,
+            message: Some("Membuka folder tidak didukung di platform ini.".into()),
+        };
+    }
+
     tauri::async_runtime::spawn_blocking(move || {
         let path = Path::new(&folder_path);
         if !path.exists() {
@@ -278,6 +289,12 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
 
         #[cfg(target_os = "linux")]
         let res = std::process::Command::new("xdg-open").arg(&folder_path).spawn();
+
+        #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+        let res: std::io::Result<std::process::Child> = Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Platform tidak didukung",
+        ));
 
         match res {
             Ok(_) => SimpleResult { success: true, message: None },
