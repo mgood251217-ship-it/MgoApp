@@ -480,7 +480,7 @@ export default function GlobalStocks() {
             </div>
 
             <Modal open={sendModalOpen} onClose={() => setSendModalOpen(false)} title="Kirim Barang ke Toko Lain" size="md">
-                <form onSubmit={handleSubmitSendStock} style={{ padding: "16px" }}>
+                <form onSubmit={handleSubmitSendStock}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" }}>
                         
                         <Select
@@ -561,7 +561,6 @@ export default function GlobalStocks() {
             </Modal>
 
             <Modal open={historyModalOpen} onClose={() => setHistoryModalOpen(false)} title="Riwayat Pengiriman & Penerimaan Stok" size="lg">
-                <div style={{ padding: "16px" }}>
                     {historyLoading ? (
                         <div style={{ textAlign: "center", padding: "24px", color: "var(--text-muted)" }}><Icon name="sync" /> Memuat data riwayat...</div>
                     ) : (
@@ -580,19 +579,18 @@ export default function GlobalStocks() {
                             rows={deliveriesHistory}
                         />
                     )}
-                </div>
             </Modal>
 
             <Modal open={categoryModalOpen} onClose={() => setCategoryModalOpen(false)} title={categoryForm.id ? "Edit Kategori" : "Tambah Kategori Baru"} size="sm">
-                <form onSubmit={handleSubmitCategory} style={{ padding: "16px" }}><div style={{ marginBottom: "24px" }}><Input labelPosition="top" name="name" type="text" label="Nama Kategori" placeholder="Contoh: ATEXCO..." value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} required /></div><div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}><Button type="button" variant="secondary" onClick={() => setCategoryModalOpen(false)}>Batal</Button><Button type="submit" variant="primary" disabled={isCategorySubmitting} icon={<Icon name={isCategorySubmitting ? "hourglass_empty" : "save"} />}>Simpan Kategori</Button></div></form>
+                <form onSubmit={handleSubmitCategory}><div style={{ marginBottom: "24px" }}><Input labelPosition="top" name="name" type="text" label="Nama Kategori" placeholder="Contoh: ATEXCO..." value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} required /></div><div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}><Button type="button" variant="secondary" onClick={() => setCategoryModalOpen(false)}>Batal</Button><Button type="submit" variant="primary" disabled={isCategorySubmitting} icon={<Icon name={isCategorySubmitting ? "hourglass_empty" : "save"} />}>Simpan Kategori</Button></div></form>
             </Modal>
 
             <Modal open={productModalOpen} onClose={() => setProductModalOpen(false)} title={productForm.id ? "Edit Produk" : "Tambah Produk Baru"} size="md">
-                <form onSubmit={handleSubmitProduct} style={{ padding: "16px" }}><div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" }}><Input labelPosition="top" name="name" type="text" label="Nama Produk" placeholder="Contoh: Protectpaper..." value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required /><div style={{ display: "flex", gap: "12px" }}><div style={{ flex: 1 }}><Input labelPosition="top" name="size" type="text" label="Ukuran (Size)" placeholder="Contoh: 1.2, roll, -" value={productForm.size} onChange={(e) => setProductForm({ ...productForm, size: e.target.value })} /></div><div style={{ flex: 1 }}><Input labelPosition="top" name="price" type="number" label="Harga (Opsional)" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} /></div></div></div><div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}><Button type="button" variant="secondary" onClick={() => setProductModalOpen(false)}>Batal</Button><Button type="submit" variant="primary" disabled={isProductSubmitting} icon={<Icon name={isProductSubmitting ? "hourglass_empty" : "save"} />}>Simpan Produk</Button></div></form>
+                <form onSubmit={handleSubmitProduct}><div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" }}><Input labelPosition="top" name="name" type="text" label="Nama Produk" placeholder="Contoh: Protectpaper..." value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required /><div style={{ display: "flex", gap: "12px" }}><div style={{ flex: 1 }}><Input labelPosition="top" name="size" type="text" label="Ukuran (Size)" placeholder="Contoh: 1.2, roll, -" value={productForm.size} onChange={(e) => setProductForm({ ...productForm, size: e.target.value })} /></div><div style={{ flex: 1 }}><Input labelPosition="top" name="price" type="number" label="Harga (Opsional)" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} /></div></div></div><div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}><Button type="button" variant="secondary" onClick={() => setProductModalOpen(false)}>Batal</Button><Button type="submit" variant="primary" disabled={isProductSubmitting} icon={<Icon name={isProductSubmitting ? "hourglass_empty" : "save"} />}>Simpan Produk</Button></div></form>
             </Modal>
 
             <Modal open={updateModalOpen} onClose={() => setUpdateModalOpen(false)} title="Update Stok Harian" size="sm">
-                <form onSubmit={handleUpdateDailyStock} style={{ padding: "16px" }}>
+                <form onSubmit={handleUpdateDailyStock}>
                     <div style={{ marginBottom: "20px", padding: "12px", backgroundColor: "var(--bg-body)", border: "1px solid var(--border)", borderRadius: "8px" }}><div style={{ marginBottom: "8px" }}><span style={{ color: "var(--text-muted)", fontSize: "13px" }}>Produk:</span><br/><strong>{selectedCell?.productName}</strong></div><div><span style={{ color: "var(--text-muted)", fontSize: "13px" }}>Tanggal:</span><br/><strong>{selectedCell?.fullDate}</strong></div></div>
                     <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}><div style={{ flex: 1 }}><Input labelPosition="top" name="stock_in" type="number" label="Stok Masuk (M)" value={updateForm.stock_in} onChange={(e) => setUpdateForm({ ...updateForm, stock_in: e.target.value })} /></div><div style={{ flex: 1 }}><Input labelPosition="top" name="stock_out" type="number" label="Stok Keluar (K)" value={updateForm.stock_out} onChange={(e) => setUpdateForm({ ...updateForm, stock_out: e.target.value })} /></div></div>
                     <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}><Button type="button" variant="secondary" onClick={() => setUpdateModalOpen(false)}>Batal</Button><Button type="submit" variant="primary" disabled={isSubmitting} icon={<Icon name={isSubmitting ? "hourglass_empty" : "save"} />}>Simpan Stok</Button></div>

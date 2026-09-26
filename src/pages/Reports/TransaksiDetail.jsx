@@ -11,10 +11,12 @@ import Input from "../../components/Input/Input";
 import Tag from "../../components/Tag/Tag";
 import Modal from "../../components/Modal/Modal";
 import PaymentModal from "../../components/PaymentModal/PaymentModal";
+import PrintStruk from "../../components/PrintStruk/PrintStruk";
 import { formatTime, formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 import { getCachedTransactionsDetail } from "../../services/apiCache";
 import { checkFoldersForItems, listFilesForFolder, formatUkuran } from "../../services/folderHelper";
+import { isDesktop } from "../../services/platform";
 import usePageAlert from "../../hooks/usePageAlert";
 
 export default function TransaksiDetail() {
@@ -39,6 +41,7 @@ export default function TransaksiDetail() {
     const [selectedImage, setSelectedImage] = useState(null);
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [printStrukOrderId, setPrintStrukOrderId] = useState(null);
 
     const applyTransactionsData = (res, { resetSelection = false } = {}) => {
         setOrders(res?.orders || []);
@@ -371,36 +374,54 @@ export default function TransaksiDetail() {
                                 <div style={{ 
                                     padding: "16px", 
                                     borderBottom: "1px dashed var(--border)",
-                                    display: "grid",
-                                    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                                    display: "flex",
+                                    alignItems: "flex-start",
                                     gap: "16px",
                                     background: "var(--surface)"
                                 }}>
-                                    <div>
-                                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomorator</div>
-                                        <div style={{ fontWeight: "bold", fontSize: "16px", color: "var(--text)" }}>#{order.nomorator}</div>
-                                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>ID: {order.order_id}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Konsumen</div>
-                                        <div style={{ fontWeight: "600", color: "var(--text)" }}>{order.customer_name}</div>
-                                        <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "2px" }}>{formatKeInternasional(order.nomor)}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Waktu Dibuat</div>
-                                        <div style={{ fontWeight: "500", fontSize: "14px", color: "var(--text)" }}>{formatTime(order.date)}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Sistem & Operator</div>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <Tag
-                                                variant={order.system === "ONLINE" ? "primary" : "success"}
-                                            >
-                                                {order.system}
-                                            </Tag>
-                                            <span style={{ fontWeight: "600", fontSize: "13px", color: "var(--text)" }}>{order.operator}</span>
+                                    <div style={{
+                                        flex: 1,
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                                        gap: "16px"
+                                    }}>
+                                        <div>
+                                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomorator</div>
+                                            <div style={{ fontWeight: "bold", fontSize: "16px", color: "var(--text)" }}>#{order.nomorator}</div>
+                                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>ID: {order.order_id}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Konsumen</div>
+                                            <div style={{ fontWeight: "600", color: "var(--text)" }}>{order.customer_name}</div>
+                                            <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "2px" }}>{formatKeInternasional(order.nomor)}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Waktu Dibuat</div>
+                                            <div style={{ fontWeight: "500", fontSize: "14px", color: "var(--text)" }}>{formatTime(order.date)}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Sistem & Operator</div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <Tag
+                                                    variant={order.system === "ONLINE" ? "primary" : "success"}
+                                                >
+                                                    {order.system}
+                                                </Tag>
+                                                <span style={{ fontWeight: "600", fontSize: "13px", color: "var(--text)" }}>{order.operator}</span>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {isDesktop && (
+                                        <Button
+                                            size="sm"
+                                            variant="primary"
+                                            icon={<Icon name="print" />}
+                                            onClick={() => setPrintStrukOrderId(order.order_id)}
+                                        >
+                                            Cetak Struk
+                                        </Button>
+                                    )}
                                 </div>
 
                                 <div style={{ padding: "16px", borderBottom: "1px dashed var(--border)" }}>
@@ -843,6 +864,13 @@ export default function TransaksiDetail() {
                 order={selectedOrder}
                 onSuccess={handlePaymentSuccess}
             />
+
+            {printStrukOrderId && (
+                <PrintStruk
+                    orderId={printStrukOrderId}
+                    onClose={() => setPrintStrukOrderId(null)}
+                />
+            )}
 
             <Modal 
                 open={!!selectedImage} 
