@@ -74,6 +74,7 @@ export default function Navbar() {
         category: "bug",
         detail: ""
     });
+    const [helpFile, setHelpFile] = useState(null);
 
     const helpStatusColors = {
         SENT: "rgba(14, 165, 233, 0.15)",
@@ -97,6 +98,8 @@ export default function Navbar() {
     const [changelogData, setChangelogData] = useState([]);
     const [changelogLoading, setChangelogLoading] = useState(false);
     const [changelogError, setChangelogError] = useState("");
+
+    const [viewHelpImage, setViewHelpImage] = useState(null);
 
     const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
 
@@ -190,6 +193,7 @@ export default function Navbar() {
         setActiveTab("form");
         setSelectedTicket(null);
         setFormHelp({ subject: "", category: "bug", detail: "" });
+        setHelpFile(null);
     };
 
     const handleTabChange = (tab) => {
@@ -198,6 +202,16 @@ export default function Navbar() {
         if (tab === "list") {
             fetchTickets();
         }
+    };
+
+    const handleHelpFileChange = (file) => {
+        if (!file) return;
+        const maxSizeMb = 5;
+        if (file.size > maxSizeMb * 1024 * 1024) {
+            setAlertConfig({ show: true, type: "error", message: `Ukuran file maksimal ${maxSizeMb}MB.` });
+            return;
+        }
+        setHelpFile(file);
     };
 
     const handleSubmitHelp = async (e) => {
@@ -218,6 +232,9 @@ export default function Navbar() {
             payload.append("detail", formHelp.detail);
             payload.append("status", "SENT");
             payload.append("datetime", datetimeStr);
+            if (helpFile) {
+                payload.append("picture", helpFile);
+            }
 
             const res = await api.post("", payload, { params: { action: "create_help" } });
             
@@ -226,6 +243,7 @@ export default function Navbar() {
             } else {
                 setAlertConfig({ show: true, type: "success", message: "Pengajuan berhasil dikirim!" });
                 setFormHelp({ subject: "", category: "bug", detail: "" });
+                setHelpFile(null);
                 setTimeout(() => {
                     handleTabChange("list");
                 }, 1000);
@@ -405,6 +423,87 @@ export default function Navbar() {
                                         placeholder="Jelaskan detail masalah atau permintaan Anda..."
                                     />
                                 </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                    <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text)" }}>
+                                        Lampiran <span style={{ fontWeight: "400", color: "var(--text-muted)" }}>(opsional, gambar/dokumen, maks 5MB)</span>
+                                    </label>
+
+                                    {!helpFile ? (
+                                        <label
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDragEnter={(e) => e.preventDefault()}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                const file = e.dataTransfer?.files?.[0];
+                                                if (file) handleHelpFileChange(file);
+                                            }}
+                                            style={{
+                                                padding: "16px",
+                                                borderRadius: "var(--radius)",
+                                                border: "2px dashed var(--border)",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: "8px",
+                                                backgroundColor: "var(--bg-content)",
+                                                color: "var(--text-muted)",
+                                                fontSize: "13px",
+                                                fontWeight: "600",
+                                                cursor: "pointer",
+                                                transition: "background 0.2s"
+                                            }}
+                                        >
+                                            <input
+                                                type="file"
+                                                accept="image/*,.pdf,.doc,.docx,.txt"
+                                                style={{ display: "none" }}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) handleHelpFileChange(file);
+                                                    e.target.value = null;
+                                                }}
+                                            />
+                                            <Icon name="upload_file" />
+                                            Klik atau seret file ke sini untuk melampirkan
+                                        </label>
+                                    ) : (
+                                        <div style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            gap: "12px",
+                                            padding: "10px 14px",
+                                            borderRadius: "var(--radius)",
+                                            border: "1px solid var(--border)",
+                                            backgroundColor: "var(--bg-content)"
+                                        }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                                {helpFile.type?.startsWith("image/") ? (
+                                                    <img
+                                                        src={URL.createObjectURL(helpFile)}
+                                                        alt="Preview lampiran"
+                                                        style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "6px", border: "1px solid var(--border)" }}
+                                                    />
+                                                ) : (
+                                                    <Icon name="description" />
+                                                )}
+                                                <span style={{ fontSize: "13px", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                    {helpFile.name}
+                                                </span>
+                                                <span style={{ fontSize: "11px", color: "var(--text-muted)", flexShrink: 0 }}>
+                                                    ({(helpFile.size / 1024).toFixed(0)} KB)
+                                                </span>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="danger"
+                                                size="sm"
+                                                icon={<Icon name="close" />}
+                                                onClick={() => setHelpFile(null)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div style={{ display: "flex", justifyContent: "flex-end" }}>
                                 <Button type="submit" variant="success" disabled={isSubmitting} icon={<Icon name={isSubmitting ? "hourglass_empty" : "send"} />}>
@@ -452,6 +551,18 @@ export default function Navbar() {
                                         }}>
                                             {selectedTicket.detail}
                                         </div>
+
+                                        {selectedTicket.picture_link && (
+                                            <div style={{ marginTop: "16px" }}>
+                                                <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", marginBottom: "8px" }}>Lampiran</div>
+                                                <img
+                                                    src={selectedTicket.picture_link}
+                                                    alt="Lampiran"
+                                                    onClick={() => setViewHelpImage(selectedTicket.picture_link)}
+                                                    style={{ maxWidth: "100%", maxHeight: "240px", borderRadius: "var(--radius)", border: "1px solid var(--border)", cursor: "pointer" }}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : isLoadingList ? (
@@ -472,7 +583,19 @@ export default function Navbar() {
                                     columns={[
                                         { key: "datetime", title: "Waktu", render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.datetime}</span> },
                                         { key: "category", title: "Kategori", render: (row) => <span style={{ textTransform: "capitalize", fontSize: "12px" }}>{row.category}</span> },
-                                        { key: "subject", title: "Subjek", render: (row) => <strong>{row.subject}</strong> },
+                                        { key: "subject", title: "Subjek", render: (row) => (
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                                                <strong>{row.subject}</strong>
+                                                {row.picture_link && (
+                                                    <img
+                                                        src={row.picture_link}
+                                                        alt="Lampiran"
+                                                        onClick={(e) => { e.stopPropagation(); setViewHelpImage(row.picture_link); }}
+                                                        style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px", border: "1px solid var(--border)", cursor: "pointer" }}
+                                                    />
+                                                )}
+                                            </span>
+                                        ) },
                                         { key: "status", title: "Status", render: (row) => (
                                             <span style={{ 
                                                 padding: "2px 8px", 
@@ -549,6 +672,23 @@ export default function Navbar() {
                                 </div>
                             ))}
                         </div>
+                    )}
+                </div>
+            </Modal>
+
+            <Modal
+                open={!!viewHelpImage}
+                onClose={() => setViewHelpImage(null)}
+                title="Lampiran"
+                size="lg"
+            >
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "16px" }}>
+                    {viewHelpImage && (
+                        <img
+                            src={viewHelpImage}
+                            alt="Lampiran"
+                            style={{ maxWidth: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: "var(--radius)" }}
+                        />
                     )}
                 </div>
             </Modal>
