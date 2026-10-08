@@ -1,13 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import Splash from "../../components/Splash/Splash";
 import UpdatePrompt from "../../components/UpdatePrompt/UpdatePrompt";
 import { delay } from "../../services/helpers";
 import { isMobile } from "../../services/platform";
 import { bootSteps } from "./steps";
 
-export default function Boot() {
-    const navigate = useNavigate();
+export default function Boot({ onComplete }) {
     const [message, setMessage] = useState("Initializing application...");
     const [error, setError] = useState(null);
     const [updateInfo, setUpdateInfo] = useState(null);
@@ -35,18 +33,16 @@ export default function Boot() {
                     return;
                 }
                 if (step.key === "session") {
-                    if (!result) {
-                        navigate("/login", { replace: true });
-                    }
+                    onComplete(Boolean(result));
                     return;
                 }
             }
-            navigate("/login", { replace: true });
+            onComplete(false);
         } catch (err) {
             console.error(err);
             setError("Terjadi kesalahan saat memulai aplikasi.");
         }
-    }, [navigate]);
+    }, [onComplete]);
 
     const initialize = useCallback(() => {
         setError(null);

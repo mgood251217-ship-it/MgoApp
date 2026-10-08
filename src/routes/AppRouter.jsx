@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "../pages/Login/Login";
 import Boot from "../pages/Boot/Boot";
@@ -7,29 +7,19 @@ import { authStore } from "../services/session";
 
 export default function AppRouter() {
     const [authenticated, setAuthenticated] = useState(Boolean(authStore.getUser()));
-    const [loading, setLoading] = useState(true);
+    const [bootComplete, setBootComplete] = useState(false);
+    const handleBootComplete = useCallback(() => setBootComplete(true), []);
 
     useEffect(() => {
         const unsubscribe = authStore.subscribe((user) => {
             setAuthenticated(Boolean(user));
         });
 
-        async function verifySession() {
-            await authStore.checkSession();
-            setLoading(false);
-        }
-
-        verifySession();
-
         return unsubscribe;
     }, []);
 
-    if (loading) {
-        return (
-            <HashRouter>
-                <Boot />
-            </HashRouter>
-        );
+    if (!bootComplete) {
+        return <Boot onComplete={handleBootComplete} />;
     }
 
     if (authenticated) {
@@ -38,10 +28,10 @@ export default function AppRouter() {
 
     return (
         <HashRouter>
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
+                <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="*" element={<Navigate to="/login" replace />} />
+                </Routes>
         </HashRouter>
     );
 }
