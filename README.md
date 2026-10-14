@@ -8,7 +8,7 @@
   ![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)
 </div>
 
----
+----
 
 ## 📖 Tentang Aplikasi
 **MGO Desktop** adalah sistem kasir (Point of Sale) profesional berbasis desktop yang dirancang khusus untuk memenuhi kebutuhan operasional kantor dan bisnis dengan mobilitas tinggi. Dibangun menggunakan ekosistem modern berperforma tinggi (**Tauri**, **React**, dan **Vite**), aplikasi ini menawarkan efisiensi luar biasa dengan ukuran file **kurang dari 10 MB**, konsumsi RAM yang sangat rendah, serta kestabilan dan keamanan server yang terjamin.
