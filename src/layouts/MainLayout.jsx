@@ -15,7 +15,7 @@ import Failure from "../pages/Failure";
 import Maklun from "../pages/Maklun";
 import Report from "../pages/Report";
 import Settings from "../pages/Settings";
-import About from "../pages/About";
+import Guide from "../pages/Guide";
 
 import TransaksiDetail from "../pages/Reports/TransaksiDetail";
 import TransaksiHarian from "../pages/Reports/TransaksiHarian";
@@ -40,7 +40,7 @@ const TITLE_BY_PATH = {
     "/maklun": "Maklun",
     "/report": "Reports",
     "/settings": "Settings",
-    "/about": "About"
+    "/guide": "Guide"
 };
 
 function resolveTitleFromPath(pathname) {
@@ -73,7 +73,7 @@ function TabMainRoutes() {
             <Route path="/failure" element={<Failure />} />
             <Route path="/maklun" element={<Maklun />} />
             <Route path="/report" element={<Report />} />
-            <Route path="/about" element={<About />} />
+            <Route path="/guide" element={<Guide />} />
 
             <Route path="/reports/transaksi-detail" element={<TransaksiDetail />} />
             <Route path="/reports/transaksi-harian" element={<TransaksiHarian />} />

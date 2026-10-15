@@ -7,7 +7,7 @@ import Modal from "../components/Modal/Modal";
 import CardVideo from "../components/CardVideo/CardVideo";
 import { FiSearch } from "react-icons/fi";
 
-export default function About() {
+export default function Guide() {
     const [tutorials, setTutorials] = useState([]);
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState(null);
@@ -27,7 +27,7 @@ export default function About() {
 
     return (
         <section style={{ width: "100%", minWidth: "0", paddingBottom: "32px", color: "var(--text)" }}>
-            <Header title="Tutorial & Panduan" subtitle="Temukan panduan untuk membantu pekerjaan sehari-hari." />
+            <Header title="Guide" subtitle="Temukan panduan untuk membantu pekerjaan sehari-hari." />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px", margin: "0 0 24px", padding: "18px 20px", background: "var(--bg-content)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 260px", maxWidth: "480px", minWidth: "0" }}>
                     <FiSearch style={{ color: "var(--text-muted)", flexShrink: 0 }} aria-hidden="true" />

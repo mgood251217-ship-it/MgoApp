@@ -2,7 +2,7 @@ import "./Sidebar.css";
 import { MdOutlineSettings } from "react-icons/md";
 import { RiStore2Line } from "react-icons/ri";
 import { LuPackage } from "react-icons/lu";
-import { FiShoppingBag, FiFileText, FiAlertCircle } from "react-icons/fi";
+import { FiShoppingBag, FiFileText, FiBookOpen } from "react-icons/fi";
 import { FaBoxes } from "react-icons/fa";
 import { TbRulerMeasure } from "react-icons/tb";
 import { MdOutlineErrorOutline } from "react-icons/md";
@@ -21,7 +21,7 @@ const menus = [
     { title: "Maklun", path: "/maklun", icon: <LiaWindowRestore /> },
     { title: "Reports", path: "/report", icon: <FiFileText />, restrict: true },
     { title: "Settings", path: "/settings", icon: <MdOutlineSettings /> },
-    { title: "About", path: "/about", icon: <FiAlertCircle />}
+    { title: "Guide", path: "/guide", icon: <FiBookOpen />}
 ];
 
 export default function Sidebar() {
