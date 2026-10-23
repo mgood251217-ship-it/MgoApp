@@ -40,7 +40,9 @@
     "windows": {
       "nsis": {
         "compression": "lzma",
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "installMode": "perMachine",
+        "template": "windows/installer.nsi"
       }
     }
   }
