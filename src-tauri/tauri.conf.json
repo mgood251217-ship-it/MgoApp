@@ -40,7 +40,8 @@
       "../src/assets/icons/*": "icons/",
       "target/release/mgo-folder-protection.exe": "mgo-folder-protection.exe",
       "windows/setup_folder_protection.ps1": "setup_folder_protection.ps1",
-      "windows/activate_folder_protection.ps1": "activate_folder_protection.ps1"
+      "windows/activate_folder_protection.ps1": "activate_folder_protection.ps1",
+      "windows/migrate_user_install.ps1": "migrate_user_install.ps1"
     },
     "windows": {
       "nsis": {

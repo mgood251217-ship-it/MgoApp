@@ -8,6 +8,8 @@ Saat memasang MgoDesktop pada komputer penyimpanan, centang **Komputer server: p
 
 Jika layanan sudah terpasang dan berjalan, langsung lanjut ke langkah berikut. Pengguna tidak perlu mengetik perintah PowerShell.
 
+Installer memakai satu lokasi aplikasi: `C:\ProgramData\MgoDesktop`. Instalasi lama di AppData pengguna diperiksa dan dimigrasikan otomatis, termasuk ketika UAC memakai akun administrator lain. Pengaturan pengguna dipertahankan. Jika migrasi gagal, installer menampilkan error; tutup MGO di semua akun dan periksa rincian instalasi sebelum mencoba lagi.
+
 ## Mengaktifkan Folder
 
 1. Buka **Settings → Custom Folder Protection**.
