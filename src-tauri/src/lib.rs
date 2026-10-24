@@ -1,4 +1,5 @@
 mod commands;
+pub mod folder_protection;
 
 use commands::{folder_order, icon_folder, misc, settings, updater_custom};
 use tauri::Manager;
@@ -66,10 +67,15 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::folder_protection::inspect_folder_protection,
+            commands::folder_protection::plan_folder_protection,
+            commands::folder_protection::activate_folder_protection,
+            commands::folder_protection::verify_folder_protection,
             misc::pilih_file_order,
             misc::pilih_folder,
             misc::buka_link_eksternal,
             misc::save_pdf_data,
+            misc::save_file_at_path,
             misc::simpan_file_dialog,
             misc::print_window,
             misc::simpan_temp_file,

@@ -1,19 +1,36 @@
+use crate::folder_protection::storage::Storage;
 use base64::Engine;
 use chrono::Datelike;
 use serde::Deserialize;
 use serde_json::Value;
-use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_shell::ShellExt;
 
 #[tauri::command]
+pub async fn save_file_at_path(file_path: String, data: Vec<u8>) -> Value {
+    tauri::async_runtime::spawn_blocking(move || {
+        match Storage::new()
+            .and_then(|storage| storage.write_file(std::path::Path::new(&file_path), &data))
+        {
+            Ok(()) => serde_json::json!({"success": true, "filePath": file_path}),
+            Err(e) => serde_json::json!({"success": false, "message": e}),
+        }
+    })
+    .await
+    .unwrap_or_else(|e| serde_json::json!({"success": false, "message": e.to_string()}))
+}
+
+#[tauri::command]
 pub async fn pilih_file_order(app: AppHandle) -> Vec<String> {
     let files = app
         .dialog()
         .file()
-        .add_filter("File Desain", &["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"])
+        .add_filter(
+            "File Desain",
+            &["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"],
+        )
         .blocking_pick_files();
 
     files
@@ -82,8 +99,15 @@ pub async fn simpan_file_dialog(app: AppHandle, args: SimpanFileArgs) -> Value {
         Err(e) => return serde_json::json!({ "success": false, "message": e.to_string() }),
     };
 
-    match fs::write(&dest_path, buffer) {
-        Ok(_) => serde_json::json!({ "success": true, "filePath": dest_path.to_string_lossy() }),
+    let result_path = dest_path.to_string_lossy().to_string();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        Storage::new().and_then(|storage| storage.write_file(&dest_path, &buffer))
+    })
+    .await
+    .map_err(|e| e.to_string())
+    .and_then(|r| r);
+    match result {
+        Ok(_) => serde_json::json!({ "success": true, "filePath": result_path }),
         Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
     }
 }
@@ -118,8 +142,15 @@ pub struct SavePdfArgs {
 }
 
 #[tauri::command]
-pub fn save_pdf_data(args: SavePdfArgs) -> Value {
-    let program_data = std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());
+pub async fn save_pdf_data(args: SavePdfArgs) -> Value {
+    tauri::async_runtime::spawn_blocking(move || save_pdf_inner(args))
+        .await
+        .unwrap_or_else(|e| serde_json::json!({"success": false, "message": e.to_string()}))
+}
+
+fn save_pdf_inner(args: SavePdfArgs) -> Value {
+    let program_data =
+        std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());
     let today = chrono::Local::now();
 
     let struk_dir: PathBuf = PathBuf::from(program_data)
@@ -129,7 +160,11 @@ pub fn save_pdf_data(args: SavePdfArgs) -> Value {
         .join(format!("{:02}", today.month()))
         .join(format!("{:02}", today.day()));
 
-    if let Err(e) = fs::create_dir_all(&struk_dir) {
+    let storage = match Storage::new() {
+        Ok(s) => s,
+        Err(e) => return serde_json::json!({"success": false, "message": e}),
+    };
+    if let Err(e) = storage.create_dir_all(&struk_dir) {
         return serde_json::json!({ "success": false, "message": e.to_string() });
     }
 
@@ -140,7 +175,7 @@ pub fn save_pdf_data(args: SavePdfArgs) -> Value {
         Err(e) => return serde_json::json!({ "success": false, "message": e.to_string() }),
     };
 
-    match fs::write(&file_path, buffer) {
+    match storage.write_file(&file_path, &buffer) {
         Ok(_) => serde_json::json!({ "success": true, "filePath": file_path.to_string_lossy() }),
         Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
     }
@@ -155,10 +190,20 @@ pub struct SimpanTempFileArgs {
 }
 
 #[tauri::command]
-pub fn simpan_temp_file(args: SimpanTempFileArgs) -> Value {
+pub async fn simpan_temp_file(args: SimpanTempFileArgs) -> Value {
+    tauri::async_runtime::spawn_blocking(move || simpan_temp_inner(args))
+        .await
+        .unwrap_or_else(|e| serde_json::json!({"success": false, "message": e.to_string()}))
+}
+
+fn simpan_temp_inner(args: SimpanTempFileArgs) -> Value {
     let temp_dir = std::env::temp_dir().join("MgoDesktopNota");
 
-    if let Err(e) = fs::create_dir_all(&temp_dir) {
+    let storage = match Storage::new() {
+        Ok(s) => s,
+        Err(e) => return serde_json::json!({"success": false, "message": e}),
+    };
+    if let Err(e) = storage.create_dir_all(&temp_dir) {
         return serde_json::json!({ "success": false, "message": e.to_string() });
     }
 
@@ -169,7 +214,7 @@ pub fn simpan_temp_file(args: SimpanTempFileArgs) -> Value {
         Err(e) => return serde_json::json!({ "success": false, "message": e.to_string() }),
     };
 
-    match fs::write(&file_path, buffer) {
+    match storage.write_file(&file_path, &buffer) {
         Ok(_) => serde_json::json!({ "success": true, "filePath": file_path.to_string_lossy() }),
         Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
     }

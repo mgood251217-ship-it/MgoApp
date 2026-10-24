@@ -172,6 +172,52 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
 !insertmacro MUI_PAGE_WELCOME
 
+; Explicit server role selection. Clients do not install a privileged local service.
+Var MgoServerCheck
+Var MgoServerEnabled
+Var MgoAccountInput
+Var MgoAuthorizedAccount
+Page custom MgoServerPage MgoServerPageLeave
+Function MgoServerPage
+  ReadRegStr $0 HKLM "SOFTWARE\MGO\FolderProtection" "ServerSid"
+  StrCpy $MgoServerEnabled 0
+  ${If} $0 != ""
+    StrCpy $MgoServerEnabled 1
+  ${EndIf}
+  ${GetOptions} $CMDLINE "/MGOSERVER" $1
+  ${IfNot} ${Errors}
+    StrCpy $MgoServerEnabled 1
+  ${EndIf}
+  ${If} ${Silent}
+    Abort
+  ${EndIf}
+  ${If} $PassiveMode = 1
+    Abort
+  ${EndIf}
+  nsDialogs::Create 1018
+  Pop $0
+  !insertmacro MUI_HEADER_TEXT "Folder Protection" "Pilih peran komputer ini"
+  ${NSD_CreateCheckbox} 0 0 100% 24u "Komputer server: pasang / perbarui layanan Folder Protection"
+  Pop $MgoServerCheck
+  ${NSD_SetState} $MgoServerCheck $MgoServerEnabled
+  ${NSD_CreateLabel} 0 30u 100% 58u "Centang hanya pada server penyimpanan. Setup baru membuat folder uji MGO-Test di ProgramData dengan akses Windows Read & Execute dan layanan Modify. Folder produksi dan izin drive D: tidak diubah. Pembaruan mempertahankan data dan izin yang sudah ada."
+  Pop $0
+  ${NSD_CreateLabel} 0 93u 100% 14u "Akun Windows MGO (untuk setup server baru):"
+  Pop $0
+  ReadEnvStr $0 "USERDOMAIN"
+  ReadEnvStr $1 "USERNAME"
+  StrCpy $MgoAuthorizedAccount "$0\$1"
+  ${NSD_CreateText} 0 111u 100% 14u "$MgoAuthorizedAccount"
+  Pop $MgoAccountInput
+  ${NSD_CreateLabel} 0 133u 100% 28u "Jika UAC memakai akun administrator lain, isi akun Windows pengguna MGO yang sebenarnya. Komputer klien cukup memasang aplikasi."
+  Pop $0
+  nsDialogs::Show
+FunctionEnd
+Function MgoServerPageLeave
+  ${NSD_GetState} $MgoServerCheck $MgoServerEnabled
+  ${NSD_GetText} $MgoAccountInput $MgoAuthorizedAccount
+FunctionEnd
+
 ; 2. License Page (if defined)
 !if "${LICENSE}" != ""
   !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
@@ -728,6 +774,36 @@ Section Install
   !ifmacrodef NSIS_HOOK_POSTINSTALL
     !insertmacro NSIS_HOOK_POSTINSTALL
   !endif
+
+  ${If} $MgoServerEnabled = 1
+    ReadRegStr $0 HKLM "SOFTWARE\MGO\FolderProtection" "ServerSid"
+    ${If} $0 != ""
+      StrCpy $1 "Upgrade"
+    ${Else}
+      StrCpy $1 "Install"
+    ${EndIf}
+    SetDetailsPrint both
+    DetailPrint "Menyiapkan layanan MGO Folder Protection ($1)..."
+    ; Use 64-bit Windows PowerShell. No execution-policy/security bypass is used.
+    ${If} ${RunningX64}
+      SetRegView 64
+      StrCpy $2 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+    ${Else}
+      StrCpy $2 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
+    ${EndIf}
+    ${If} $1 == "Upgrade"
+    ${OrIf} $MgoAuthorizedAccount == ""
+      nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -File $\"$INSTDIR\setup_folder_protection.ps1$\" -Mode $1'
+      Pop $0
+    ${Else}
+      nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -File $\"$INSTDIR\setup_folder_protection.ps1$\" -Mode $1 -AuthorizedAccount $\"$MgoAuthorizedAccount$\"'
+      Pop $0
+    ${EndIf}
+    ${If} $0 != 0
+      MessageBox MB_ICONSTOP|MB_OK "Aplikasi terpasang, tetapi setup layanan gagal (kode $0). Konfigurasi dan data proteksi dipertahankan. Periksa layanan MgoFolderProtection atau jalankan installer kembali sebagai administrator."
+      SetErrorLevel 2
+    ${EndIf}
+  ${EndIf}
 
   ; Auto close this page for passive mode
   ${If} $PassiveMode = 1
