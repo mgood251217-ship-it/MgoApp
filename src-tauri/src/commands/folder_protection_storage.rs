@@ -20,13 +20,13 @@ pub struct Storage {
 }
 
 fn validate_registrations(roots: &[Registration]) -> Result<(), String> {
-    if roots.is_empty() || roots.len() > 32 {
+    if roots.is_empty() || roots.len() > 64 {
         return Err("Invalid machine root catalog size".into());
     }
     let mut ids = std::collections::HashSet::new();
     for root in roots {
         if root.root_id.is_empty()
-            || root.root_id.len() > 64
+            || root.root_id.len() > 68
             || !root
                 .root_id
                 .bytes()
@@ -112,6 +112,13 @@ impl Storage {
                 validate_registrations(&roots)?;
             }
         }
+        #[cfg(windows)]
+        {
+            roots.extend(super::lan::registrations()?);
+            if !roots.is_empty() {
+                validate_registrations(&roots)?;
+            }
+        }
         Ok(Self {
             roots,
             transport: Box::new(ipc),
@@ -158,9 +165,26 @@ impl Storage {
         ))
     }
 
+    pub fn analyze_directory(&self, path: &Path) -> Result<Value, String> {
+        match self.classify(path)? {
+            StorageBackend::DirectFilesystem => {
+                Err("Directory is not registered with Folder Protection".into())
+            }
+            StorageBackend::ProtectedFilesystem {
+                root_id,
+                relative_path,
+            } => self.call(
+                &root_id,
+                Request::AnalyzeDirectory {
+                    path: relative_path,
+                },
+            ),
+        }
+    }
+
     fn call(&self, root_id: &str, request: Request) -> Result<Value, String> {
         self.protocol.get_or_init(|| {
-            let status = (self.transport)(Request::Status)?;
+            let status = (self.transport)(Request::ForRoot { root_id:root_id.into(),request:Box::new(Request::Status) })?;
             if status["protocol_version"].as_u64().unwrap_or(0) < super::PROTOCOL_VERSION as u64 {
                 return Err("Versi layanan Folder Protection perlu diperbarui. Jalankan installer MgoApp dan pilih komputer server.".into());
             }

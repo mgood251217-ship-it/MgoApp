@@ -3,7 +3,10 @@ use std::fs;
 use tauri::{AppHandle, Manager};
 
 fn settings_path(app: &AppHandle) -> std::path::PathBuf {
-    let dir = app.path().app_data_dir().expect("app data dir tidak tersedia");
+    let dir = app
+        .path()
+        .app_data_dir()
+        .expect("app data dir tidak tersedia");
     let _ = fs::create_dir_all(&dir);
     dir.join("settings.json")
 }
@@ -24,7 +27,8 @@ pub fn get_settings(app: AppHandle) -> Value {
 #[tauri::command]
 pub fn save_settings(app: AppHandle, new_settings: Value) -> Value {
     let mut current = read_settings(&app);
-    if let (Some(current_obj), Some(new_obj)) = (current.as_object_mut(), new_settings.as_object()) {
+    if let (Some(current_obj), Some(new_obj)) = (current.as_object_mut(), new_settings.as_object())
+    {
         for (k, v) in new_obj {
             current_obj.insert(k.clone(), v.clone());
         }

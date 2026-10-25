@@ -14,12 +14,12 @@ use std::{
     time::Duration,
 };
 
-struct Fixture {
+pub(super) struct Fixture {
     _temp: tempfile::TempDir,
-    root: PathBuf,
+    pub(super) root: PathBuf,
     state: PathBuf,
-    config: PathBuf,
-    sid: String,
+    pub(super) config: PathBuf,
+    pub(super) sid: String,
 }
 
 struct ServiceWorker {
@@ -35,7 +35,7 @@ impl Drop for ServiceWorker {
     }
 }
 impl Fixture {
-    fn new(write: bool) -> Self {
+    pub(super) fn new(write: bool) -> Self {
         let parent = std::env::var_os("MGO_TEST_PARENT")
             .map(PathBuf::from)
             .or_else(|| std::env::var_os("USERPROFILE").map(PathBuf::from))
@@ -342,6 +342,14 @@ fn nested_crud_preserves_unicode_names_and_rejects_collisions() {
     );
     assert!(list.success, "{list:?}");
     assert_eq!(list.data["entries"].as_array().unwrap().len(), 2);
+    let analysis = b.handle(
+        sid,
+        Request::AnalyzeDirectory {
+            path: r"2026\10 Oktober\23\Pesanan".into(),
+        },
+    );
+    assert!(analysis.success, "{analysis:?}");
+    assert_eq!(analysis.data["items"].as_array().unwrap().len(), 2);
     for path in [copied, renamed] {
         assert!(b.handle(sid, Request::Delete { name: path.into() }).success);
     }

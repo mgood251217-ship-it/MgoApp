@@ -51,8 +51,8 @@ fn raster_meta(width: u32, height: u32, color_mode: &str, dpi: Option<f64>) -> F
     }
 }
 
-fn read_prefix(file_path: &Path, max_bytes: usize) -> Option<Vec<u8>> {
-    let mut file = File::open(file_path).ok()?;
+fn read_prefix(file: &mut File, max_bytes: usize) -> Option<Vec<u8>> {
+    file.seek(SeekFrom::Start(0)).ok()?;
     let length = file.metadata().ok()?.len().min(max_bytes as u64) as usize;
     let mut bytes = vec![0; length];
     file.read_exact(&mut bytes).ok()?;
@@ -145,7 +145,9 @@ fn get_jpeg_meta(bytes: &[u8]) -> Option<(u32, u32, String, Option<f64>)> {
                 _ => None,
             };
         }
-        if matches!(marker, 0xc0..=0xc3 | 0xc5..=0xc7 | 0xc9..=0xcb | 0xcd..=0xcf) && data.len() >= 6 {
+        if matches!(marker, 0xc0..=0xc3 | 0xc5..=0xc7 | 0xc9..=0xcb | 0xcd..=0xcf)
+            && data.len() >= 6
+        {
             let height = read_u16(data, 1, false)? as u32;
             let width = read_u16(data, 3, false)? as u32;
             let color_mode = match data[5] {
@@ -161,8 +163,8 @@ fn get_jpeg_meta(bytes: &[u8]) -> Option<(u32, u32, String, Option<f64>)> {
     None
 }
 
-fn get_jpeg_meta_from_file(file_path: &Path) -> Option<(u32, u32, String, Option<f64>)> {
-    let mut file = File::open(file_path).ok()?;
+fn get_jpeg_meta_from_file(file: &mut File) -> Option<(u32, u32, String, Option<f64>)> {
+    file.seek(SeekFrom::Start(0)).ok()?;
     let file_len = file.metadata().ok()?.len();
     let max_bytes = file_len.min(8 * 1024 * 1024) as usize;
     let mut bytes = Vec::with_capacity(max_bytes);
@@ -204,8 +206,8 @@ fn get_psd_meta(bytes: &[u8]) -> Option<(u32, u32, String, Option<f64>)> {
     Some((width, height, color_mode.into(), None))
 }
 
-fn get_tiff_meta(file_path: &Path) -> Option<(u32, u32, String, Option<f64>)> {
-    let mut file = File::open(file_path).ok()?;
+fn get_tiff_meta(file: &mut File) -> Option<(u32, u32, String, Option<f64>)> {
+    file.seek(SeekFrom::Start(0)).ok()?;
     let mut header = [0u8; 8];
     file.read_exact(&mut header).ok()?;
 
@@ -259,13 +261,13 @@ fn get_tiff_meta(file_path: &Path) -> Option<(u32, u32, String, Option<f64>)> {
             }
             let value_offset = read_u32(&ifd_buf, entry + 8, little_endian)? as u64;
             let current_pos = file.seek(SeekFrom::Current(0)).ok()?;
-            
+
             file.seek(SeekFrom::Start(value_offset)).ok()?;
             let mut val_buf = [0u8; 8];
             let read_ok = file.read_exact(&mut val_buf).is_ok();
-            
+
             file.seek(SeekFrom::Start(current_pos)).ok()?;
-            
+
             if !read_ok {
                 continue;
             }
@@ -297,12 +299,18 @@ fn get_tiff_meta(file_path: &Path) -> Option<(u32, u32, String, Option<f64>)> {
         _ if samples >= 3 => "RGB",
         _ => "unknown",
     };
-    let dpi = x_resolution.map(|value| if resolution_unit == 3 { value * 2.54 } else { value });
+    let dpi = x_resolution.map(|value| {
+        if resolution_unit == 3 {
+            value * 2.54
+        } else {
+            value
+        }
+    });
     Some((width?, height?, color_mode.into(), dpi))
 }
 
-fn get_pdf_dimensions(file_path: &Path) -> Option<(f64, f64)> {
-    let mut file = File::open(file_path).ok()?;
+fn get_pdf_dimensions(file: &mut File) -> Option<(f64, f64)> {
+    file.seek(SeekFrom::Start(0)).ok()?;
     let file_len = file.metadata().ok()?.len();
     let scan_len = file_len.min(256 * 1024) as usize;
     let mut bytes = vec![0; scan_len];
@@ -318,7 +326,9 @@ fn get_pdf_dimensions(file_path: &Path) -> Option<(f64, f64)> {
 
     let text = String::from_utf8_lossy(&bytes);
     let marker = b"/MediaBox";
-    let marker_pos = bytes.windows(marker.len()).position(|window| window == marker)?;
+    let marker_pos = bytes
+        .windows(marker.len())
+        .position(|window| window == marker)?;
     let values = text[marker_pos + marker.len()..]
         .split(|ch: char| ch == '[' || ch == ']' || ch.is_ascii_whitespace())
         .filter(|value| !value.is_empty())
@@ -339,7 +349,20 @@ pub fn get_file_meta(file_path: &Path) -> FileMeta {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
+    if ext == "cdr" {
+        return FileMeta {
+            color_mode: "-".into(),
+            ..FileMeta::empty()
+        };
+    }
+    let mut file = match File::open(file_path) {
+        Ok(file) => file,
+        Err(_) => return FileMeta::empty(),
+    };
+    get_file_meta_from_open_file(&mut file, &ext)
+}
 
+pub fn get_file_meta_from_open_file(file: &mut File, ext: &str) -> FileMeta {
     if ext == "cdr" {
         return FileMeta {
             color_mode: "-".into(),
@@ -348,7 +371,7 @@ pub fn get_file_meta(file_path: &Path) -> FileMeta {
     }
 
     if ext == "pdf" {
-        return match get_pdf_dimensions(file_path) {
+        return match get_pdf_dimensions(file) {
             Some((width_pt, height_pt)) => {
                 let panjang_m = ((width_pt / 72.0) * 0.0254 * 100.0).round() / 100.0;
                 let lebar_m = ((height_pt / 72.0) * 0.0254 * 100.0).round() / 100.0;
@@ -367,20 +390,20 @@ pub fn get_file_meta(file_path: &Path) -> FileMeta {
     }
 
     let raster_ext = ["jpg", "jpeg", "png", "tif", "tiff", "psd"];
-    if !raster_ext.contains(&ext.as_str()) {
+    if !raster_ext.contains(&ext) {
         return FileMeta::empty();
     }
 
-    let parsed = if matches!(ext.as_str(), "jpg" | "jpeg") {
-        get_jpeg_meta_from_file(file_path)
-    } else if matches!(ext.as_str(), "tif" | "tiff") {
-        get_tiff_meta(file_path)
+    let parsed = if matches!(ext, "jpg" | "jpeg") {
+        get_jpeg_meta_from_file(file)
+    } else if matches!(ext, "tif" | "tiff") {
+        get_tiff_meta(file)
     } else {
-        let bytes = match read_prefix(file_path, 256 * 1024) {
+        let bytes = match read_prefix(file, 256 * 1024) {
             Some(bytes) => bytes,
             None => return FileMeta::empty(),
         };
-        match ext.as_str() {
+        match ext {
             "png" => get_png_meta(&bytes),
             "psd" => get_psd_meta(&bytes),
             _ => None,

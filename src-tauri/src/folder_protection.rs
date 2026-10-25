@@ -1,10 +1,13 @@
-//! Phase 2: local, Windows-authenticated test-folder broker. No ACL mutations.
+//! Protected folder routing through an authenticated local or TLS LAN broker.
 #[cfg(windows)]
 #[path = "commands/folder_protection_admin.rs"]
 pub mod admin;
 #[cfg(windows)]
 #[path = "commands/folder_protection_broker.rs"]
 pub mod broker;
+#[cfg(windows)]
+#[path = "commands/folder_protection_lan.rs"]
+pub mod lan;
 #[path = "commands/folder_protection_mapping.rs"]
 pub mod mapping;
 #[cfg(windows)]
@@ -25,7 +28,7 @@ use serde::{Deserialize, Serialize};
 pub const PIPE: &str = r"\\.\pipe\MgoFolderProtection-v1";
 pub const MAX_BYTES: usize = 1024 * 1024;
 pub const MAX_FRAME: usize = 2 * MAX_BYTES;
-pub const PROTOCOL_VERSION: u32 = 4;
+pub const PROTOCOL_VERSION: u32 = 5;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
@@ -52,6 +55,10 @@ pub enum Request {
         name: String,
     },
     ListDirectory {
+        #[serde(default)]
+        path: String,
+    },
+    AnalyzeDirectory {
         #[serde(default)]
         path: String,
     },
@@ -124,6 +131,7 @@ impl Request {
             Self::Update { .. } => "update",
             Self::Delete { .. } => "delete",
             Self::ListDirectory { .. } => "list_directory",
+            Self::AnalyzeDirectory { .. } => "analyze_directory",
             Self::CreateDirectory { .. } => "create_directory",
             Self::RemoveDirectory { .. } => "remove_directory",
             Self::Rename { .. } => "rename",
@@ -143,6 +151,7 @@ impl Request {
             | Self::Update { name, .. }
             | Self::Delete { name } => Some(name),
             Self::ListDirectory { path }
+            | Self::AnalyzeDirectory { path }
             | Self::CreateDirectory { path }
             | Self::RemoveDirectory { path } => Some(path),
             Self::Rename { source, .. } | Self::Copy { source, .. } => Some(source),
@@ -229,6 +238,11 @@ pub fn relative_parts(path: &str, allow_root: bool) -> Result<Vec<&str>, String>
 
 #[cfg(windows)]
 pub async fn request(request: Request) -> Result<Response, String> {
+    lan::route(request).await
+}
+
+#[cfg(windows)]
+pub async fn request_local(request: Request) -> Result<Response, String> {
     let sid =
         windows::registered_server_sid().map_err(|e| format!("service_not_registered: {e}"))?;
     broker::client(PIPE, &sid, request).await

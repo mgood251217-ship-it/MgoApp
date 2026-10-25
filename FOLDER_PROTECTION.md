@@ -33,4 +33,19 @@ Untuk pekerjaan sehari-hari, jalankan MGO dengan akun Windows biasa. Explorer te
 
 Baca pesan di bawah folder atau pada dialog administrator. Jika tombol aktivasi belum bisa diklik, klik **Periksa folder** dan lihat alasan yang ditampilkan. Catat pesan error lengkap agar penyebabnya bisa diperiksa; jangan menghapus folder atau mengubah izin seluruh drive untuk mencoba memperbaikinya.
 
-**Catatan:** Menghapus folder dari daftar tidak mencabut proteksi. Reinstall tidak mengembalikan data yang sudah dihapus. Fitur ini saat ini berlaku untuk folder lokal; koneksi layanan melalui LAN belum tersedia.
+**Catatan:** Menghapus folder dari daftar tidak mencabut proteksi. Reinstall tidak mengembalikan data yang sudah dihapus.
+
+## Menggunakan Folder Lewat LAN
+
+1. Pasang installer terbaru pada server dengan mencentang **Komputer server**. Pada komputer klien, pasang aplikasi tanpa mencentang layanan server.
+2. Pada server, buka **Settings → Folder Protection LAN → Komputer server**. Pilih folder yang sudah dilindungi, misalnya `D:\TEST PATH FOLDER`, lalu isi nama server (misalnya `DEV`).
+3. MGO mengisi path share khusus, misalnya `\\DEV\MGOFP_<id>`. Klik **Buat kode dengan administrator** dan setujui UAC. MGO membuat SMB share yang menunjuk langsung ke folder tersebut, memberi izin share baca-saja kepada **Authenticated Users**, dan mengizinkan SMB TCP 445 hanya dari subnet lokal. Izin NTFS tetap membatasi hasil akhirnya.
+4. Dalam 10 menit, pada MGO komputer klien, tempel kode di **Folder Protection LAN**, lalu klik **Sambungkan dan simpan koneksi**. Ulangi pada klien lain yang dipercaya; IP klien boleh berubah dalam subnet LAN. Setelah terdaftar, koneksi tetap berlaku sampai dicabut.
+5. Isi **Path Folder Produksi** klien dengan path jaringan persis seperti pada koneksi, lalu simpan. Untuk Explorer, buka **Siapkan akses baca Explorer** pada koneksi MGO, masukkan akun Windows baca-saja di server satu kali, lalu klik **Simpan akses aman & buka Explorer**. Kredensial tersimpan di Windows Credential Manager untuk akun Windows client yang sedang login; tombol **Buka di Explorer** memakai kredensial tersebut. `D:\TEST PATH FOLDER` adalah path lokal server, bukan alamat jaringan.
+6. Klik **Uji akses Windows dan CRUD LAN**. CRUD MGO harus lulus, sedangkan perubahan melalui Explorer harus ditolak. Jalankan pengujian dari komputer klien, bukan hanya server.
+
+Operasi MGO pada folder terdaftar, termasuk membuat folder dan menganalisis file, berjalan melalui layanan TLS Folder Protection. Akses Explorer adalah jalur SMB terpisah dan hanya baca. Jangan aktifkan akses guest/anonim atau memberi izin tulis `Everyone`; gunakan akun Windows server standar dengan akses baca saja. Kredensial Explorer tidak dipakai untuk CRUD MGO.
+
+Bagikan kode hanya kepada pengguna yang dipercaya. Klien memakai izin CRUD operator server pembuat kode. Membuat kode baru mencabut kode dan pendaftaran klien lama untuk folder yang sama: semua klien folder itu perlu disambungkan kembali. **Cabut akses LAN** memutus akses MGO untuk folder itu dan menghapus share Explorer khusus yang dibuat MGO. Share Windows lain yang dipilih manual tidak diubah. Pengaturan server memulai ulang layanan, jadi selesaikan pekerjaan file dahulu.
+
+Koneksi MGO memakai TLS, identitas perangkat, dan firewall TCP 42765 untuk subnet lokal; Explorer memakai SMB TCP 445 pada subnet lokal. Izin tulis share tidak diberikan kepada **Authenticated Users** atau **Everyone**. Kunci pribadi klien disimpan terenkripsi untuk akun Windows yang memasukkannya. Program yang berjalan sebagai akun Windows yang sama tetap berada dalam batas kepercayaan akun itu.

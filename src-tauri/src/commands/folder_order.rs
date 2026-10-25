@@ -314,6 +314,20 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
     }
 
     tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(target_os = "windows")]
+        if crate::commands::folder_protection_smb::is_mgo_share_path(&folder_path) {
+            return match crate::commands::folder_protection_smb::open_explorer(&folder_path) {
+                Ok(()) => SimpleResult {
+                    success: true,
+                    message: None,
+                },
+                Err(error) => SimpleResult {
+                    success: false,
+                    message: Some(error),
+                },
+            };
+        }
+
         let path = Path::new(&folder_path);
         if !path.exists() {
             return SimpleResult {
@@ -354,6 +368,43 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
     })
     .await
     .unwrap()
+}
+
+#[tauri::command]
+pub async fn save_folder_protection_smb_credential(
+    folder_path: String,
+    username: String,
+    password: String,
+) -> SimpleResult {
+    #[cfg(target_os = "windows")]
+    {
+        return tauri::async_runtime::spawn_blocking(move || {
+            match crate::commands::folder_protection_smb::save_credentials_and_open(
+                &folder_path,
+                &username,
+                &password,
+            ) {
+                Ok(()) => SimpleResult {
+                    success: true,
+                    message: None,
+                },
+                Err(error) => SimpleResult {
+                    success: false,
+                    message: Some(error),
+                },
+            }
+        })
+        .await
+        .unwrap();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (folder_path, username, password);
+        SimpleResult {
+            success: false,
+            message: Some("Akses Explorer LAN hanya didukung di Windows.".into()),
+        }
+    }
 }
 
 #[tauri::command]
@@ -413,6 +464,26 @@ pub async fn analisis_folder_order(folder_path: String) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
         let allowed_ext = ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"];
         let dir = Path::new(&folder_path);
+        let storage = match Storage::new() {
+            Ok(storage) => storage,
+            Err(error) => {
+                return serde_json::json!({ "success": false, "message": error });
+            }
+        };
+        match storage.protected(dir) {
+            Ok(true) => {
+                return match storage.analyze_directory(dir) {
+                    Ok(result) => {
+                        serde_json::json!({ "success": true, "data": result["items"].clone() })
+                    }
+                    Err(error) => serde_json::json!({ "success": false, "message": error }),
+                };
+            }
+            Ok(false) => (),
+            Err(error) => {
+                return serde_json::json!({ "success": false, "message": error });
+            }
+        }
 
         let entries = match fs::read_dir(dir) {
             Ok(e) => e,

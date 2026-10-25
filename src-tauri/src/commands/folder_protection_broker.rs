@@ -408,6 +408,58 @@ impl Broker {
                 Ok(json!({ "deleted": true }))
             }
             Request::ListDirectory { path } => self.entries(&path),
+            Request::AnalyzeDirectory { path } => {
+                let pins = self.directory(&path, false)?;
+                let parent = pins.last().unwrap();
+                let mut items = Vec::new();
+                for name in win::list(parent).map_err(|e| e.to_string())? {
+                    if super::validate_name(&name).is_err() {
+                        continue;
+                    }
+                    let ext = PathBuf::from(&name)
+                        .extension()
+                        .and_then(|value| value.to_str())
+                        .unwrap_or("")
+                        .to_ascii_lowercase();
+                    if !["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"].contains(&ext.as_str())
+                    {
+                        continue;
+                    }
+                    let relative = if path.is_empty() {
+                        name.clone()
+                    } else {
+                        format!("{path}\\{name}")
+                    };
+                    let Ok(mut file) = self.file(&relative, FILE_READ_DATA | FILE_READ_ATTRIBUTES)
+                    else {
+                        continue;
+                    };
+                    let Ok(metadata) = file.metadata() else {
+                        continue;
+                    };
+                    let meta = crate::commands::file_meta::get_file_meta_from_open_file(
+                        &mut file.file,
+                        &ext,
+                    );
+                    let meta = serde_json::to_value(meta).map_err(|e| e.to_string())?;
+                    let mut item = json!({
+                        "nama": name,
+                        "ukuranByte": metadata.len(),
+                    });
+                    item.as_object_mut()
+                        .ok_or("Invalid folder analysis result")?
+                        .extend(
+                            meta.as_object()
+                                .ok_or("Invalid file metadata result")?
+                                .clone(),
+                        );
+                    items.push(item);
+                    if items.len() > 1000 {
+                        return Err("Too many files for folder analysis".into());
+                    }
+                }
+                Ok(json!({"items": items}))
+            }
             Request::CreateDirectory { path } => {
                 self.directory(&path, true)?;
                 Ok(json!({"created": true}))

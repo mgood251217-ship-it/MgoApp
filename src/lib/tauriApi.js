@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 
 export const tauriApi = {
-    version: () => "2.0.8",
+    version: () => "2.0.10",
 
     analisisFolderOrder: (folderPath) => invoke("analisis_folder_order", { folderPath }),
     buatFolderOrder: (args) => invoke("buat_folder_order", { args }),
@@ -14,6 +14,8 @@ export const tauriApi = {
     cekFolderOrder: (folderPath) => invoke("cek_folder_order", { folderPath }),
     cariFolderOrder: (args) => invoke("cari_folder_order", { args }),
     openFolder: (folderPath) => invoke("buka_folder", { folderPath }),
+    saveFolderProtectionSmbCredential: (folderPath, username, password) =>
+        invoke("save_folder_protection_smb_credential", { folderPath, username, password }),
 
     pilihFolder: () => invoke("pilih_folder"),
     pilihFileOrder: () => invoke("pilih_file_order"),
@@ -34,6 +36,10 @@ export const tauriApi = {
     activateFolderProtection: (path, label) => invoke("activate_folder_protection", { path, label }),
     planFolderProtection: (path) => invoke("plan_folder_protection", { path }),
     verifyFolderProtection: (rootId = null) => invoke("verify_folder_protection", { rootId }),
+    folderProtectionLanStatus: () => invoke("folder_protection_lan_status"),
+    configureFolderProtectionLan: (rootId, host, path, enabled) => invoke("configure_folder_protection_lan", { rootId, host, path, enabled }),
+    connectFolderProtectionLan: (code) => invoke("connect_folder_protection_lan", { code }),
+    disconnectFolderProtectionLan: (id) => invoke("disconnect_folder_protection_lan", { id }),
     saveSettings: (newSettings) => invoke("save_settings", { newSettings }),
     restartApp: () => invoke("restart_app"),
 

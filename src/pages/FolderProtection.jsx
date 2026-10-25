@@ -6,6 +6,87 @@ export default function FolderProtection({ settings = {}, onSettingsChange, onSa
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [verification, setVerification] = useState(null);
+    const [lan, setLan] = useState(null);
+    const [lanRoot, setLanRoot] = useState("");
+    const [lanHost, setLanHost] = useState("");
+    const [lanPath, setLanPath] = useState("");
+    const [connectionCode, setConnectionCode] = useState("");
+    const [newCode, setNewCode] = useState("");
+    const [lanMessage, setLanMessage] = useState("");
+    const [smbUsername, setSmbUsername] = useState("");
+    const [smbPassword, setSmbPassword] = useState("");
+
+    const managedLanPath = (host, rootId) => {
+        const suffix = rootId.slice(-16);
+        return `\\\\${host}\\MGOFP_${suffix}`;
+    };
+    const refreshLan = async () => {
+        const status = await window.electron.folderProtectionLanStatus();
+        setLan(status);
+        setLanHost(host => host || status.computer || "");
+        return status;
+    };
+    useEffect(() => {
+        let cancelled = false;
+        if (!window.electron?.folderProtectionLanStatus) return undefined;
+        window.electron.folderProtectionLanStatus().then(status => {
+            if (!cancelled) { setLan(status); setLanHost(status.computer || ""); }
+        }).catch(e => { if (!cancelled) setLanMessage(String(e.message || e)); });
+        return () => { cancelled = true; };
+    }, []);
+    const selectLanRoot = (id) => {
+        setLanRoot(id); setNewCode("");
+        if (id) setLanPath(managedLanPath(lanHost, id));
+    };
+    const configureLan = async (enabled) => {
+        setBusy(true); setNewCode(""); setLanMessage("");
+        try {
+            const response = await window.electron.configureFolderProtectionLan(lanRoot, lanHost, lanPath, enabled);
+            setNewCode(response.code || ""); setLanMessage(response.message);
+            await refreshLan();
+        } catch (e) { setLanMessage(String(e.message || e)); }
+        finally { setBusy(false); }
+    };
+    const connectLan = async () => {
+        setBusy(true); setLanMessage("");
+        try {
+            const connection = await window.electron.connectFolderProtectionLan(connectionCode);
+            setConnectionCode(""); await refreshLan();
+            setLanMessage(`Terhubung. Gunakan ${connection.path} pada Path Folder Produksi, lalu simpan pengaturan.`);
+        } catch (e) { setLanMessage(String(e.message || e)); }
+        finally { setBusy(false); }
+    };
+    const disconnectLan = async (id) => {
+        setBusy(true);
+        try {
+            await window.electron.disconnectFolderProtectionLan(id); await refreshLan();
+            setLanMessage("Koneksi pada akun Windows ini dihapus. Untuk mencabut kode di semua klien, gunakan Cabut akses LAN pada server.");
+        } catch (e) { setLanMessage(String(e.message || e)); }
+        finally { setBusy(false); }
+    };
+    const saveExplorerAccess = async (path) => {
+        setBusy(true); setLanMessage("");
+        try {
+            const response = await window.electron.saveFolderProtectionSmbCredential(path, smbUsername, smbPassword);
+            if (!response.success) throw new Error(response.message || "Akses Explorer gagal disiapkan.");
+            setLanMessage("Akses baca Explorer tersimpan aman untuk akun Windows ini. Folder sudah dibuka.");
+        } catch (e) {
+            setLanMessage(String(e.message || e));
+        } finally {
+            setSmbPassword("");
+            setBusy(false);
+        }
+    };
+    const openExplorer = async (path) => {
+        setBusy(true); setLanMessage("");
+        try {
+            const response = await window.electron.openFolder(path);
+            if (!response.success) throw new Error(response.message || "Folder Explorer gagal dibuka.");
+            setLanMessage("Folder dibuka di Explorer dengan akses baca.");
+        } catch (e) {
+            setLanMessage(String(e.message || e));
+        } finally { setBusy(false); }
+    };
 
     const [folderPlans, setFolderPlans] = useState({});
     const [folderMessage, setFolderMessage] = useState("");
@@ -117,7 +198,16 @@ export default function FolderProtection({ settings = {}, onSettingsChange, onSa
         try {
             setVerification(await window.electron.verifyFolderProtection(rootId));
         } catch (e) {
-            setError({ title: "Pengujian belum berhasil.", guidance: "Periksa versi layanan dan izin akun Windows Anda.", detail: String(e.message || e) });
+            const detail = String(e.message || e);
+            const parentSecurityChanged = detail.includes("Root parent security changed:");
+            setError({
+                title: parentSecurityChanged ? "Folder masih terdaftar, tetapi izin folder induk membuatnya tidak tersedia."
+                    : "Pengujian belum berhasil.",
+                guidance: parentSecurityChanged
+                    ? "Minta administrator memeriksa izin folder induk untuk S-1-1-0 (Everyone). Jangan daftar ulang folder atau mengubah izin seluruh drive tanpa memeriksa dampaknya. Setelah izin induk diperbaiki, muat ulang status LAN."
+                    : "Periksa versi layanan dan izin akun Windows Anda.",
+                detail,
+            });
         } finally { setBusy(false); }
     };
 
@@ -125,8 +215,8 @@ export default function FolderProtection({ settings = {}, onSettingsChange, onSa
         <div style={{ backgroundColor: "var(--bg-content)", padding: "28px", borderRadius: "var(--radius)", border: "1px solid var(--border)", gridColumn: "1 / -1" }}>
             <h3 style={{ marginTop: 0, color: "var(--text)", fontSize: 18 }}>MGO Folder Protection</h3>
             <p style={{ color: "var(--text-secondary)" }}>
-                Folder terdaftar diproses melalui layanan lokal. Path biasa tetap memakai akses Windows Anda.
-                Folder baru diaktifkan melalui persetujuan administrator. Koneksi layanan melalui LAN belum tersedia.
+                Folder terdaftar diproses melalui layanan MGO. Path biasa tetap memakai akses Windows Anda.
+                Aktifkan folder pada server, lalu sambungkan komputer lain melalui pengaturan LAN di bawah.
             </p>
             <section aria-label="Custom folder protection" style={{ margin: "24px 0", padding: 20, border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                 <h4 style={{ margin: "0 0 8px", color: "var(--text)" }}>Custom Folder Protection</h4>
@@ -170,6 +260,88 @@ export default function FolderProtection({ settings = {}, onSettingsChange, onSa
                 </div>
                 {folderMessage && <p role="status" style={{ color: "var(--text)", overflowWrap: "anywhere" }}>{folderMessage}</p>}
             </section>
+            <section aria-label="Folder Protection LAN" style={{ margin: "24px 0", padding: 20, border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+                <h4 style={{ marginTop: 0 }}>Folder Protection LAN</h4>
+                <p>IP komputer klien boleh berubah. Kode koneksi berlaku 10 menit untuk mendaftarkan komputer yang dipercaya ke satu folder. Setelah terdaftar, klien tetap bisa CRUD sampai aksesnya dicabut.</p>
+                <details>
+                    <summary>Komputer server — buat atau cabut kode koneksi</summary>
+                    <p>Pilih folder yang sudah dilindungi. MGO akan membuat share Explorer khusus untuk folder itu dengan izin baca-saja bagi akun Windows yang berhasil login. Share dibatasi ke subnet lokal dan dihapus saat akses LAN folder dicabut. Untuk memakai share Windows lain, ganti path di bawah; izin share itu tidak diubah.</p>
+                    <div style={{ display: "grid", gap: 12, marginBottom: 12 }}>
+                        <label>Folder server
+                            <select style={inputStyle} value={lanRoot} disabled={busy} onChange={e => selectLanRoot(e.target.value)}>
+                                <option value="">Pilih folder terdaftar</option>
+                                {lan?.server?.roots?.map(root => <option key={root.id} value={root.id} disabled={!root.available}>{root.path}</option>)}
+                            </select>
+                        </label>
+                        {lan?.server?.roots?.some(root => !root.available) && <div role="alert" style={{ color: "var(--danger)", overflowWrap: "anywhere" }}>
+                            <strong>Folder tetap terdaftar, tetapi layanan belum dapat membukanya:</strong>
+                            <ul>{lan.server.roots.filter(root => !root.available).map(root => <li key={root.id}>{root.path}: {root.error || "Penyebab tidak diketahui"}</li>)}</ul>
+                            <p>Minta administrator memeriksa izin pada folder induk yang disebutkan. Jangan daftar ulang folder. Setelah izin diperbaiki, muat ulang status LAN.</p>
+                        </div>}
+                        <label>Nama atau IPv4 server
+                            <input style={inputStyle} value={lanHost} disabled={busy} placeholder="Contoh: DEV" onChange={e => {
+                                const nextHost = e.target.value;
+                                setLanHost(nextHost); setNewCode("");
+                                setLanPath(current => current.toLowerCase().startsWith(`\\\\${lanHost.toLowerCase()}\\`)
+                                    ? `\\\\${nextHost}\\${current.slice(lanHost.length + 3)}`
+                                    : current);
+                            }} />
+                        </label>
+                        <label>Path jaringan folder
+                            <input style={inputStyle} value={lanPath} disabled={busy} placeholder="\\\\DEV\\MGOFP_folder-id" onChange={e => { setLanPath(e.target.value); setNewCode(""); }} />
+                        </label>
+                    </div>
+                    <p>Membuat kode baru mencabut kode dan pendaftaran klien lama untuk folder ini. Semua klien folder ini perlu disambungkan kembali. Layanan dimulai ulang; selesaikan pekerjaan file dahulu.</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        <Button disabled={busy || lan?.server?.lan_protocol !== 1 || !lanRoot || !lanHost.trim() || !lanPath.trim()} onClick={() => configureLan(true)}>Buat kode dengan administrator</Button>
+                        <Button variant="danger" disabled={busy || !lanRoot || !lan?.server?.lan?.roots?.includes(lanRoot)} onClick={() => configureLan(false)}>Cabut akses LAN</Button>
+                    </div>
+                    {lan?.server?.lan_error && <p role="alert">Layanan LAN: {lan.server.lan_error}</p>}
+                    {!lan?.server && <p>Pasang/perbarui layanan lewat installer pada komputer server, lalu muat ulang status.</p>}
+                    {lan?.server && lan.server.lan_protocol !== 1 && <p>Perbarui layanan lewat installer terbaru dengan mencentang komputer server, lalu muat ulang status LAN.</p>}
+                    {newCode && <div style={{ marginTop: 12 }}>
+                        <label>Kode koneksi baru — salin ke MGO pada komputer klien
+                            <textarea style={{ ...inputStyle, height: 100 }} readOnly value={newCode} onFocus={e => e.target.select()} />
+                        </label>
+                        <Button variant="secondary" disabled={busy} onClick={() => setNewCode("")}>Tutup kode</Button>
+                    </div>}
+                </details>
+                <h5 style={{ marginBottom: 8 }}>Komputer klien — sambungkan folder server</h5>
+                <label>Kode dari administrator server
+                    <input type="password" autoComplete="off" style={inputStyle} value={connectionCode} disabled={busy} placeholder="Tempel kode MGO-LAN-1:..." onChange={e => setConnectionCode(e.target.value)} />
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                    <Button disabled={busy || !connectionCode.trim()} onClick={connectLan}>Sambungkan dan simpan koneksi</Button>
+                    <Button variant="secondary" disabled={busy} onClick={async () => {
+                        setBusy(true);
+                        try { await refreshLan(); } catch (e) { setLanMessage(String(e.message || e)); }
+                        finally { setBusy(false); }
+                    }}>Muat ulang status LAN</Button>
+                </div>
+                {lan?.connections?.map(connection => <div key={connection.id} style={{ marginTop: 16 }}>
+                    <p><strong>Folder tersambung:</strong> {connection.path}</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        <Button disabled={busy} onClick={() => verify(connection.id)}>Uji akses Windows dan CRUD LAN</Button>
+                        <Button variant="secondary" disabled={busy} onClick={() => openExplorer(connection.path)}>Buka di Explorer</Button>
+                        <Button variant="secondary" disabled={busy} onClick={() => disconnectLan(connection.id)}>Hapus koneksi klien</Button>
+                    </div>
+                    <details style={{ marginTop: 12 }}>
+                        <summary>Siapkan akses baca Explorer (sekali untuk akun client ini)</summary>
+                        <p>Masukkan akun Windows di komputer server. MGO menyimpan kredensial dengan aman di Credential Manager akun Windows client ini. Akses share tetap baca-saja; CRUD dilakukan lewat MGO.</p>
+                        <label>Akun Windows server (contoh DEV\akun)
+                            <input style={inputStyle} autoComplete="username" value={smbUsername} disabled={busy} onChange={e => setSmbUsername(e.target.value)} />
+                        </label>
+                        <label>Kata sandi akun Windows server
+                            <input type="password" autoComplete="current-password" style={inputStyle} value={smbPassword} disabled={busy} onChange={e => setSmbPassword(e.target.value)} />
+                        </label>
+                        <Button disabled={busy || !smbUsername.trim() || !smbPassword} onClick={() => saveExplorerAccess(connection.path)}>
+                            {busy ? "Menyimpan..." : "Simpan akses aman & buka Explorer"}
+                        </Button>
+                    </details>
+                </div>)}
+                <p>Koneksi MGO dan akses Explorer adalah dua jalur terpisah. CRUD MGO memakai kode koneksi; Explorer hanya baca dan memakai kredensial Windows yang disiapkan sekali di atas. Jangan ubah izin seluruh drive server.</p>
+                {lanMessage && <p role="status" style={{ overflowWrap: "anywhere" }}>{lanMessage}</p>}
+            </section>
             <Button type="button" variant="secondary" disabled={busy} onClick={inspect}>
                 {busy ? "Memeriksa..." : "Inspect Permissions"}
             </Button>
@@ -195,7 +367,7 @@ export default function FolderProtection({ settings = {}, onSettingsChange, onSa
                 </div>)}
             </div>}
             {verification && <div aria-live="polite" style={{ color: "var(--text)", marginTop: 16 }}>
-                <p><strong>{verification.passed ? "Pengujian lokal berhasil." : "Ada pengujian yang belum lulus."}</strong>{verification.root_label ? ` ${verification.root_label}: ${verification.root}` : ""}</p>
+                <p><strong>{verification.passed ? "Pengujian berhasil." : "Ada pengujian yang belum lulus."}</strong>{verification.root_label ? ` ${verification.root_label}: ${verification.root}` : ""}</p>
                 <ul>{verification.checks.map((check, index) => <li key={index}>
                     {check.passed ? "Lulus" : "Gagal"}: {check.name}{check.message ? ` - ${check.message}` : ""}
                 </li>)}</ul>

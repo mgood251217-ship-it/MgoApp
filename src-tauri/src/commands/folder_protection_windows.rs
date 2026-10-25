@@ -584,7 +584,11 @@ fn pin_directory_with_leaf_sharing(path: &Path, leaf_sharing: u32) -> io::Result
             &current,
             FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | READ_CONTROL,
             OPEN_EXISTING,
-            if current == path { leaf_sharing } else { FILE_SHARE_READ },
+            if current == path {
+                leaf_sharing
+            } else {
+                FILE_SHARE_READ
+            },
         )?;
         if information(&file)?.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == 0 {
             return Err(io::Error::new(
@@ -861,7 +865,10 @@ pub fn enable_restore_privilege() -> io::Result<()> {
             if error != 0 {
                 return Err(io::Error::new(
                     io::ErrorKind::PermissionDenied,
-                    format!("Tidak dapat mengaktifkan {privilege_name}: {}", io::Error::from_raw_os_error(error as i32)),
+                    format!(
+                        "Tidak dapat mengaktifkan {privilege_name}: {}",
+                        io::Error::from_raw_os_error(error as i32)
+                    ),
                 ));
             }
         }
@@ -944,8 +951,13 @@ mod security_handle_tests {
         let child = temp.path().join("root");
         std::fs::create_dir(&child).unwrap();
         let _parents = pin_directory(temp.path()).unwrap();
-        let file = open(&child, FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | READ_CONTROL | WRITE_DAC | WRITE_OWNER,
-            OPEN_EXISTING, FILE_SHARE_READ).unwrap();
+        let file = open(
+            &child,
+            FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | READ_CONTROL | WRITE_DAC | WRITE_OWNER,
+            OPEN_EXISTING,
+            FILE_SHARE_READ,
+        )
+        .unwrap();
         let original = sddl(&file).unwrap();
         set_security(&file, &original).expect("restore unchanged security through pinned handle");
     }
@@ -954,11 +966,19 @@ mod security_handle_tests {
     fn set_inheritable_acl_with_migration_handles_open() {
         let temp = tempfile::tempdir().unwrap();
         std::fs::write(temp.path().join("child.txt"), b"data").unwrap();
-        let root = open(temp.path(), FILE_LIST_DIRECTORY | READ_CONTROL | WRITE_DAC | WRITE_OWNER,
-            OPEN_EXISTING, FILE_SHARE_READ).unwrap();
+        let root = open(
+            temp.path(),
+            FILE_LIST_DIRECTORY | READ_CONTROL | WRITE_DAC | WRITE_OWNER,
+            OPEN_EXISTING,
+            FILE_SHARE_READ,
+        )
+        .unwrap();
         let _child = admin_child(&root, "child.txt", false).unwrap();
         let sid = process_sid().unwrap();
-        set_security(&root, &format!("O:{sid}G:{sid}D:P(A;OICI;FA;;;{sid})(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)")).unwrap();
+        set_security(
+            &root,
+            &format!("O:{sid}G:{sid}D:P(A;OICI;FA;;;{sid})(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)"),
+        )
+        .unwrap();
     }
-
 }

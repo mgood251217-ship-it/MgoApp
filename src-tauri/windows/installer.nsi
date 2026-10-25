@@ -591,11 +591,13 @@ Function MgoMigrateUserInstall
     StrCpy $2 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
   ${EndIf}
   DetailPrint "Memeriksa/memigrasikan instalasi MGO per pengguna ($MgoMigrationMode)..."
-  nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -File $\"$PLUGINSDIR\migrate_user_install.ps1$\" -Mode $MgoMigrationMode -InstallDirectory $\"$INSTDIR$\"'
+  ; The bundled migration helper is part of this installer. Bypass applies only to this
+  ; PowerShell process and does not change the machine or user execution policy.
+  nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $\"$PLUGINSDIR\migrate_user_install.ps1$\" -Mode $MgoMigrationMode -InstallDirectory $\"$INSTDIR$\"'
   Pop $0
   ${If} $0 != 0
     IfSilent mgo_migration_failed
-    MessageBox MB_ICONSTOP|MB_OK "Migrasi MGO dari AppData belum selesai (kode $0). Periksa pesan pada rincian instalasi. Tutup MGO pada semua akun Windows lalu coba lagi. Pengaturan dan data pengguna tidak dihapus."
+    MessageBox MB_ICONSTOP|MB_OK "Migrasi MGO dari AppData belum selesai (kode $0). Periksa pesan rinci di atas untuk penyebabnya. Jika detail menyebut file sedang dipakai, keluar dari akun Windows lain yang masih aktif lalu coba lagi. Pengaturan dan data pengguna tidak dihapus."
     mgo_migration_failed:
     SetErrorLevel 2
     Abort "Migrasi instalasi lama gagal; pemasangan belum selesai."

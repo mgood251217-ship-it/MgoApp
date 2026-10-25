@@ -45,6 +45,199 @@ fn service(request: Request) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub async fn folder_protection_lan_status() -> Result<Value, String> {
+    #[cfg(windows)]
+    {
+        use crate::folder_protection::{lan, request_local};
+        let local = request_local(Request::Status)
+            .await
+            .ok()
+            .filter(|r| r.success)
+            .map(|r| r.data);
+        return Ok(
+            json!({"server":local,"computer":std::env::var("COMPUTERNAME").unwrap_or_default(),"connections":lan::connections()?.iter().map(|c|c.summary()).collect::<Vec<_>>()}),
+        );
+    }
+    #[cfg(not(windows))]
+    {
+        Err("LAN memerlukan Windows".into())
+    }
+}
+
+#[cfg(windows)]
+fn elevate_lan(
+    cache: &std::path::Path,
+    request: &crate::folder_protection::admin::LanRequest,
+) -> Result<(), String> {
+    use crate::folder_protection::{lan, windows as win};
+    use std::{fs, io::Write};
+    use windows_sys::Win32::{
+        System::Threading::{GetExitCodeProcess, WaitForSingleObject},
+        UI::{
+            Shell::{ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW},
+            WindowsAndMessaging::SW_HIDE,
+        },
+    };
+    fs::create_dir_all(cache).map_err(|e| e.to_string())?;
+    let request_path = cache.join(format!("folder-lan-{}.json", lan::random_token()?));
+    let result = (|| {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&request_path)
+            .map_err(|e| e.to_string())?;
+        file.write_all(&serde_json::to_vec(request).map_err(|e| e.to_string())?)
+            .and_then(|_| file.sync_all())
+            .map_err(|e| e.to_string())?;
+        drop(file);
+        let launcher = win::known_folder(&windows_sys::Win32::UI::Shell::FOLDERID_ProgramFiles)
+            .map_err(|e| e.to_string())?
+            .join("MgoFolderProtection")
+            .join("activate_folder_protection.ps1");
+        let powershell =
+            std::path::PathBuf::from(std::env::var_os("SystemRoot").ok_or("Missing Windows path")?)
+                .join(r"System32\WindowsPowerShell\v1.0\powershell.exe");
+        let parameters = format!(
+            "-NoProfile -NonInteractive -File \"{}\" -Action ConfigureLan -RequestFile \"{}\"",
+            launcher.display(),
+            request_path.display()
+        );
+        let verb = win::wide(std::ffi::OsStr::new("runas"));
+        let exe = win::wide(powershell.as_os_str());
+        let params = win::wide(std::ffi::OsStr::new(&parameters));
+        let mut info: SHELLEXECUTEINFOW = unsafe { std::mem::zeroed() };
+        info.cbSize = std::mem::size_of_val(&info) as u32;
+        info.fMask = SEE_MASK_NOCLOSEPROCESS;
+        info.lpVerb = verb.as_ptr();
+        info.lpFile = exe.as_ptr();
+        info.lpParameters = params.as_ptr();
+        info.nShow = SW_HIDE;
+        unsafe {
+            win::checked(ShellExecuteExW(&mut info))
+                .map_err(|e| format!("UAC dibatalkan atau gagal: {e}"))?;
+        }
+        let process = win::Handle(info.hProcess);
+        if process.0.is_null() {
+            return Err("Proses administrator tidak dimulai".into());
+        }
+        if unsafe { WaitForSingleObject(process.0, 600_000) } != 0 {
+            return Err(
+                "Pengaturan LAN masih berjalan. Periksa status sebelum mencoba lagi.".into(),
+            );
+        }
+        let mut code = 1;
+        unsafe {
+            win::checked(GetExitCodeProcess(process.0, &mut code)).map_err(|e| e.to_string())?;
+        }
+        if code != 0 {
+            return Err(
+                "Pengaturan LAN tidak selesai. Periksa pesan pada jendela administrator.".into(),
+            );
+        }
+        Ok(())
+    })();
+    let _ = fs::remove_file(request_path);
+    result
+}
+
+#[tauri::command]
+pub async fn configure_folder_protection_lan(
+    app: tauri::AppHandle,
+    root_id: String,
+    host: String,
+    path: String,
+    enabled: bool,
+) -> Result<Value, String> {
+    #[cfg(windows)]
+    {
+        use crate::folder_protection::{self as fp, admin::LanRequest, lan, windows as win};
+        use tauri::Manager;
+        let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?;
+        let status = fp::request_local(Request::Status).await?;
+        if status.data["lan_protocol"] != 1 {
+            return Err("Perbarui layanan menggunakan installer terbaru dan centang komputer server sebelum mengatur LAN.".into());
+        }
+        return tauri::async_runtime::spawn_blocking(move || {
+            let token=lan::random_token()?;
+            let request=LanRequest { root_id:root_id.clone(),operator_sid:win::process_sid().map_err(|e|e.to_string())?,host:host.trim().into(),path:path.trim().trim_end_matches('\\').into(),token_hash:if enabled {Some(lan::token_hash(&token)?)}else{None} };
+            // Only the hash crosses the elevation boundary; the credential stays in this process.
+            elevate_lan(&cache,&request)?;
+            if !enabled { return Ok(json!({"message":"Akses LAN MGO folder ini dicabut. Share Explorer khusus MGO dihapus bila digunakan."})); }
+            let response=tauri::async_runtime::block_on(fp::request_local(Request::Status))?;
+            let certificate=response.data["lan"]["certificate"].as_str().ok_or("Layanan LAN belum siap; perbarui layanan melalui installer terbaru")?;
+            let c=lan::Connection { schema:1,host:request.host,path:request.path,root_id,certificate:certificate.into(),token,device_key:None,enrolled:false };
+            Ok(json!({"code":c.encode()?,"message":format!("Path Explorer baca-saja: {}. Kode berlaku 10 menit untuk mendaftarkan klien; kode dan pendaftaran lama folder ini sudah dicabut.",c.path)}))
+        }).await.map_err(|e|e.to_string())?;
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (app, root_id, host, path, enabled);
+        Err("LAN memerlukan Windows".into())
+    }
+}
+
+#[tauri::command]
+pub async fn connect_folder_protection_lan(code: String) -> Result<Value, String> {
+    #[cfg(windows)]
+    {
+        use crate::folder_protection::lan;
+        let mut c = lan::Connection::decode(&code)?;
+        c.prepare_device()?;
+        let response = lan::client(&c, Request::Status).await?;
+        if !response.success {
+            return Err(response.message.unwrap_or(response.code));
+        }
+        if response.data["protocol_version"].as_u64().unwrap_or(0)
+            < crate::folder_protection::PROTOCOL_VERSION as u64
+            || !response.data["roots"].as_array().is_some_and(|rs| {
+                rs.iter()
+                    .any(|r| r["id"] == c.root_id && r["available"] == true)
+            })
+        {
+            return Err("Folder server belum siap atau versi layanan perlu diperbarui".into());
+        }
+        c.enrolled = true;
+        let mut saved = lan::connections()?;
+        saved.retain(|old| old.id() != c.id());
+        let summary = c.summary();
+        saved.push(c);
+        let registrations: Vec<_> = saved
+            .iter()
+            .map(|c| crate::folder_protection::mapping::Registration {
+                root_id: c.id(),
+                aliases: vec![c.path.clone()],
+            })
+            .collect();
+        for r in &registrations {
+            crate::folder_protection::mapping::resolve(&r.aliases[0], &registrations)?;
+        }
+        lan::save_connections(&saved)?;
+        return Ok(summary);
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = code;
+        Err("LAN memerlukan Windows".into())
+    }
+}
+
+#[tauri::command]
+pub async fn disconnect_folder_protection_lan(id: String) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use crate::folder_protection::lan;
+        let mut saved = lan::connections()?;
+        saved.retain(|c| c.id() != id);
+        return lan::save_connections(&saved);
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = id;
+        Err("LAN memerlukan Windows".into())
+    }
+}
+
+#[tauri::command]
 pub async fn verify_folder_protection(root_id: Option<String>) -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(move || verify_current_user(root_id))
         .await
@@ -130,7 +323,10 @@ fn verify_current_user(requested_root_id: Option<String>) -> Result<Value, Strin
                 false
             }
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => true,
-            Err(e) => return Err(format!("Direct write check inconclusive: {e}")),
+            Err(e) => {
+                checks.push(json!({"name":"Akses langsung Windows belum dapat dipastikan", "passed":false,"message":e.to_string()}));
+                false
+            }
         };
         checks.push(
             json!({"name": "Windows menolak pembuatan file langsung", "passed": create_denied}),
@@ -138,7 +334,10 @@ fn verify_current_user(requested_root_id: Option<String>) -> Result<Value, Strin
         let delete_denied = match fs::remove_file(root.join(&probe).join("read.txt")) {
             Ok(()) => false,
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => true,
-            Err(e) => return Err(format!("Direct delete check inconclusive: {e}")),
+            Err(e) => {
+                checks.push(json!({"name":"Akses hapus Windows belum dapat dipastikan", "passed":false,"message":e.to_string()}));
+                false
+            }
         };
         checks
             .push(json!({"name": "Windows menolak penghapusan langsung", "passed": delete_denied}));
@@ -209,7 +408,7 @@ fn verify_current_user(requested_root_id: Option<String>) -> Result<Value, Strin
     let passed = checks.iter().all(|c| c["passed"] == true) && cleanup_errors.is_empty();
     Ok(
         json!({"passed": passed, "checks": checks, "cleanup_errors": cleanup_errors,
-        "root_id":root_id,"root_label":root_label,"root": root, "scope": "Akun Windows yang menjalankan MgoApp pada komputer ini; akses SMB/LAN belum diuji."}),
+        "root_id":root_id,"root_label":root_label,"root": root, "scope": if root_id.starts_with("lan-") { "CRUD melalui koneksi TLS ke server; akses Windows melalui share SMB memakai kredensial Windows aktif pada klien ini." } else { "Akun Windows yang menjalankan MgoApp pada komputer ini; akses dari komputer LAN lain belum diuji." }}),
     )
 }
 
@@ -388,7 +587,6 @@ mod folder_plan_tests {
         );
         assert!(candidate_folder(r"D:\Produksi\Outdoor").is_ok());
     }
-
 }
 
 #[tauri::command]
