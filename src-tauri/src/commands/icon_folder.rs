@@ -1,7 +1,6 @@
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use tauri::AppHandle;
 
 const ICON_FILES: [&str; 4] = [
@@ -49,32 +48,76 @@ fn icon_path_for(status: &str) -> Option<PathBuf> {
     }
 }
 
-fn run_attrib(args: &[&str]) -> std::io::Result<()> {
-    Command::new("attrib").args(args).output()?;
-    Ok(())
+#[cfg(windows)]
+mod shell {
+    use std::{ffi::c_void, io, os::windows::ffi::OsStrExt, path::Path};
+
+    pub const READONLY: u32 = 0x1;
+    pub const HIDDEN: u32 = 0x2;
+    pub const SYSTEM: u32 = 0x4;
+    const NORMAL: u32 = 0x80;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetFileAttributesW(path: *const u16) -> u32;
+        fn SetFileAttributesW(path: *const u16, attributes: u32) -> i32;
+    }
+
+    #[link(name = "shell32")]
+    extern "system" {
+        fn SHChangeNotify(event: i32, flags: u32, item1: *const c_void, item2: *const c_void);
+    }
+
+    fn wide_path(path: &Path) -> Vec<u16> {
+        path.as_os_str().encode_wide().chain(Some(0)).collect()
+    }
+
+    pub fn attributes(path: &Path, add: u32, remove: u32) -> io::Result<()> {
+        let path = wide_path(path);
+        // SAFETY: path is a live, null-terminated UTF-16 buffer.
+        let current = unsafe { GetFileAttributesW(path.as_ptr()) };
+        if current == u32::MAX {
+            return Err(io::Error::last_os_error());
+        }
+        let updated = ((current | add) & !remove) & !NORMAL;
+        let updated = if updated == 0 { NORMAL } else { updated };
+        if updated == current {
+            return Ok(());
+        }
+        if unsafe { SetFileAttributesW(path.as_ptr(), updated) } == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+
+    pub fn notify(folder: &Path) {
+        const UPDATEITEM: i32 = 0x2000;
+        const UPDATEDIR: i32 = 0x1000;
+        const PATHW_FLUSHNOWAIT: u32 = 0x0005 | 0x3000;
+        let path = wide_path(folder);
+        // SAFETY: buffers remain live for each call; Windows copies the notification data.
+        unsafe {
+            SHChangeNotify(UPDATEITEM, PATHW_FLUSHNOWAIT, path.as_ptr().cast(), std::ptr::null());
+        }
+        if let Some(parent) = folder.parent() {
+            let parent = wide_path(parent);
+            unsafe {
+                SHChangeNotify(UPDATEDIR, PATHW_FLUSHNOWAIT, parent.as_ptr().cast(), std::ptr::null());
+            }
+        }
+    }
 }
 
-fn notify_shell_update(folder_path: &Path) {
-    let ps_command = format!(
-        r#"$sig = @"
-using System;
-using System.Runtime.InteropServices;
-public class ShellNotify {{
-    [DllImport("shell32.dll")]
-    public static extern void SHChangeNotify(int eventId, int flags, IntPtr item1, IntPtr item2);
-}}
-"@
-Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
-$path = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni('{}')
-[ShellNotify]::SHChangeNotify(0x2000, 0x0005, $path, [IntPtr]::Zero)
-[System.Runtime.InteropServices.Marshal]::FreeHGlobal($path)
-"#,
-        folder_path.to_string_lossy().replace('\'', "''")
-    );
-
-    let _ = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", &ps_command])
-        .output();
+#[cfg(not(windows))]
+mod shell {
+    use std::{io, path::Path};
+    pub const READONLY: u32 = 1;
+    pub const HIDDEN: u32 = 2;
+    pub const SYSTEM: u32 = 4;
+    pub fn attributes(_: &Path, _: u32, _: u32) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::Unsupported, "Windows only"))
+    }
+    pub fn notify(_: &Path) {}
 }
 
 #[tauri::command]
@@ -100,22 +143,56 @@ pub async fn set_icon_folder_order(folder_path: String, status: String) -> Value
             return serde_json::json!({ "success": false, "message": e.to_string() });
         }
 
-        let folder_str = folder.to_string_lossy();
-        let ini_str = desktop_ini_path.to_string_lossy();
-        let _ = run_attrib(&["-r", "-s", "-h", &folder_str]);
-        let _ = run_attrib(&["-r", "-s", "-h", &ini_str]);
+        // Only desktop.ini needs its read-only/system/hidden flags cleared for writing.
+        if let Err(e) = shell::attributes(&desktop_ini_path, 0, shell::READONLY | shell::SYSTEM | shell::HIDDEN) {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                return serde_json::json!({ "success": false, "message": format!("Gagal menyiapkan desktop.ini: {}", e) });
+            }
+        }
 
         if let Err(e) = fs::write(&desktop_ini_path, content) {
             return serde_json::json!({ "success": false, "message": e.to_string() });
         }
 
-        if run_attrib(&["+h", "+s", &ini_str]).is_err() || run_attrib(&["+r", &folder_str]).is_err() {
-            return serde_json::json!({ "success": false, "message": "Gagal set attribute folder." });
+        if let Err(e) = shell::attributes(&desktop_ini_path, shell::HIDDEN | shell::SYSTEM, 0)
+            .and_then(|_| shell::attributes(folder, shell::READONLY, 0))
+        {
+            return serde_json::json!({ "success": false, "message": format!("Gagal set attribute folder: {}", e) });
         }
 
-        notify_shell_update(folder);
+        shell::notify(folder);
         serde_json::json!({ "success": true })
     })
     .await
     .unwrap()
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use std::os::windows::fs::MetadataExt;
+
+    #[test]
+    fn shell_attributes_preserve_other_flags_and_allow_icon_replacement() {
+        let folder = std::env::temp_dir().join(format!(
+            "mgo-icon-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        fs::create_dir(&folder).unwrap();
+        let ini = folder.join("desktop.ini");
+        assert_eq!(shell::attributes(&ini, 0, shell::READONLY).unwrap_err().kind(), std::io::ErrorKind::NotFound);
+        fs::write(&ini, "first icon").unwrap();
+        shell::attributes(&ini, shell::READONLY | shell::HIDDEN | shell::SYSTEM, 0).unwrap();
+        shell::attributes(&ini, 0, shell::READONLY | shell::HIDDEN | shell::SYSTEM).unwrap();
+        fs::write(&ini, "second icon").unwrap();
+        shell::attributes(&ini, shell::HIDDEN | shell::SYSTEM, 0).unwrap();
+        assert_eq!(fs::metadata(&ini).unwrap().file_attributes() & 7, shell::HIDDEN | shell::SYSTEM);
+        shell::attributes(&folder, shell::HIDDEN, 0).unwrap();
+        shell::attributes(&folder, shell::READONLY, 0).unwrap();
+        assert_eq!(fs::metadata(&folder).unwrap().file_attributes() & 3, shell::READONLY | shell::HIDDEN);
+        shell::notify(&folder);
+        shell::attributes(&ini, 0, shell::HIDDEN | shell::SYSTEM).unwrap();
+        shell::attributes(&folder, 0, shell::READONLY | shell::HIDDEN).unwrap();
+        fs::remove_dir_all(&folder).unwrap();
+    }
 }
