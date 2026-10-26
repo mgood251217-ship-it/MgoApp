@@ -5,12 +5,10 @@ import Table from "../Table/Table";
 import Button from "../Button/Button";
 import Icon from "../Icon/Icon";
 import Select from "../Select/Select";
-import Input from "../Input/Input";
 import Form from "../Form/Form";
 import { formatRupiah, formatTime } from "../../services/helpers";
 import { FOLDER_STATUS_LABEL, formatUkuran, buildRenamedFilenameWithQuantity, getItemFolderStatus, folderInfoMatchesItem } from "../../services/folderHelper";
 import useOrderFolderStatus from "../../hooks/useOrderFolderStatus";
-import ChangeFolderIconModal from "../ChangeFolderIconModal/ChangeFolderIconModal";
 import { getCachedStoreNames } from "../../services/apiCache";
 
 export default function OrderDetailModal({ open, onClose, viewOrderDetails, viewOrderData, setAlertConfig, onRefresh, operatorOptions = [], onProcessed }) {
@@ -24,10 +22,11 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
     });
 
     const [processModalOpen, setProcessModalOpen] = useState(false);
+    const [processingOrder, setProcessingOrder] = useState(false);
+    const checkingOrderFolders = !folder.settingsLoaded || Object.values(folder.itemFolderStatus).some(info => info.status === "checking");
     const [processOrderData, setProcessOrderData] = useState({
         order_id: "",
         status: "",
-        customStatus: "",
         user_id: ""
     });
 
@@ -81,7 +80,6 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         setProcessOrderData({
             order_id: viewOrderDetails?.order_id || "",
             status: "",
-            customStatus: "",
             user_id: ""
         });
         setProcessModalOpen(true);
@@ -89,12 +87,13 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
 
     const handleProcessSubmit = async (e) => {
         e.preventDefault();
+        if (processingOrder || checkingOrderFolders || !processOrderData.status || (processOrderData.status === "DIAMBIL" && !processOrderData.user_id)) return;
+        setProcessingOrder(true);
         try {
             const payload = new FormData();
             payload.append("order_id", processOrderData.order_id);
 
-            const finalStatus = processOrderData.status === "LAINYA" ? processOrderData.customStatus : processOrderData.status;
-            payload.append("status", finalStatus);
+            payload.append("status", processOrderData.status);
 
             if (processOrderData.status === "DIAMBIL") {
                 payload.append("user_id", processOrderData.user_id);
@@ -102,11 +101,34 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                 payload.append("user_id", "");
             }
 
-            await api.post("", payload, { params: { action: "update_project" } });
+            const res = await api.post("", payload, { params: { action: "update_project" } });
+            if (!res.data?.success) throw new Error(res.data?.message || "Gagal memperbarui proses order.");
+
+            const iconStatus = { SELESAI: "selesai", DIPROSES: "proses", DIAMBIL: "diambil", BATAL: "cancel" }[processOrderData.status];
+            const paths = [...new Map(folder.dedupedFolderEntries
+                .filter(({ info }) => info.status === "ada" && info.path)
+                .map(({ info }) => [info.path.toLowerCase(), info.path])).values()];
+            const results = await Promise.allSettled(paths.map(async (folderPath) => {
+                const result = await window.electron.setIconFolderOrder({ folderPath, status: iconStatus });
+                if (!result?.success) throw new Error(result?.message || "Gagal mengganti ikon.");
+            }));
+            const failures = results.flatMap((result, index) => result.status === "rejected"
+                ? [`${paths[index]}: ${result.reason?.message || String(result.reason)}`] : []);
+            setAlertConfig({
+                show: true,
+                type: failures.length ? "error" : "success",
+                message: failures.length
+                    ? `Status order sudah tersimpan, tetapi ikon folder gagal diperbarui: ${failures.join("; ")}`
+                    : paths.length ? "Status order dan ikon folder berhasil diperbarui." : "Status order berhasil diperbarui. Tidak ada folder terdeteksi untuk diganti ikonnya."
+            });
             setProcessModalOpen(false);
             onProcessed?.();
             onRefresh?.();
-        } catch (err) {}
+        } catch (err) {
+            setAlertConfig({ show: true, type: "error", message: err.message || "Gagal memperbarui proses order." });
+        } finally {
+            setProcessingOrder(false);
+        }
     };
 
     const viewItemsMapped = (viewOrderData?.items || []).map(item => {
@@ -335,15 +357,6 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                                         onClick={() => handleOpenFolder(info.path)}
                                                     >
                                                         Buka Folder
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        icon={<Icon name="folder" />}
-                                                        style={{ whiteSpace: "nowrap" }}
-                                                        onClick={() => folder.handleOpenIconModalForCategory(cat, info.path, viewOrderDetails)}
-                                                    >
-                                                        Ganti Icon
                                                     </Button>
                                                     <Button
                                                         size="sm"
@@ -586,40 +599,32 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
 
             <Modal
                 open={processModalOpen}
-                onClose={() => setProcessModalOpen(false)}
+                onClose={() => { if (!processingOrder) setProcessModalOpen(false); }}
                 title="Proses Order"
                 size="sm"
                 variant="secondary"
             >
                 <Form id="formProcessOrder" onSubmit={handleProcessSubmit}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
-                        {["BELUM DIPROSES", "DIPROSES", "DIAMBIL", "LAINYA"].map((statusItem) => (
+                        {[
+                            { value: "SELESAI", label: "Selesai", variant: "success" },
+                            { value: "DIPROSES", label: "Proses", variant: "primary" },
+                            { value: "DIAMBIL", label: "Diambil", variant: "secondary" },
+                            { value: "BATAL", label: "Batal", variant: "danger" }
+                        ].map((statusItem) => (
                             <Button
-                                key={statusItem}
+                                key={statusItem.value}
+                                disabled={processingOrder}
                                 type="button"
-                                variant={processOrderData.status === statusItem ? "primary" : "secondary"}
-                                onClick={() => setProcessOrderData(prev => ({ ...prev, status: statusItem }))}
+                                variant={statusItem.variant}
+                                icon={processOrderData.status === statusItem.value ? <Icon name="check" /> : undefined}
+                                onClick={() => setProcessOrderData(prev => ({ ...prev, status: statusItem.value }))}
                                 size="md"
                             >
-                                {statusItem}
+                                {statusItem.label}
                             </Button>
                         ))}
                     </div>
-
-                    {processOrderData.status === "LAINYA" && (
-                        <div style={{ marginBottom: "16px" }}>
-                            <Input
-                                labelPosition="left"
-                                labelWidth={130}
-                                name="customStatus"
-                                value={processOrderData.customStatus}
-                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, customStatus: e.target.value }))}
-                                label="Status Lainnya"
-                                placeholder="Ketik status manual..."
-                                required
-                            />
-                        </div>
-                    )}
 
                     {processOrderData.status === "DIAMBIL" && (
                         <div style={{ marginBottom: "16px" }}>
@@ -642,24 +647,14 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                         size="full-lg"
                         variant="primary"
                         icon={<Icon name="save" />}
-                        disabled={!processOrderData.status}
+                        loading={processingOrder}
+                        disabled={checkingOrderFolders || !processOrderData.status || (processOrderData.status === "DIAMBIL" && !processOrderData.user_id)}
                     >
                         Update Proses
                     </Button>
                 </Form>
             </Modal>
 
-            <ChangeFolderIconModal
-                open={folder.iconModalOpen}
-                onClose={folder.closeIconModal}
-                orderInfo={folder.iconModalOrder}
-                folderPath={folder.folderIconTarget}
-                found={folder.folderIconFound}
-                searching={folder.searchingFolder}
-                applying={folder.applyingIcon}
-                onPilihManual={folder.handlePilihFolderManual}
-                onTerapkan={folder.handleTerapkanIcon}
-            />
         </>
     );
 }

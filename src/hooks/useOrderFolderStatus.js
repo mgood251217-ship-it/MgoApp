@@ -12,12 +12,6 @@ export default function useOrderFolderStatus(setAlertConfig) {
     const [dragOverCat, setDragOverCat] = useState(null);
     const [copyFeedbackId, setCopyFeedbackId] = useState(null);
 
-    const [iconModalOpen, setIconModalOpen] = useState(false);
-    const [iconModalOrder, setIconModalOrder] = useState(null);
-    const [folderIconTarget, setFolderIconTarget] = useState(null);
-    const [folderIconFound, setFolderIconFound] = useState(false);
-    const [searchingFolder, setSearchingFolder] = useState(false);
-    const [applyingIcon, setApplyingIcon] = useState(false);
     const [uploadingNotaFor, setUploadingNotaFor] = useState(null);
 
     useEffect(() => {
@@ -170,49 +164,6 @@ export default function useOrderFolderStatus(setAlertConfig) {
         }
     }, [setAlertConfig, moveFilesToCategory]);
 
-    const handleOpenIconModalForCategory = useCallback((category, folderPath, orderRow) => {
-        setIconModalOrder({ ...orderRow, kategori: category });
-        setFolderIconTarget(folderPath);
-        setFolderIconFound(true);
-        setSearchingFolder(false);
-        setIconModalOpen(true);
-    }, []);
-
-    const closeIconModal = useCallback(() => {
-        setIconModalOpen(false);
-        setFolderIconTarget(null);
-        setFolderIconFound(false);
-        setIconModalOrder(null);
-    }, []);
-
-    const handlePilihFolderManual = useCallback(async () => {
-        try {
-            const path = await window.electron.pilihFolder();
-            if (!path) return;
-            setFolderIconTarget(path);
-        } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Gagal membuka dialog folder." });
-        }
-    }, [setAlertConfig]);
-
-    const handleTerapkanIcon = useCallback(async (status) => {
-        if (!folderIconTarget) return;
-        setApplyingIcon(true);
-        try {
-            const res = await window.electron.setIconFolderOrder({ folderPath: folderIconTarget, status });
-            if (!res.success) {
-                setAlertConfig({ show: true, type: "error", message: res.message || "Gagal mengubah icon folder." });
-            } else {
-                setAlertConfig({ show: true, type: "success", message: "Icon folder berhasil diubah." });
-                closeIconModal();
-            }
-        } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Terjadi kesalahan saat mengubah icon folder." });
-        } finally {
-            setApplyingIcon(false);
-        }
-    }, [folderIconTarget, setAlertConfig, closeIconModal]);
-
     return {
         settingsLoaded,
         itemFolderStatus,
@@ -229,16 +180,6 @@ export default function useOrderFolderStatus(setAlertConfig) {
         handleBuatFolder,
         handleDropFile,
         handlePilihFile,
-        iconModalOpen,
-        iconModalOrder,
-        folderIconTarget,
-        folderIconFound,
-        searchingFolder,
-        applyingIcon,
-        handleOpenIconModalForCategory,
-        closeIconModal,
-        handlePilihFolderManual,
-        handleTerapkanIcon,
         handleUploadNota,
         uploadingNotaFor,
     };
