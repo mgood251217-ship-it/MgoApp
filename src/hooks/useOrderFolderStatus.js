@@ -112,7 +112,7 @@ export default function useOrderFolderStatus(setAlertConfig) {
         }
     }, [setAlertConfig, checkFolders]);
 
-    const moveFilesToCategory = useCallback(async (filePaths, info, orderRow, itemsList) => {
+    const moveFilesToCategory = useCallback(async (filePaths, info, orderRow, itemsList, copyOnly = false) => {
         if (!filePaths || filePaths.length === 0) return;
 
         try {
@@ -127,16 +127,16 @@ export default function useOrderFolderStatus(setAlertConfig) {
                 targetPath = createRes.path;
             }
 
-            const res = await window.electron.pindahFileKeFolder({ filePaths, targetFolderPath: targetPath });
+            const res = await window.electron.pindahFileKeFolder({ filePaths, targetFolderPath: targetPath, copyOnly });
             const gagal = res?.results?.filter(r => !r.success) || [];
             if (gagal.length > 0) {
-                setAlertConfig({ show: true, type: "error", message: `${gagal.length} file gagal dipindahkan.` });
+                setAlertConfig({ show: true, type: "error", message: `${gagal.length} file gagal ${copyOnly ? "disalin" : "dipindahkan"}.` });
             } else {
-                setAlertConfig({ show: true, type: "success", message: `${filePaths.length} file berhasil dipindahkan.` });
+                setAlertConfig({ show: true, type: "success", message: `${filePaths.length} file berhasil ${copyOnly ? "disalin" : "dipindahkan"}.` });
             }
             if (orderRow) checkFolders(orderRow, itemsList || []);
         } catch (err) {
-            setAlertConfig({ show: true, type: "error", message: "Gagal memindahkan file." });
+            setAlertConfig({ show: true, type: "error", message: copyOnly ? "Gagal menyalin file." : "Gagal memindahkan file." });
         }
     }, [setAlertConfig, checkFolders]);
 
@@ -150,7 +150,7 @@ export default function useOrderFolderStatus(setAlertConfig) {
 
     const handlePilihFile = useCallback(async (category, info, orderRow, itemsList) => {
         const filePaths = await window.electron.pilihFileOrder();
-        moveFilesToCategory(filePaths, info, orderRow, itemsList);
+        moveFilesToCategory(filePaths, info, orderRow, itemsList, true);
     }, [moveFilesToCategory]);
 
     const handleUploadNota = useCallback(async (category, info, orderRow, itemsList) => {

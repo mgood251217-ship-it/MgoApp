@@ -181,7 +181,17 @@ fn find_folder_recursive(dir: &Path, nomorator: &str, depth: u32, max_depth: u32
     None
 }
 
-fn move_file_into_folder(source_path: &Path, target_dir: &Path) -> std::io::Result<PathBuf> {
+fn duplicate_file_suffix(mut index: usize) -> String {
+    let mut letters = Vec::new();
+    while index > 0 {
+        index -= 1;
+        letters.push((b'a' + (index % 26) as u8) as char);
+        index /= 26;
+    }
+    letters.into_iter().rev().collect()
+}
+
+fn move_file_into_folder(source_path: &Path, target_dir: &Path, copy_only: bool) -> std::io::Result<PathBuf> {
     fs::create_dir_all(target_dir)?;
     let base_name = source_path.file_name().unwrap().to_string_lossy().to_string();
     let ext = source_path.extension().map(|e| e.to_string_lossy().to_string()).unwrap_or_default();
@@ -190,16 +200,19 @@ fn move_file_into_folder(source_path: &Path, target_dir: &Path) -> std::io::Resu
     let mut dest_path = target_dir.join(&base_name);
     let mut counter = 1;
     while dest_path.exists() {
+        let suffix = duplicate_file_suffix(counter);
         let candidate = if ext.is_empty() {
-            format!("{} ({})", name_only, counter)
+            format!("{} {}", name_only, suffix)
         } else {
-            format!("{} ({}).{}", name_only, counter, ext)
+            format!("{} {}.{}", name_only, suffix, ext)
         };
         dest_path = target_dir.join(candidate);
         counter += 1;
     }
 
-    if fs::rename(source_path, &dest_path).is_err() {
+    if copy_only {
+        fs::copy(source_path, &dest_path)?;
+    } else if fs::rename(source_path, &dest_path).is_err() {
         fs::copy(source_path, &dest_path)?;
         fs::remove_file(source_path)?;
     }
@@ -212,6 +225,31 @@ fn move_file_into_folder(source_path: &Path, target_dir: &Path) -> std::io::Resu
 #[cfg(test)]
 mod production_format_tests {
     use super::*;
+
+    #[test]
+    fn copy_keeps_source_and_existing_destination() {
+        let temp = std::env::temp_dir();
+        let root = temp.join(format!("mgo-copy-test-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let target = root.join("target");
+        fs::create_dir_all(&target).unwrap();
+        let source = root.join("desain.txt");
+        fs::write(&source, b"desain baru").unwrap();
+        fs::write(target.join("desain.txt"), b"desain lama").unwrap();
+        let copied = move_file_into_folder(&source, &target, true).unwrap();
+        assert_eq!(fs::read(&source).unwrap(), b"desain baru");
+        assert_eq!(fs::read(&copied).unwrap(), b"desain baru");
+        assert_eq!(copied, target.join("desain a.txt"));
+        assert_eq!(duplicate_file_suffix(26), "z");
+        assert_eq!(duplicate_file_suffix(27), "aa");
+        assert_eq!(fs::read(target.join("desain.txt")).unwrap(), b"desain lama");
+        let moved = move_file_into_folder(&source, &target, false).unwrap();
+        assert_eq!(moved, target.join("desain b.txt"));
+        assert!(!source.exists());
+        assert_eq!(fs::read(moved).unwrap(), b"desain baru");
+        assert!(root.starts_with(&temp) && root.file_name().unwrap().to_string_lossy().starts_with("mgo-copy-test-"));
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn month_formats_create_and_find_the_selected_directory() {
@@ -290,6 +328,8 @@ pub struct PindahFileArgs {
     pub file_paths: Vec<String>,
     #[serde(rename = "targetFolderPath")]
     pub target_folder_path: String,
+    #[serde(default, rename = "copyOnly")]
+    pub copy_only: bool,
 }
 
 #[derive(Deserialize)]
@@ -475,7 +515,7 @@ pub async fn pindah_file_ke_folder(args: PindahFileArgs) -> serde_json::Value {
 
         for file_path in &args.file_paths {
             let source = Path::new(file_path);
-            match move_file_into_folder(source, target_dir) {
+            match move_file_into_folder(source, target_dir, args.copy_only) {
                 Ok(dest) => results.push(MoveResultItem {
                     source: file_path.clone(),
                     success: true,
