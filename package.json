@@ -1,7 +1,7 @@
 {
   "name": "MgoDesktop",
   "private": true,
-  "version": "2.0.11",
+  "version": "2.0.6",
   "type": "module",
   "author": {
     "name": "Viki Alvian Riyadi",
@@ -14,7 +14,7 @@
     "dev": "tauri dev",
     "build": "vite build",
     "tauri": "tauri",
-    "dist": "node src-tauri/windows/build_distribution.mjs"
+    "dist": "tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

@@ -4,11 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::AppHandle;
 
-const ICON_FILES: [&str; 3] = [
-    "folder-selesai.ico",
-    "folder-proses.ico",
-    "folder-cancel.ico",
-];
+const ICON_FILES: [&str; 3] = ["folder-selesai.ico", "folder-proses.ico", "folder-cancel.ico"];
 
 fn program_data_dir() -> PathBuf {
     let base = std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());
@@ -53,21 +49,26 @@ fn run_attrib(args: &[&str]) -> std::io::Result<()> {
 }
 
 fn notify_shell_update(folder_path: &Path) {
-    #[cfg(windows)]
-    {
-        use windows_sys::Win32::UI::Shell::{SHChangeNotify, SHCNE_UPDATEDIR, SHCNF_PATHW};
-        let path = crate::folder_protection::windows::wide(folder_path.as_os_str());
-        unsafe {
-            SHChangeNotify(
-                SHCNE_UPDATEDIR as i32,
-                SHCNF_PATHW,
-                path.as_ptr() as _,
-                std::ptr::null(),
-            );
-        }
-    }
-    #[cfg(not(windows))]
-    let _ = folder_path;
+    let ps_command = format!(
+        r#"$sig = @"
+using System;
+using System.Runtime.InteropServices;
+public class ShellNotify {{
+    [DllImport("shell32.dll")]
+    public static extern void SHChangeNotify(int eventId, int flags, IntPtr item1, IntPtr item2);
+}}
+"@
+Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
+$path = [System.Runtime.InteropServices.Marshal]::StringToHGlobalUni('{}')
+[ShellNotify]::SHChangeNotify(0x2000, 0x0005, $path, [IntPtr]::Zero)
+[System.Runtime.InteropServices.Marshal]::FreeHGlobal($path)
+"#,
+        folder_path.to_string_lossy().replace('\'', "''")
+    );
+
+    let _ = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", &ps_command])
+        .output();
 }
 
 #[tauri::command]
@@ -75,12 +76,6 @@ pub async fn set_icon_folder_order(folder_path: String, status: String) -> Value
     tauri::async_runtime::spawn_blocking(move || {
         if !cfg!(target_os = "windows") {
             return serde_json::json!({ "success": false, "message": "Fitur ini hanya didukung di Windows." });
-        }
-
-        match crate::folder_protection::storage::Storage::new().and_then(|s| s.set_folder_icon(Path::new(&folder_path), &status)) {
-            Ok(true) => { notify_shell_update(Path::new(&folder_path)); return serde_json::json!({"success": true}); },
-            Ok(false) => (),
-            Err(e) => return serde_json::json!({"success": false, "message": e}),
         }
 
         let icon_path = match icon_path_for(&status) {

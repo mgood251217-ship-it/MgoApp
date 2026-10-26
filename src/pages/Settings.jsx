@@ -7,7 +7,6 @@ import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { applyTheme } from "../services/theme";
 import { clearAllCache } from "../services/apiCache";
-import FolderProtection from "./FolderProtection";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
@@ -898,7 +897,6 @@ export default function Settings() {
                 </div>
             ) : (
                 <Form id="formSettings" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "32px", maxWidth: "1600px" }}>
-                    <FolderProtection settings={settings} onSettingsChange={setSettings} onSave={() => saveSettingsNow(settings, false)} />
                     
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "32px", alignItems: "start" }}>
                         

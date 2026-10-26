@@ -1,18 +1,9 @@
 [package]
 name = "mgo-desktop"
-version = "2.0.11"
+version = "2.0.6"
 description = "Aplikasi POS internal Mgo Desktop untuk transaksi cepat, praktis, dan akurat."
 authors = ["Viki Alvian Riyadi <mgood251217@gmail.com>"]
 edition = "2021"
-default-run = "mgo-desktop"
-
-[features]
-folder-protection-service = []
-
-[[bin]]
-name = "mgo-folder-protection"
-path = "src/security_service.rs"
-required-features = ["folder-protection-service"]
 
 [lib]
 name = "mgo_desktop_lib"
@@ -34,18 +25,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 regex = "1"
 reqwest = { version = "0.12", default-features = false, features = ["stream", "rustls-tls"] }
-tokio = { version = "1", features = ["fs", "net", "time", "io-util", "rt", "macros", "sync"] }
+tokio = { version = "1", features = ["fs", "io-util"] }
 futures-util = "0.3"
 chrono = "0.4"
 base64 = "0.22"
-
-[target.'cfg(windows)'.dependencies]
-tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
-rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-rcgen = { version = "0.14", default-features = false, features = ["ring", "crypto"] }
-ring = "0.17"
-windows-service = "0.8"
-windows-sys = { version = "0.61", features = ["Wdk_Foundation", "Wdk_Storage_FileSystem", "Win32_System_IO", "Win32_Foundation", "Win32_Security", "Win32_Security_Credentials", "Win32_Security_Cryptography", "Win32_NetworkManagement_NetManagement", "Win32_NetworkManagement_WNet", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Pipes", "Win32_System_Threading", "Win32_System_Memory", "Win32_System_Registry", "Win32_System_EventLog", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_Com"] }
-
-[dev-dependencies]
-tempfile = "3"

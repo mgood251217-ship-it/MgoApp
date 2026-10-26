@@ -14,7 +14,10 @@ pub async fn download_update(app: AppHandle, url: String) -> Value {
             .unwrap_or("MgoDesktopUpdate.exe")
             .to_string();
 
-        let downloads_dir = app.path().download_dir().map_err(|e| e.to_string())?;
+        let downloads_dir = app
+            .path()
+            .download_dir()
+            .map_err(|e| e.to_string())?;
         let dest_path = downloads_dir.join(&file_name);
 
         let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;

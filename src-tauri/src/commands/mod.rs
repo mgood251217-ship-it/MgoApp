@@ -1,9 +1,6 @@
-pub mod file_meta;
-pub mod folder_order;
-pub mod folder_protection;
-#[cfg(windows)]
-pub mod folder_protection_smb;
-pub mod icon_folder;
-pub mod misc;
 pub mod settings;
+pub mod folder_order;
+pub mod file_meta;
+pub mod icon_folder;
 pub mod updater_custom;
+pub mod misc;

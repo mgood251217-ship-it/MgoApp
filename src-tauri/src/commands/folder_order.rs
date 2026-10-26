@@ -1,5 +1,4 @@
 use crate::commands::file_meta::get_file_meta;
-use crate::folder_protection::storage::{io_error, Storage};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -28,87 +27,73 @@ fn folder_matches_nomor(entry_name: &str, nomorator: &str) -> bool {
         || entry_name.eq_ignore_ascii_case(nomorator)
 }
 
-fn find_matching_subfolder<F>(
-    storage: &Storage,
-    dir: &Path,
-    matcher: F,
-) -> Result<Option<PathBuf>, String>
+fn find_matching_subfolder<F>(dir: &Path, matcher: F) -> Option<PathBuf>
 where
     F: Fn(&str) -> bool,
 {
-    for entry in storage.list_directory(dir)? {
-        if entry.is_dir && matcher(&entry.name) {
-            return Ok(Some(dir.join(entry.name)));
+    let entries = fs::read_dir(dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if matcher(name) {
+                    return Some(path);
+                }
+            }
         }
     }
-    Ok(None)
+    None
 }
 
 fn resolve_date_folder(
-    storage: &Storage,
     base_path: &Path,
     year: i32,
     month_num: i32,
     month_name: &str,
     day: i32,
-) -> Result<Option<PathBuf>, String> {
-    let Some(year_dir) = find_matching_subfolder(storage, base_path, |name| {
+) -> Option<PathBuf> {
+    let year_dir = find_matching_subfolder(base_path, |name| {
         Regex::new(r"\d{4}")
             .unwrap()
             .find(name)
             .and_then(|m| m.as_str().parse::<i32>().ok())
             .map(|d| d == year)
             .unwrap_or(false)
-    })?
-    else {
-        return Ok(None);
-    };
+    })?;
 
     let month_name_norm = normalize_for_match(month_name);
-    let Some(month_dir) = find_matching_subfolder(storage, &year_dir, |name| {
+    let month_dir = find_matching_subfolder(&year_dir, |name| {
         if extract_leading_number(name) == Some(month_num) {
             return true;
         }
         normalize_for_match(name).contains(&month_name_norm)
-    })?
-    else {
-        return Ok(None);
-    };
+    })?;
 
-    find_matching_subfolder(storage, &month_dir, |name| {
-        extract_leading_number(name) == Some(day)
-    })
+    find_matching_subfolder(&month_dir, |name| extract_leading_number(name) == Some(day))
 }
 
-fn resolve_or_create_subfolder<F>(
-    storage: &Storage,
-    dir: &Path,
-    matcher: F,
-    default_name: &str,
-) -> std::io::Result<PathBuf>
+fn resolve_or_create_subfolder<F>(dir: &Path, matcher: F, default_name: &str) -> std::io::Result<PathBuf>
 where
     F: Fn(&str) -> bool,
 {
-    if let Some(existing) = find_matching_subfolder(storage, dir, matcher).map_err(io_error)? {
+    if let Some(existing) = find_matching_subfolder(dir, matcher) {
         return Ok(existing);
     }
     let new_path = dir.join(default_name);
-    storage.create_dir_all(&new_path).map_err(io_error)?;
+    fs::create_dir_all(&new_path)?;
     Ok(new_path)
 }
 
 fn resolve_or_create_date_folder(
-    storage: &Storage,
     base_path: &Path,
     year: i32,
     month_num: i32,
     month_name: &str,
     day: i32,
 ) -> std::io::Result<PathBuf> {
-    storage.create_dir_all(base_path).map_err(io_error)?;
+    fs::create_dir_all(base_path)?;
 
     let year_dir = resolve_or_create_subfolder(
-        storage,
         base_path,
         |name| {
             Regex::new(r"\d{4}")
@@ -124,7 +109,6 @@ fn resolve_or_create_date_folder(
     let month_name_norm = normalize_for_match(month_name);
     let month_default_name = format!("{:02} {}", month_num, month_name);
     let month_dir = resolve_or_create_subfolder(
-        storage,
         &year_dir,
         |name| {
             if extract_leading_number(name) == Some(month_num) {
@@ -137,63 +121,44 @@ fn resolve_or_create_date_folder(
 
     let day_default_name = format!("{:02}", day);
     resolve_or_create_subfolder(
-        storage,
         &month_dir,
         |name| extract_leading_number(name) == Some(day),
         &day_default_name,
     )
 }
 
-fn find_folder_recursive(
-    storage: &Storage,
-    dir: &Path,
-    nomorator: &str,
-    depth: u32,
-    max_depth: u32,
-) -> Result<Option<PathBuf>, String> {
+fn find_folder_recursive(dir: &Path, nomorator: &str, depth: u32, max_depth: u32) -> Option<PathBuf> {
     if depth > max_depth {
-        return Ok(None);
+        return None;
     }
-    let entries = storage.list_directory(dir)?;
+    let entries: Vec<_> = fs::read_dir(dir).ok()?.flatten().collect();
 
     for entry in &entries {
-        if entry.is_dir && folder_matches_nomor(&entry.name, nomorator) {
-            return Ok(Some(dir.join(&entry.name)));
-        }
-    }
-    for entry in &entries {
-        if entry.is_dir {
-            let path = dir.join(&entry.name);
-            if let Some(found) =
-                find_folder_recursive(storage, &path, nomorator, depth + 1, max_depth)?
-            {
-                return Ok(Some(found));
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if folder_matches_nomor(name, nomorator) {
+                    return Some(path);
+                }
             }
         }
     }
-    Ok(None)
+    for entry in &entries {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find_folder_recursive(&path, nomorator, depth + 1, max_depth) {
+                return Some(found);
+            }
+        }
+    }
+    None
 }
 
-fn move_file_into_folder(
-    storage: &Storage,
-    source_path: &Path,
-    target_dir: &Path,
-) -> std::io::Result<PathBuf> {
-    storage.create_dir_all(target_dir).map_err(io_error)?;
-    let base_name = source_path
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
-    let ext = source_path
-        .extension()
-        .map(|e| e.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let name_only = source_path
-        .file_stem()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
+fn move_file_into_folder(source_path: &Path, target_dir: &Path) -> std::io::Result<PathBuf> {
+    fs::create_dir_all(target_dir)?;
+    let base_name = source_path.file_name().unwrap().to_string_lossy().to_string();
+    let ext = source_path.extension().map(|e| e.to_string_lossy().to_string()).unwrap_or_default();
+    let name_only = source_path.file_stem().unwrap().to_string_lossy().to_string();
 
     let mut dest_path = target_dir.join(&base_name);
     let mut counter = 1;
@@ -207,20 +172,9 @@ fn move_file_into_folder(
         counter += 1;
     }
 
-    let source_protected = storage.protected(source_path).map_err(io_error)?;
-    let target_protected = storage.protected(&dest_path).map_err(io_error)?;
-    if source_protected {
-        storage.rename(source_path, &dest_path).map_err(io_error)?;
-    } else if target_protected || storage.rename(source_path, &dest_path).is_err() {
-        storage
-            .copy_file(source_path, &dest_path)
-            .map_err(io_error)?;
-        storage.remove_file(source_path).map_err(|e| {
-            io_error(format!(
-                "File copied to {}, but source removal failed: {e}",
-                dest_path.display()
-            ))
-        })?;
+    if fs::rename(source_path, &dest_path).is_err() {
+        fs::copy(source_path, &dest_path)?;
+        fs::remove_file(source_path)?;
     }
 
     Ok(dest_path)
@@ -302,9 +256,9 @@ pub async fn cek_folder_order(folder_path: String) -> serde_json::Value {
         return serde_json::json!({ "exists": false, "unsupported": true });
     }
 
-    tauri::async_runtime::spawn_blocking(
-        move || serde_json::json!({ "exists": Path::new(&folder_path).exists() }),
-    )
+    tauri::async_runtime::spawn_blocking(move || {
+        serde_json::json!({ "exists": Path::new(&folder_path).exists() })
+    })
     .await
     .unwrap()
 }
@@ -319,20 +273,6 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
     }
 
     tauri::async_runtime::spawn_blocking(move || {
-        #[cfg(target_os = "windows")]
-        if crate::commands::folder_protection_smb::is_mgo_share_path(&folder_path) {
-            return match crate::commands::folder_protection_smb::open_explorer(&folder_path) {
-                Ok(()) => SimpleResult {
-                    success: true,
-                    message: None,
-                },
-                Err(error) => SimpleResult {
-                    success: false,
-                    message: Some(error),
-                },
-            };
-        }
-
         let path = Path::new(&folder_path);
         if !path.exists() {
             return SimpleResult {
@@ -342,17 +282,13 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
         }
 
         #[cfg(target_os = "windows")]
-        let res = std::process::Command::new("explorer")
-            .arg(&folder_path)
-            .spawn();
+        let res = std::process::Command::new("explorer").arg(&folder_path).spawn();
 
         #[cfg(target_os = "macos")]
         let res = std::process::Command::new("open").arg(&folder_path).spawn();
 
         #[cfg(target_os = "linux")]
-        let res = std::process::Command::new("xdg-open")
-            .arg(&folder_path)
-            .spawn();
+        let res = std::process::Command::new("xdg-open").arg(&folder_path).spawn();
 
         #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
         let res: std::io::Result<std::process::Child> = Err(std::io::Error::new(
@@ -361,14 +297,8 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
         ));
 
         match res {
-            Ok(_) => SimpleResult {
-                success: true,
-                message: None,
-            },
-            Err(e) => SimpleResult {
-                success: false,
-                message: Some(e.to_string()),
-            },
+            Ok(_) => SimpleResult { success: true, message: None },
+            Err(e) => SimpleResult { success: false, message: Some(e.to_string()) },
         }
     })
     .await
@@ -376,76 +306,19 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
 }
 
 #[tauri::command]
-pub async fn save_folder_protection_smb_credential(
-    folder_path: String,
-    username: String,
-    password: String,
-) -> SimpleResult {
-    #[cfg(target_os = "windows")]
-    {
-        return tauri::async_runtime::spawn_blocking(move || {
-            match crate::commands::folder_protection_smb::save_credentials_and_open(
-                &folder_path,
-                &username,
-                &password,
-            ) {
-                Ok(()) => SimpleResult {
-                    success: true,
-                    message: None,
-                },
-                Err(error) => SimpleResult {
-                    success: false,
-                    message: Some(error),
-                },
-            }
-        })
-        .await
-        .unwrap();
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = (folder_path, username, password);
-        SimpleResult {
-            success: false,
-            message: Some("Akses Explorer LAN hanya didukung di Windows.".into()),
-        }
-    }
-}
-
-#[tauri::command]
 pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
-        let storage = match Storage::new() {
-            Ok(storage) => storage,
-            Err(error) => {
-                return serde_json::json!({"found": false, "error": error});
-            }
-        };
         let base = Path::new(&args.base_path);
-        match resolve_date_folder(
-            &storage,
-            base,
-            args.year,
-            args.month_num,
-            &args.month_name,
-            args.day,
-        ) {
-            Ok(Some(day_dir)) => {
-                match find_folder_recursive(&storage, &day_dir, &args.nomorator, 0, 12) {
-                    Ok(found_path) => serde_json::json!({
-                        "found": found_path.is_some(),
-                        "path": found_path.map(|p| p.to_string_lossy().to_string()),
-                        "searchedPath": day_dir.to_string_lossy().to_string(),
-                    }),
-                    Err(error) => serde_json::json!({
-                        "found": false,
-                        "error": error,
-                        "searchedPath": day_dir.to_string_lossy().to_string(),
-                    }),
-                }
+        match resolve_date_folder(base, args.year, args.month_num, &args.month_name, args.day) {
+            Some(day_dir) => {
+                let found_path = find_folder_recursive(&day_dir, &args.nomorator, 0, 12);
+                serde_json::json!({
+                    "found": found_path.is_some(),
+                    "path": found_path.map(|p| p.to_string_lossy().to_string()),
+                    "searchedPath": day_dir.to_string_lossy().to_string(),
+                })
             }
-            Ok(None) => serde_json::json!({ "found": false }),
-            Err(error) => serde_json::json!({"found": false, "error": error}),
+            None => serde_json::json!({ "found": false }),
         }
     })
     .await
@@ -456,24 +329,11 @@ pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
 pub async fn buat_folder_order(args: BuatFolderArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
         let base = Path::new(&args.base_path);
-        let storage = match Storage::new() {
-            Ok(s) => s,
-            Err(e) => return serde_json::json!({"success": false, "message": e}),
-        };
-        match resolve_or_create_date_folder(
-            &storage,
-            base,
-            args.year,
-            args.month_num,
-            &args.month_name,
-            args.day,
-        ) {
+        match resolve_or_create_date_folder(base, args.year, args.month_num, &args.month_name, args.day) {
             Ok(day_dir) => {
                 let target = day_dir.join(&args.folder_name);
-                match storage.create_dir_all(&target) {
-                    Ok(_) => {
-                        serde_json::json!({ "success": true, "path": target.to_string_lossy() })
-                    }
+                match fs::create_dir_all(&target) {
+                    Ok(_) => serde_json::json!({ "success": true, "path": target.to_string_lossy() }),
                     Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
                 }
             }
@@ -489,26 +349,6 @@ pub async fn analisis_folder_order(folder_path: String) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
         let allowed_ext = ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"];
         let dir = Path::new(&folder_path);
-        let storage = match Storage::new() {
-            Ok(storage) => storage,
-            Err(error) => {
-                return serde_json::json!({ "success": false, "message": error });
-            }
-        };
-        match storage.protected(dir) {
-            Ok(true) => {
-                return match storage.analyze_directory(dir) {
-                    Ok(result) => {
-                        serde_json::json!({ "success": true, "data": result["items"].clone() })
-                    }
-                    Err(error) => serde_json::json!({ "success": false, "message": error }),
-                };
-            }
-            Ok(false) => (),
-            Err(error) => {
-                return serde_json::json!({ "success": false, "message": error });
-            }
-        }
 
         let entries = match fs::read_dir(dir) {
             Ok(e) => e,
@@ -521,11 +361,7 @@ pub async fn analisis_folder_order(folder_path: String) -> serde_json::Value {
             if !path.is_file() {
                 continue;
             }
-            let ext = path
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("")
-                .to_lowercase();
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
             if !allowed_ext.contains(&ext.as_str()) {
                 continue;
             }
@@ -551,15 +387,11 @@ pub async fn analisis_folder_order(folder_path: String) -> serde_json::Value {
 pub async fn pindah_file_ke_folder(args: PindahFileArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
         let target_dir = Path::new(&args.target_folder_path);
-        let storage = match Storage::new() {
-            Ok(s) => s,
-            Err(e) => return serde_json::json!({"success": false, "message": e}),
-        };
         let mut results = Vec::new();
 
         for file_path in &args.file_paths {
             let source = Path::new(file_path);
-            match move_file_into_folder(&storage, source, target_dir) {
+            match move_file_into_folder(source, target_dir) {
                 Ok(dest) => results.push(MoveResultItem {
                     source: file_path.clone(),
                     success: true,
@@ -585,10 +417,7 @@ pub async fn pindah_file_ke_folder(args: PindahFileArgs) -> serde_json::Value {
 pub async fn rename_file_order(args: RenameFileArgs) -> SimpleResult {
     tauri::async_runtime::spawn_blocking(move || {
         if args.old_path == args.new_path {
-            return SimpleResult {
-                success: true,
-                message: None,
-            };
+            return SimpleResult { success: true, message: None };
         }
         if Path::new(&args.new_path).exists() {
             return SimpleResult {
@@ -596,17 +425,9 @@ pub async fn rename_file_order(args: RenameFileArgs) -> SimpleResult {
                 message: Some("Nama file sudah dipakai di folder ini.".into()),
             };
         }
-        match Storage::new().and_then(|storage| {
-            storage.rename(Path::new(&args.old_path), Path::new(&args.new_path))
-        }) {
-            Ok(_) => SimpleResult {
-                success: true,
-                message: None,
-            },
-            Err(e) => SimpleResult {
-                success: false,
-                message: Some(e.to_string()),
-            },
+        match fs::rename(&args.old_path, &args.new_path) {
+            Ok(_) => SimpleResult { success: true, message: None },
+            Err(e) => SimpleResult { success: false, message: Some(e.to_string()) },
         }
     })
     .await
@@ -615,17 +436,9 @@ pub async fn rename_file_order(args: RenameFileArgs) -> SimpleResult {
 
 #[tauri::command]
 pub async fn delete_file_order(file_path: String) -> SimpleResult {
-    tauri::async_runtime::spawn_blocking(move || {
-        match Storage::new().and_then(|storage| storage.remove_file(Path::new(&file_path))) {
-            Ok(_) => SimpleResult {
-                success: true,
-                message: None,
-            },
-            Err(e) => SimpleResult {
-                success: false,
-                message: Some(e.to_string()),
-            },
-        }
+    tauri::async_runtime::spawn_blocking(move || match fs::remove_file(&file_path) {
+        Ok(_) => SimpleResult { success: true, message: None },
+        Err(e) => SimpleResult { success: false, message: Some(e.to_string()) },
     })
     .await
     .unwrap()

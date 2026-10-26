@@ -78,7 +78,6 @@ Var UpdateMode
 Var NoShortcutMode
 Var WixMode
 Var OldMainBinaryName
-Var MgoMigrationMode
 
 Name "${PRODUCTNAME}"
 BrandingText "${COPYRIGHT}"
@@ -172,52 +171,6 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 ; 1. Welcome Page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
 !insertmacro MUI_PAGE_WELCOME
-
-; Explicit server role selection. Clients do not install a privileged local service.
-Var MgoServerCheck
-Var MgoServerEnabled
-Var MgoAccountInput
-Var MgoAuthorizedAccount
-Page custom MgoServerPage MgoServerPageLeave
-Function MgoServerPage
-  ReadRegStr $0 HKLM "SOFTWARE\MGO\FolderProtection" "ServerSid"
-  StrCpy $MgoServerEnabled 0
-  ${If} $0 != ""
-    StrCpy $MgoServerEnabled 1
-  ${EndIf}
-  ${GetOptions} $CMDLINE "/MGOSERVER" $1
-  ${IfNot} ${Errors}
-    StrCpy $MgoServerEnabled 1
-  ${EndIf}
-  ${If} ${Silent}
-    Abort
-  ${EndIf}
-  ${If} $PassiveMode = 1
-    Abort
-  ${EndIf}
-  nsDialogs::Create 1018
-  Pop $0
-  !insertmacro MUI_HEADER_TEXT "Folder Protection" "Pilih peran komputer ini"
-  ${NSD_CreateCheckbox} 0 0 100% 24u "Komputer server: pasang / perbarui layanan Folder Protection"
-  Pop $MgoServerCheck
-  ${NSD_SetState} $MgoServerCheck $MgoServerEnabled
-  ${NSD_CreateLabel} 0 30u 100% 58u "Centang hanya pada server penyimpanan. Setup baru membuat folder uji MGO-Test di ProgramData dengan akses Windows Read & Execute dan layanan Modify. Folder produksi dan izin drive D: tidak diubah. Pembaruan mempertahankan data dan izin yang sudah ada."
-  Pop $0
-  ${NSD_CreateLabel} 0 93u 100% 14u "Akun Windows MGO (untuk setup server baru):"
-  Pop $0
-  ReadEnvStr $0 "USERDOMAIN"
-  ReadEnvStr $1 "USERNAME"
-  StrCpy $MgoAuthorizedAccount "$0\$1"
-  ${NSD_CreateText} 0 111u 100% 14u "$MgoAuthorizedAccount"
-  Pop $MgoAccountInput
-  ${NSD_CreateLabel} 0 133u 100% 28u "Jika UAC memakai akun administrator lain, isi akun Windows pengguna MGO yang sebenarnya. Komputer klien cukup memasang aplikasi."
-  Pop $0
-  nsDialogs::Show
-FunctionEnd
-Function MgoServerPageLeave
-  ${NSD_GetState} $MgoServerCheck $MgoServerEnabled
-  ${NSD_GetText} $MgoAccountInput $MgoAuthorizedAccount
-FunctionEnd
 
 ; 2. License Page (if defined)
 !if "${LICENSE}" != ""
@@ -435,11 +388,7 @@ Function PageLeaveReinstall
 FunctionEnd
 
 ; 5. Choose install directory page
-!if "${INSTALLMODE}" == "perMachine"
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE Skip
-!else
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-!endif
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; 6. Start menu shortcut page
@@ -567,41 +516,6 @@ Function .onInit
   !if "${INSTALLMODE}" == "both"
     !insertmacro MULTIUSER_INIT
   !endif
-  !if "${INSTALLMODE}" == "perMachine"
-    ; One canonical machine location, including /D overrides and old saved paths.
-    SetShellVarContext all
-    StrCpy $INSTDIR "$APPDATA\${PRODUCTNAME}"
-    ReadRegStr $0 HKLM "${UNINSTKEY}" "InstallLocation"
-    ${If} $0 != ""
-    ${AndIf} $0 != "$INSTDIR"
-    ${AndIf} $0 != '$\"$INSTDIR$\"'
-      IfSilent mgo_noncanonical_abort
-      MessageBox MB_ICONSTOP|MB_OK "Instalasi MGO untuk semua pengguna berada di lokasi lain: $0. Hapus instalasi mesin lama melalui Installed Apps terlebih dahulu tanpa menghapus data pengguna, lalu jalankan installer ini kembali."
-      mgo_noncanonical_abort:
-      SetErrorLevel 2
-      Abort
-    ${EndIf}
-  !endif
-FunctionEnd
-
-Function MgoMigrateUserInstall
-  ${If} ${RunningX64}
-    StrCpy $2 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
-  ${Else}
-    StrCpy $2 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
-  ${EndIf}
-  DetailPrint "Memeriksa/memigrasikan instalasi MGO per pengguna ($MgoMigrationMode)..."
-  ; The bundled migration helper is part of this installer. Bypass applies only to this
-  ; PowerShell process and does not change the machine or user execution policy.
-  nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $\"$PLUGINSDIR\migrate_user_install.ps1$\" -Mode $MgoMigrationMode -InstallDirectory $\"$INSTDIR$\"'
-  Pop $0
-  ${If} $0 != 0
-    IfSilent mgo_migration_failed
-    MessageBox MB_ICONSTOP|MB_OK "Migrasi MGO dari AppData belum selesai (kode $0). Periksa pesan rinci di atas untuk penyebabnya. Jika detail menyebut file sedang dipakai, keluar dari akun Windows lain yang masih aktif lalu coba lagi. Pengaturan dan data pengguna tidak dihapus."
-    mgo_migration_failed:
-    SetErrorLevel 2
-    Abort "Migrasi instalasi lama gagal; pemasangan belum selesai."
-  ${EndIf}
 FunctionEnd
 
 
@@ -717,10 +631,6 @@ Section WebView2
 SectionEnd
 
 Section Install
-  !if "${INSTALLMODE}" == "perMachine"
-    SetShellVarContext all
-    StrCpy $INSTDIR "$APPDATA\${PRODUCTNAME}"
-  !endif
   SetOutPath $INSTDIR
 
   !ifmacrodef NSIS_HOOK_PREINSTALL
@@ -728,23 +638,6 @@ Section Install
   !endif
 
   !insertmacro CheckIfAppIsRunning "${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
-
-  !if "${INSTALLMODE}" == "perMachine"
-    !insertmacro CheckIfAppIsRunning "MgoDesktop.exe" "${PRODUCTNAME}"
-    InitPluginsDir
-    ; Extract the packaged helper before copying/replacing any application files.
-    {{#each resources}}
-      !if "{{this.[1]}}" == "migrate_user_install.ps1"
-        File "/oname=$PLUGINSDIR\migrate_user_install.ps1" "{{no-escape @key}}"
-        !define MGO_MIGRATION_HELPER_INCLUDED
-      !endif
-    {{/each}}
-    !ifndef MGO_MIGRATION_HELPER_INCLUDED
-      !error "The per-user migration helper must be included in bundle.resources"
-    !endif
-    StrCpy $MgoMigrationMode "Check"
-    Call MgoMigrateUserInstall
-  !endif
 
   ; Copy main executable
   File "${MAINBINARYSRCPATH}"
@@ -761,12 +654,6 @@ Section Install
   {{#each binaries}}
     File /a "/oname={{this}}" "{{no-escape @key}}"
   {{/each}}
-
-  !if "${INSTALLMODE}" == "perMachine"
-    ; Retire legacy launchers only after the replacement app has been copied.
-    StrCpy $MgoMigrationMode "Apply"
-    Call MgoMigrateUserInstall
-  !endif
 
   ; Create file associations
   {{#each file_associations as |association| ~}}
@@ -831,14 +718,6 @@ Section Install
     Call CreateOrUpdateStartMenuShortcut
   !insertmacro MUI_STARTMENU_WRITE_END
 
-  !if "${INSTALLMODE}" == "perMachine"
-  !if "${STARTMENUFOLDER}" == ""
-    ; Also recreate the shared entry during /UPDATE after removing user entries.
-    CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
-  !endif
-  !endif
-
   ; Create desktop shortcut for silent and passive installers
   ; because finish page will be skipped
   ${If} $PassiveMode = 1
@@ -849,36 +728,6 @@ Section Install
   !ifmacrodef NSIS_HOOK_POSTINSTALL
     !insertmacro NSIS_HOOK_POSTINSTALL
   !endif
-
-  ${If} $MgoServerEnabled = 1
-    ReadRegStr $0 HKLM "SOFTWARE\MGO\FolderProtection" "ServerSid"
-    ${If} $0 != ""
-      StrCpy $1 "Upgrade"
-    ${Else}
-      StrCpy $1 "Install"
-    ${EndIf}
-    SetDetailsPrint both
-    DetailPrint "Menyiapkan layanan MGO Folder Protection ($1)..."
-    ; Use 64-bit Windows PowerShell. No execution-policy/security bypass is used.
-    ${If} ${RunningX64}
-      SetRegView 64
-      StrCpy $2 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
-    ${Else}
-      StrCpy $2 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
-    ${EndIf}
-    ${If} $1 == "Upgrade"
-    ${OrIf} $MgoAuthorizedAccount == ""
-      nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -File $\"$INSTDIR\setup_folder_protection.ps1$\" -Mode $1'
-      Pop $0
-    ${Else}
-      nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -File $\"$INSTDIR\setup_folder_protection.ps1$\" -Mode $1 -AuthorizedAccount $\"$MgoAuthorizedAccount$\"'
-      Pop $0
-    ${EndIf}
-    ${If} $0 != 0
-      MessageBox MB_ICONSTOP|MB_OK "Aplikasi terpasang, tetapi setup layanan gagal (kode $0). Konfigurasi dan data proteksi dipertahankan. Periksa layanan MgoFolderProtection atau jalankan installer kembali sebagai administrator."
-      SetErrorLevel 2
-    ${EndIf}
-  ${EndIf}
 
   ; Auto close this page for passive mode
   ${If} $PassiveMode = 1
