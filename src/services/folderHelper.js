@@ -22,7 +22,16 @@ const formatTimeHHMM = (date) => {
     return `${hh}.${mm}`;
 };
 
-export const buildDateSubPath = (dateStr) => {
+export const getProductionFolderOptions = (settings, pathKey) => {
+    const key = pathKey.startsWith("path_") ? pathKey : `path_${pathKey}`;
+    const monthFormat = settings?.[`${key}_month_format`];
+    return {
+        monthFormat: ["number_name", "number", "name"].includes(monthFormat) ? monthFormat : "number_name",
+        separateByProduct: settings?.[`${key}_separate_by_product`] === true,
+    };
+};
+
+export const buildDateSubPath = (dateStr, monthFormat = "number_name") => {
     if (!dateStr) return "";
     const d = new Date(String(dateStr).replace(" ", "T"));
     if (isNaN(d.getTime())) return "";
@@ -32,7 +41,14 @@ export const buildDateSubPath = (dateStr) => {
     const monthName = MONTH_NAMES_ID[d.getMonth()];
     const day = String(d.getDate()).padStart(2, "0");
 
-    return `${year}\\${monthNum} ${monthName}\\${day}`;
+    const month = monthFormat === "number" ? monthNum : monthFormat === "name" ? monthName : `${monthNum} ${monthName}`;
+    return `${year}\\${month}\\${day}`;
+};
+
+export const buildProductionPathPreview = (basePath, options, dateStr, productName = "PRINTPRESS") => {
+    if (!basePath) return "Pilih atau isi path terlebih dahulu.";
+    const path = joinPath(basePath, buildDateSubPath(dateStr, options.monthFormat));
+    return options.separateByProduct ? joinPath(path, sanitizeFolderPart(productName).toUpperCase()) : path;
 };
 
 export const buildDateParts = (dateStr) => {
@@ -112,45 +128,69 @@ export const roundUpToStandardWidth = (value, pathKey) => {
     return match != null ? match : value;
 };
 
+export const getProductFolderName = (item) => sanitizeFolderPart(item.product_name || (item.product_id ? `PRODUK ${item.product_id}` : "TANPA PRODUK")).replace(/[. ]+$/g, "").toUpperCase() || "TANPA PRODUK";
+
+export const folderInfoMatchesItem = (info, item) => info.category === item.category &&
+    (!info.productFolder || info.productFolder === getProductFolderName(item));
+
+export const getItemFolderStatus = (statuses, item) => Object.values(statuses).find(info => folderInfoMatchesItem(info, item))
+    || statuses[item.category];
+
 export const checkFoldersForItems = async (settings, orderData, itemsList) => {
     const relevantItems = (itemsList || []).filter(i => i.category && !i.maklun_store);
     const categoriesInOrder = [...new Set(relevantItems.map(i => i.category))];
     const results = {};
-
     const dateParts = buildDateParts(orderData.date);
-    const dateSubPath = buildDateSubPath(orderData.date);
     const nomorator = orderData.nomorator;
 
     await Promise.all(categoriesInOrder.map(async (cat) => {
         const pathKeys = CATEGORY_PATH_MAP[String(cat).toUpperCase()];
         if (!pathKeys) return;
-
-        for (const key of pathKeys) {
-            const basePath = settings?.[`path_${key}`];
-            if (!basePath || !dateParts) continue;
-            try {
-                const res = await window.electron.cariFolderOrder({ basePath, ...dateParts, nomorator });
-                if (res?.found) {
-                    results[cat] = { status: "ada", path: res.path, createPath: null, createInfo: null, pathKey: key };
-                    return;
-                }
-            } catch (err) {}
+        const configuredKeys = pathKeys.filter(key => settings?.[`path_${key}`]);
+        if (!configuredKeys.length) {
+            results[cat] = { status: "no-path", category: cat, path: null, createPath: null, createInfo: null, pathKey: null };
+            return;
         }
-
-        if (!results[cat]) {
-            const configuredKey = pathKeys.find(key => settings?.[`path_${key}`]);
-            if (!configuredKey) {
-                results[cat] = { status: "no-path", path: null, createPath: null, createInfo: null, pathKey: null };
-                return;
+        const splitProducts = configuredKeys.some(key => getProductionFolderOptions(settings, key).separateByProduct);
+        const products = splitProducts
+            ? [...new Set(relevantItems.filter(item => item.category === cat).map(getProductFolderName))]
+            : [null];
+        for (const product of products) {
+            const resultKey = product ? `${cat} / ${product}` : cat;
+            for (const key of configuredKeys) {
+                if (!dateParts) continue;
+                const options = getProductionFolderOptions(settings, key);
+                const productFolder = options.separateByProduct ? product : null;
+                const basePath = settings[`path_${key}`];
+                try {
+                    const res = await window.electron.cariFolderOrder({
+                        basePath, ...dateParts, nomorator,
+                        monthFormat: settings[`path_${key}_month_format`] ? options.monthFormat : null,
+                        productFolder,
+                    });
+                    if (res?.found) {
+                        results[resultKey] = { status: "ada", category: cat, productFolder, path: res.path, createPath: null, createInfo: null, pathKey: key };
+                        break;
+                    }
+                } catch (err) {}
             }
-            const basePath = settings[`path_${configuredKey}`];
-            const folderName = buildFolderName(orderData);
-            const createPath = joinPath(joinPath(basePath, dateSubPath), folderName);
-            const createInfo = dateParts ? { basePath, ...dateParts, folderName } : null;
-            results[cat] = { status: "tidak-ada", path: null, createPath, createInfo, pathKey: configuredKey };
+            if (!results[resultKey]) {
+                const key = configuredKeys[0];
+                const basePath = settings[`path_${key}`];
+                const options = getProductionFolderOptions(settings, key);
+                const productFolder = options.separateByProduct ? product : null;
+                const folderName = buildFolderName(orderData);
+                const parentPath = buildProductionPathPreview(basePath, options, orderData.date, product || "");
+                const createPath = dateParts ? joinPath(parentPath, folderName) : null;
+                const createInfo = dateParts ? {
+                    basePath, ...dateParts, folderName,
+                    monthFormat: settings[`path_${key}_month_format`] ? options.monthFormat : null,
+                    productFolder,
+                } : null;
+                results[resultKey] = { status: "tidak-ada", category: cat, productFolder, path: null, createPath, createInfo, pathKey: key };
+            }
         }
     }));
-
     return results;
 };
 

@@ -51,7 +51,8 @@ export default function useOrderFolderStatus(setAlertConfig) {
             return next;
         });
 
-        const results = await checkFoldersForItems(appSettings, orderRow, itemsList);
+        const currentSettings = await window.electron.getSettings().catch(() => appSettings);
+        const results = await checkFoldersForItems(currentSettings || appSettings, orderRow, itemsList);
         setItemFolderStatus(results);
 
         const fetchedPaths = new Set();

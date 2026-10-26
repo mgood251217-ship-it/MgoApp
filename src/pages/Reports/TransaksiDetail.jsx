@@ -15,7 +15,7 @@ import PrintStruk from "../../components/PrintStruk/PrintStruk";
 import { formatTime, formatRupiah, getTodayDate, formatKeInternasional } from "../../services/helpers";
 import { exportTransaksiDetailExcel } from "../../services/excelService";
 import { getCachedTransactionsDetail } from "../../services/apiCache";
-import { checkFoldersForItems, listFilesForFolder, formatUkuran } from "../../services/folderHelper";
+import { checkFoldersForItems, listFilesForFolder, formatUkuran, folderInfoMatchesItem } from "../../services/folderHelper";
 import { isDesktop } from "../../services/platform";
 import usePageAlert from "../../hooks/usePageAlert";
 
@@ -480,7 +480,7 @@ export default function TransaksiDetail() {
                                                             return a * b;
                                                         };
                                                         const orderMeterTotal = items
-                                                            .filter(i => i.category === cat && !i.maklun_store)
+                                                            .filter(i => folderInfoMatchesItem(fData, i) && !i.maklun_store)
                                                             .reduce((sum, i) => sum + (parseSizeArea(i.size) * (Number(i.quantity) || 0)), 0);
                                                         const meterDiff = Math.round((totalLuasKategori - orderMeterTotal) * 100) / 100;
 

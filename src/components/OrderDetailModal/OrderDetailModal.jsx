@@ -8,7 +8,7 @@ import Select from "../Select/Select";
 import Input from "../Input/Input";
 import Form from "../Form/Form";
 import { formatRupiah, formatTime } from "../../services/helpers";
-import { FOLDER_STATUS_LABEL, formatUkuran, buildRenamedFilenameWithQuantity } from "../../services/folderHelper";
+import { FOLDER_STATUS_LABEL, formatUkuran, buildRenamedFilenameWithQuantity, getItemFolderStatus, folderInfoMatchesItem } from "../../services/folderHelper";
 import useOrderFolderStatus from "../../hooks/useOrderFolderStatus";
 import ChangeFolderIconModal from "../ChangeFolderIconModal/ChangeFolderIconModal";
 import { getCachedStoreNames } from "../../services/apiCache";
@@ -114,7 +114,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         return {
             ...item,
             formatted_amount: formatRupiah(item.amount),
-            folder_status: isMaklun ? "🤝 Maklun" : (FOLDER_STATUS_LABEL[folder.itemFolderStatus[item.category]?.status] || "-"),
+            folder_status: isMaklun ? "🤝 Maklun" : (FOLDER_STATUS_LABEL[getItemFolderStatus(folder.itemFolderStatus, item)?.status] || "-"),
             maklun_store: (
                 <Button 
                     size="sm" 
@@ -280,7 +280,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                             const groupKey = info.path || info.createPath;
                             const groupCategories = Object.entries(folder.itemFolderStatus)
                                 .filter(([, i]) => (i.path || i.createPath) === groupKey)
-                                .map(([c]) => c);
+                                .map(([, folderInfo]) => folderInfo);
                             const parseSizeArea = (sizeStr) => {
                                 const match = String(sizeStr || "").match(/(\d+(?:[.,]\d+)?)\s*[xX]\s*(\d+(?:[.,]\d+)?)/);
                                 if (!match) return 0;
@@ -289,7 +289,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                 return a * b;
                             };
                             const orderMeterTotal = (viewOrderData?.items || [])
-                                .filter(i => groupCategories.includes(i.category) && !i.maklun_store)
+                                .filter(i => groupCategories.some(folderInfo => folderInfoMatchesItem(folderInfo, i)) && !i.maklun_store)
                                 .reduce((sum, i) => sum + (parseSizeArea(i.size) * (Number(i.quantity) || 0)), 0);
                             const meterDiff = Math.round((totalSemua - orderMeterTotal) * 100) / 100;
 

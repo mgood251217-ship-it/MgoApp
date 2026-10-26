@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
+import Select from "../components/Select/Select";
+import { buildProductionPathPreview, getProductionFolderOptions } from "../services/folderHelper";
 import Button from "../components/Button/Button";
 import Form from "../components/Form/Form";
 import Icon from "../components/Icon/Icon";
@@ -939,6 +941,29 @@ export default function Settings() {
                                                     Reset
                                                 </Button>
                                             </div>
+                                        </div>
+                                        <Select
+                                            label="Format folder bulan"
+                                            value={getProductionFolderOptions(settings, key).monthFormat}
+                                            onChange={(e) => handleInputChange(`${key}_month_format`, e.target.value)}
+                                            options={[
+                                                { value: "number_name", label: "Angka dan nama — 10 Oktober (default)" },
+                                                { value: "number", label: "Angka saja — 10" },
+                                                { value: "name", label: "Nama saja — Oktober" },
+                                            ]}
+                                        />
+                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text)", fontSize: 13 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={getProductionFolderOptions(settings, key).separateByProduct}
+                                                onChange={(e) => handleInputChange(`${key}_separate_by_product`, e.target.checked)}
+                                            />
+                                            Pisahkan per produk
+                                        </label>
+                                        <div style={{ padding: "10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", color: "var(--text-secondary)", fontSize: 12, overflowWrap: "anywhere" }}>
+                                            <strong>Preview folder produksi</strong>
+                                            <div>{buildProductionPathPreview(settings[key], getProductionFolderOptions(settings, key), "2026-10-26")}</div>
+                                            <small>Contoh tanggal 26 Oktober 2026, produk PRINTPRESS. Folder nota dibuat di dalamnya.</small>
                                         </div>
                                     </div>
                                 ))}

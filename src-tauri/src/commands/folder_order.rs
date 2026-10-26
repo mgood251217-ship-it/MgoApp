@@ -51,6 +51,7 @@ fn resolve_date_folder(
     month_num: i32,
     month_name: &str,
     day: i32,
+    month_format: Option<&str>,
 ) -> Option<PathBuf> {
     let year_dir = find_matching_subfolder(base_path, |name| {
         Regex::new(r"\d{4}")
@@ -63,6 +64,9 @@ fn resolve_date_folder(
 
     let month_name_norm = normalize_for_match(month_name);
     let month_dir = find_matching_subfolder(&year_dir, |name| {
+        if let Some(format) = month_format {
+            return name.eq_ignore_ascii_case(&formatted_month(month_num, month_name, format));
+        }
         if extract_leading_number(name) == Some(month_num) {
             return true;
         }
@@ -90,6 +94,7 @@ fn resolve_or_create_date_folder(
     month_num: i32,
     month_name: &str,
     day: i32,
+    month_format: Option<&str>,
 ) -> std::io::Result<PathBuf> {
     fs::create_dir_all(base_path)?;
 
@@ -107,10 +112,13 @@ fn resolve_or_create_date_folder(
     )?;
 
     let month_name_norm = normalize_for_match(month_name);
-    let month_default_name = format!("{:02} {}", month_num, month_name);
+    let month_default_name = formatted_month(month_num, month_name, month_format.unwrap_or("number_name"));
     let month_dir = resolve_or_create_subfolder(
         &year_dir,
         |name| {
+            if month_format.is_some() {
+                return name.eq_ignore_ascii_case(&month_default_name);
+            }
             if extract_leading_number(name) == Some(month_num) {
                 return true;
             }
@@ -125,6 +133,25 @@ fn resolve_or_create_date_folder(
         |name| extract_leading_number(name) == Some(day),
         &day_default_name,
     )
+}
+
+fn formatted_month(month_num: i32, month_name: &str, format: &str) -> String {
+    match format {
+        "number" => format!("{:02}", month_num),
+        "name" => month_name.to_string(),
+        _ => format!("{:02} {}", month_num, month_name),
+    }
+}
+
+fn valid_folder_component(name: &str) -> bool {
+    !name.is_empty() && name != "." && name != ".."
+        && !name.ends_with(['.', ' '])
+        && !name.chars().any(|c| c.is_control() || "\\/:*?\"<>|".contains(c))
+}
+
+fn validate_folder_options(month_format: Option<&str>, product: Option<&str>) -> bool {
+    month_format.map_or(true, |value| matches!(value, "number_name" | "number" | "name"))
+        && product.map_or(true, valid_folder_component)
 }
 
 fn find_folder_recursive(dir: &Path, nomorator: &str, depth: u32, max_depth: u32) -> Option<PathBuf> {
@@ -182,6 +209,46 @@ fn move_file_into_folder(source_path: &Path, target_dir: &Path) -> std::io::Resu
 
 // ---------- payload structs ----------
 
+#[cfg(test)]
+mod production_format_tests {
+    use super::*;
+
+    #[test]
+    fn month_formats_create_and_find_the_selected_directory() {
+        let temp = std::env::temp_dir();
+        let root = temp.join(format!("mgo-production-format-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        for (format, expected) in [("number_name", "10 Oktober"), ("number", "10"), ("name", "Oktober")] {
+            let day = resolve_or_create_date_folder(&root, 2026, 10, "Oktober", 26, Some(format)).unwrap();
+            assert_eq!(day, root.join("2026").join(expected).join("26"));
+            assert_eq!(resolve_date_folder(&root, 2026, 10, "Oktober", 26, Some(format)), Some(day.clone()));
+            for product in ["PRINTPRESS", "JERSEY"] {
+                let order = day.join(product).join("UJI_123");
+                fs::create_dir_all(&order).unwrap();
+                assert_eq!(find_folder_recursive(&day.join(product), "123", 0, 12), Some(order));
+            }
+            assert!(find_folder_recursive(&day.join("PRODUK LAIN"), "123", 0, 12).is_none());
+        }
+        assert!(root.starts_with(&temp) && root.file_name().unwrap().to_string_lossy().starts_with("mgo-production-format-"));
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn folder_options_reject_nested_product_paths_and_accept_legacy_payloads() {
+        assert!(validate_folder_options(None, None));
+        assert!(validate_folder_options(Some("number"), Some("PRINTPRESS")));
+        for product in ["..", "", "D:\\Other", "A/B", "A\\B"] {
+            assert!(!validate_folder_options(Some("name"), Some(product)));
+        }
+        assert!(!validate_folder_options(Some("unknown"), None));
+        let legacy: BuatFolderArgs = serde_json::from_value(serde_json::json!({
+            "basePath": "D:\\Produksi", "year": 2026, "monthNum": 10,
+            "monthName": "Oktober", "day": 26, "folderName": "UJI_123"
+        })).unwrap();
+        assert!(legacy.month_format.is_none() && legacy.product_folder.is_none());
+    }
+}
+
 #[derive(Deserialize)]
 pub struct CariFolderArgs {
     #[serde(rename = "basePath")]
@@ -193,6 +260,10 @@ pub struct CariFolderArgs {
     pub month_name: String,
     pub day: i32,
     pub nomorator: String,
+    #[serde(default, rename = "monthFormat")]
+    pub month_format: Option<String>,
+    #[serde(default, rename = "productFolder")]
+    pub product_folder: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -207,6 +278,10 @@ pub struct BuatFolderArgs {
     pub day: i32,
     #[serde(rename = "folderName")]
     pub folder_name: String,
+    #[serde(default, rename = "monthFormat")]
+    pub month_format: Option<String>,
+    #[serde(default, rename = "productFolder")]
+    pub product_folder: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -308,14 +383,18 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
 #[tauri::command]
 pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
+        if !validate_folder_options(args.month_format.as_deref(), args.product_folder.as_deref()) {
+            return serde_json::json!({ "found": false, "message": "Format folder tidak valid." });
+        }
         let base = Path::new(&args.base_path);
-        match resolve_date_folder(base, args.year, args.month_num, &args.month_name, args.day) {
+        match resolve_date_folder(base, args.year, args.month_num, &args.month_name, args.day, args.month_format.as_deref()) {
             Some(day_dir) => {
-                let found_path = find_folder_recursive(&day_dir, &args.nomorator, 0, 12);
+                let search_dir = args.product_folder.as_ref().map_or_else(|| day_dir.clone(), |product| day_dir.join(product));
+                let found_path = find_folder_recursive(&search_dir, &args.nomorator, 0, 12);
                 serde_json::json!({
                     "found": found_path.is_some(),
                     "path": found_path.map(|p| p.to_string_lossy().to_string()),
-                    "searchedPath": day_dir.to_string_lossy().to_string(),
+                    "searchedPath": search_dir.to_string_lossy().to_string(),
                 })
             }
             None => serde_json::json!({ "found": false }),
@@ -328,10 +407,15 @@ pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
 #[tauri::command]
 pub async fn buat_folder_order(args: BuatFolderArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
+        if !validate_folder_options(args.month_format.as_deref(), args.product_folder.as_deref())
+            || !valid_folder_component(&args.folder_name) || !valid_folder_component(&args.month_name) {
+            return serde_json::json!({ "success": false, "message": "Format atau nama folder tidak valid." });
+        }
         let base = Path::new(&args.base_path);
-        match resolve_or_create_date_folder(base, args.year, args.month_num, &args.month_name, args.day) {
+        match resolve_or_create_date_folder(base, args.year, args.month_num, &args.month_name, args.day, args.month_format.as_deref()) {
             Ok(day_dir) => {
-                let target = day_dir.join(&args.folder_name);
+                let parent = args.product_folder.as_ref().map_or(day_dir.clone(), |product| day_dir.join(product));
+                let target = parent.join(&args.folder_name);
                 match fs::create_dir_all(&target) {
                     Ok(_) => serde_json::json!({ "success": true, "path": target.to_string_lossy() }),
                     Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
