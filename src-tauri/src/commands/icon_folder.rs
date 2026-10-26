@@ -4,7 +4,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::AppHandle;
 
-const ICON_FILES: [&str; 3] = ["folder-selesai.ico", "folder-proses.ico", "folder-cancel.ico"];
+const ICON_FILES: [&str; 4] = [
+    "folder-selesai.ico",
+    "folder-proses.ico",
+    "folder-cancel.ico",
+    "folder-diambil.ico",
+];
 
 fn program_data_dir() -> PathBuf {
     let base = std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());
@@ -39,6 +44,7 @@ fn icon_path_for(status: &str) -> Option<PathBuf> {
         "selesai" => Some(base.join("folder-selesai.ico")),
         "proses" => Some(base.join("folder-proses.ico")),
         "cancel" => Some(base.join("folder-cancel.ico")),
+        "diambil" => Some(base.join("folder-diambil.ico")),
         _ => None,
     }
 }

@@ -33,12 +33,15 @@ export default function ChangeFolderIconModal({ open, onClose, orderInfo, folder
                     Pilih Folder Manual (kalau path di atas salah)
                 </Button>
                 <div style={{ fontSize: "14px", fontWeight: "bold" }}>Pilih status order:</div>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     <Button size="md" variant="success" disabled={applying || searching} icon={<Icon name="folder" />} onClick={() => onTerapkan("selesai")}>
                         Selesai
                     </Button>
                     <Button size="md" variant="primary" disabled={applying || searching} icon={<Icon name="folder" />} onClick={() => onTerapkan("proses")}>
                         Proses
+                    </Button>
+                    <Button size="md" variant="secondary" disabled={applying || searching} icon={<Icon name="folder" />} onClick={() => onTerapkan("diambil")}>
+                        Diambil
                     </Button>
                     <Button size="md" variant="danger" disabled={applying || searching} icon={<Icon name="folder" />} onClick={() => onTerapkan("cancel")}>
                         Batal
