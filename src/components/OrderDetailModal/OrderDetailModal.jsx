@@ -168,18 +168,23 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
     };
 
     const handleStartRename = (file, folderPath) => {
-        setRenamingPath(`${folderPath}\\${file.nama}`);
+        setRenamingPath((file.path || `${folderPath}\\${file.relativePath || file.nama}`));
         setRenameValue(file.nama);
     };
 
-    const handleConfirmRename = async (oldFullPath, folderPath) => {
+    const handleConfirmRename = async (oldFullPath) => {
         const oldName = oldFullPath.split("\\").pop();
         if (!renameValue || renameValue === oldName) {
             setRenamingPath(null);
             return;
         }
+        if (/[\\/:*?"<>|]/.test(renameValue) || /[. ]$/.test(renameValue) || renameValue === "." || renameValue === "..") {
+            setAlertConfig({ show: true, type: "error", message: "Nama file tidak valid. Masukkan nama file saja." });
+            return;
+        }
         setProcessingFile(oldFullPath);
-        const newFullPath = `${folderPath}\\${renameValue}`;
+        const parentPath = oldFullPath.slice(0, Math.max(oldFullPath.lastIndexOf("\\"), oldFullPath.lastIndexOf("/")));
+        const newFullPath = `${parentPath}\\${renameValue}`;
         const res = await window.electron.renameFileOrder({ oldPath: oldFullPath, newPath: newFullPath });
         setProcessingFile(null);
         setRenamingPath(null);
@@ -192,7 +197,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
     };
 
     const handleStartEditQty = (file, folderPath) => {
-        setEditingQtyPath(`${folderPath}\\${file.nama}`);
+        setEditingQtyPath((file.path || `${folderPath}\\${file.relativePath || file.nama}`));
         setQtyValue(String(file.quantity));
     };
 
@@ -201,9 +206,10 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         setEditingQtyPath(null);
         if (!newQty || newQty === file.quantity) return;
 
-        const oldFullPath = `${folderPath}\\${file.nama}`;
+        const oldFullPath = (file.path || `${folderPath}\\${file.relativePath || file.nama}`);
         const newName = buildRenamedFilenameWithQuantity(file.nama, newQty);
-        const newFullPath = `${folderPath}\\${newName}`;
+        const parentPath = oldFullPath.slice(0, Math.max(oldFullPath.lastIndexOf("\\"), oldFullPath.lastIndexOf("/")));
+        const newFullPath = `${parentPath}\\${newName}`;
 
         setProcessingFile(oldFullPath);
         const res = await window.electron.renameFileOrder({ oldPath: oldFullPath, newPath: newFullPath });
@@ -220,7 +226,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         const ok = window.confirm(`Hapus file "${file.nama}"? Tindakan ini tidak bisa dibatalkan.`);
         if (!ok) return;
 
-        const fullPath = `${folderPath}\\${file.nama}`;
+        const fullPath = (file.path || `${folderPath}\\${file.relativePath || file.nama}`);
         setProcessingFile(fullPath);
         const res = await window.electron.deleteFileOrder(fullPath);
         setProcessingFile(null);
@@ -353,10 +359,19 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                                         variant="info"
                                                         icon={<Icon name="receipt_long" />}
                                                         style={{ whiteSpace: "nowrap" }}
-                                                        disabled={folder.uploadingNotaFor === cat}
-                                                        onClick={() => folder.handleUploadNota(cat, info, viewOrderDetails, viewOrderData.items)}
+                                                        disabled={folder.uploadingNotaFor !== null}
+                                                        onClick={() => folder.handleUploadNota(cat, info, viewOrderDetails, viewOrderData.items, "pdf")}
                                                     >
-                                                        {folder.uploadingNotaFor === cat ? "Mengupload..." : "Upload Nota"}
+                                                        {folder.uploadingNotaFor === cat ? "Mengupload..." : "Upload Nota PDF"}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="info"
+                                                        icon={<Icon name="image" />}
+                                                        disabled={folder.uploadingNotaFor !== null}
+                                                        onClick={() => folder.handleUploadNota(cat, info, viewOrderDetails, viewOrderData.items, "jpg")}
+                                                    >
+                                                        Upload Nota JPG
                                                     </Button>
                                                 </>
                                             ) : (
@@ -414,7 +429,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                                 </thead>
                                                 <tbody>
                                                     {files.map((f, idx) => {
-                                                        const fullPath = `${folderPath}\\${f.nama}`;
+                                                        const fullPath = (f.path || `${folderPath}\\${f.relativePath || f.nama}`);
                                                         const isRenaming = renamingPath === fullPath;
                                                         const isEditingQty = editingQtyPath === fullPath;
                                                         const isProcessing = processingFile === fullPath;
@@ -427,14 +442,14 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                                                             autoFocus
                                                                             value={renameValue}
                                                                             onChange={(e) => setRenameValue(e.target.value)}
-                                                                            onBlur={() => handleConfirmRename(fullPath, folderPath)}
+                                                                            onBlur={() => handleConfirmRename(fullPath)}
                                                                             onKeyDown={(e) => {
-                                                                                if (e.key === "Enter") handleConfirmRename(fullPath, folderPath);
+                                                                                if (e.key === "Enter") handleConfirmRename(fullPath);
                                                                                 if (e.key === "Escape") setRenamingPath(null);
                                                                             }}
                                                                             style={{ width: "100%", fontSize: 13 }}
                                                                         />
-                                                                    ) : f.nama}
+                                                                    ) : (f.relativePath || f.nama)}
                                                                 </td>
                                                                 <td style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>{formatUkuran(f)}</td>
                                                                 <td style={{ padding: "4px 8px" }}>

@@ -263,6 +263,28 @@ mod production_format_tests {
     use super::*;
 
     #[test]
+    fn scan_includes_nested_files_with_distinct_paths() {
+        let temp = std::env::temp_dir();
+        let root = temp.join(format!("mgo-nested-test-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        fs::create_dir_all(root.join("milano").join("revisi")).unwrap();
+        fs::write(root.join("file.jpg"), b"test").unwrap();
+        fs::write(root.join("milano").join("file.jpg"), b"nested").unwrap();
+        fs::write(root.join("milano").join("revisi").join("file.jpg"), b"revision").unwrap();
+        fs::write(root.join("milano").join("ignore.txt"), b"ignored").unwrap();
+        let files = collect_order_files(&root).unwrap();
+        assert_eq!(files.len(), 3);
+        assert!(files.iter().all(|file| file.nama == "file.jpg"));
+        for relative in [PathBuf::from("file.jpg"), PathBuf::from("milano").join("file.jpg"),
+            PathBuf::from("milano").join("revisi").join("file.jpg")] {
+            let file = files.iter().find(|file| Path::new(&file.relative_path) == relative).unwrap();
+            assert_eq!(Path::new(&file.path), root.join(relative));
+        }
+        assert!(root.starts_with(&temp) && root.file_name().unwrap().to_string_lossy().starts_with("mgo-nested-test-"));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn copy_keeps_source_and_existing_destination() {
         let temp = std::env::temp_dir();
         let root = temp.join(format!("mgo-copy-test-{}-{}", std::process::id(),
@@ -418,6 +440,9 @@ pub struct MoveResultItem {
 #[derive(Serialize)]
 pub struct AnalisisItem {
     pub nama: String,
+    pub path: String,
+    #[serde(rename = "relativePath")]
+    pub relative_path: String,
     #[serde(rename = "ukuranByte")]
     pub ukuran_byte: u64,
     #[serde(flatten)]
@@ -525,40 +550,48 @@ pub async fn buat_folder_order(args: BuatFolderArgs) -> serde_json::Value {
     .unwrap()
 }
 
-#[tauri::command]
-pub async fn analisis_folder_order(folder_path: String) -> serde_json::Value {
-    tauri::async_runtime::spawn_blocking(move || {
-        let allowed_ext = ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"];
-        let dir = Path::new(&folder_path);
-
-        let entries = match fs::read_dir(dir) {
-            Ok(e) => e,
-            Err(e) => return serde_json::json!({ "success": false, "message": e.to_string() }),
-        };
-
-        let mut hasil = Vec::new();
-        for entry in entries.flatten() {
+fn collect_order_files(root: &Path) -> std::io::Result<Vec<AnalisisItem>> {
+    let allowed_ext = ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "cdr"];
+    let mut pending = vec![root.to_path_buf()];
+    let mut hasil = Vec::new();
+    while let Some(dir) = pending.pop() {
+        for entry in fs::read_dir(&dir)? {
+            let entry = entry?;
             let path = entry.path();
-            if !path.is_file() {
+            let meta = fs::symlink_metadata(&path)?;
+            if meta.file_type().is_symlink() { continue; }
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::fs::MetadataExt;
+                // Jangan mengikuti junction ke luar folder nota atau berputar kembali.
+                if meta.file_attributes() & 0x400 != 0 { continue; }
+            }
+            if meta.is_dir() {
+                pending.push(path);
                 continue;
             }
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
-            if !allowed_ext.contains(&ext.as_str()) {
-                continue;
-            }
-            let meta = match fs::metadata(&path) {
-                Ok(m) => m,
-                Err(_) => continue,
-            };
-            let file_meta = get_file_meta(&path);
+            if !meta.is_file() || !allowed_ext.contains(&ext.as_str()) { continue; }
             hasil.push(AnalisisItem {
-                nama: path.file_name().unwrap().to_string_lossy().to_string(),
+                nama: entry.file_name().to_string_lossy().to_string(),
+                path: path.to_string_lossy().to_string(),
+                relative_path: path.strip_prefix(root).unwrap_or(&path).to_string_lossy().to_string(),
                 ukuran_byte: meta.len(),
-                meta: file_meta,
+                meta: get_file_meta(&path),
             });
         }
+    }
+    hasil.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
+    Ok(hasil)
+}
 
-        serde_json::json!({ "success": true, "data": hasil })
+#[tauri::command]
+pub async fn analisis_folder_order(folder_path: String) -> serde_json::Value {
+    tauri::async_runtime::spawn_blocking(move || {
+        match collect_order_files(Path::new(&folder_path)) {
+            Ok(hasil) => serde_json::json!({ "success": true, "data": hasil }),
+            Err(e) => serde_json::json!({ "success": false, "message": e.to_string() }),
+        }
     })
     .await
     .unwrap()

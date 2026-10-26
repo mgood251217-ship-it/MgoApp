@@ -500,7 +500,7 @@ export default function TransaksiDetail() {
                                                                                 <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                                                                                     
                                                                                     <span style={{ fontSize: "13px", fontWeight: "600", color: "var(--text)", wordBreak: "break-all" }}>
-                                                                                        {file.nama}
+                                                                                        {file.relativePath || file.nama}
                                                                                     </span>
                                                                                     
                                                                                     {!(file.is_dir || file.type === "folder") && (

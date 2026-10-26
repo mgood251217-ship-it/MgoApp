@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { buildFolderName, checkFoldersForItems, listFilesForFolder } from "../services/folderHelper";
-import { generateNotaPdfBase64 } from "../services/notaPdf";
+import { generateNotaBase64 } from "../services/notaPdf";
 
 export default function useOrderFolderStatus(setAlertConfig) {
     const [appSettings, setAppSettings] = useState({});
@@ -153,10 +153,10 @@ export default function useOrderFolderStatus(setAlertConfig) {
         moveFilesToCategory(filePaths, info, orderRow, itemsList, true);
     }, [moveFilesToCategory]);
 
-    const handleUploadNota = useCallback(async (category, info, orderRow, itemsList) => {
+    const handleUploadNota = useCallback(async (category, info, orderRow, itemsList, format = "pdf") => {
         setUploadingNotaFor(category);
         try {
-            const { base64Data, fileName } = await generateNotaPdfBase64(orderRow.order_id);
+            const { base64Data, fileName } = await generateNotaBase64(orderRow.order_id, format);
             const res = await window.electron.simpanTempFile({ fileName, base64Data });
             if (!res.success) {
                 setAlertConfig({ show: true, type: "error", message: res.message || "Gagal membuat file nota." });

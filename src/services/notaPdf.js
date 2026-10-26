@@ -21,7 +21,8 @@ function safeName(str) {
     return (str || "File").toString().replace(/[^a-z0-9]/gi, "_");
 }
 
-export async function generateNotaPdfBase64(orderId) {
+export async function generateNotaBase64(orderId, format = "pdf") {
+    if (!["pdf", "jpg"].includes(format)) throw new Error("Format nota harus PDF atau JPG.");
     const [resOrder, resStore, resPayment] = await Promise.all([
         api.get("", { params: { action: "order_detail", order_id: orderId } }),
         getCachedStoreData(),
@@ -44,31 +45,33 @@ export async function generateNotaPdfBase64(orderId) {
     document.body.appendChild(container);
 
     const root = createRoot(container);
-    await new Promise((resolve) => {
-        root.render(React.createElement(ReceiptContent, { data, store, paymentData, id: "pdf-content-nota" }));
-        setTimeout(resolve, 50); // beri waktu React commit ke DOM
-    });
+    try {
+        await new Promise((resolve) => {
+            root.render(React.createElement(ReceiptContent, { data, store, paymentData, id: "pdf-content-nota" }));
+            setTimeout(resolve, 50);
+        });
+        await waitForImages(container);
 
-    await waitForImages(container);
+        const element = container.querySelector("#pdf-content-nota");
+        if (!element) throw new Error("Tampilan nota belum tersedia.");
+        const canvas = await html2canvas(element, {
+            scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff"
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 1.0);
+        const orderData = data.order || {};
+        const fileName = `NOTA_${safeName(orderData.customer_name)}_${safeName(orderData.operator_initial || "OP")}_${safeName(orderData.date)}_${safeName(orderData.nomorator)}.${format}`;
 
-    const element = container.querySelector("#pdf-content-nota");
-    const canvas = await html2canvas(element, {
-        scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff"
-    });
-    const imgData = canvas.toDataURL("image/jpeg", 1.0);
+        if (format === "jpg") {
+            return { base64Data: imgData.split(",")[1], fileName };
+        }
 
-    const pdf = new jsPDF("p", "mm", [80, 200]);
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
-
-    root.unmount();
-    document.body.removeChild(container);
-
-    const orderData = data.order || {};
-    const fileName = `NOTA_${safeName(orderData.customer_name)}_${safeName(orderData.operator_initial || "OP")}_${safeName(orderData.date)}_${safeName(orderData.nomorator)}.pdf`;
-    const base64Data = pdf.output("datauristring").split(",")[1];
-
-    return { base64Data, fileName };
+        const pdfWidth = 80;
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pdf = new jsPDF("p", "mm", [pdfWidth, Math.max(200, pdfHeight)]);
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+        return { base64Data: pdf.output("datauristring").split(",")[1], fileName };
+    } finally {
+        root.unmount();
+        container.remove();
+    }
 }
