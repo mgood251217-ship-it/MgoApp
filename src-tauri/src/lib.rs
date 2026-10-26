@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::{folder_order, icon_folder, misc, settings, updater_custom};
+use commands::{folder_order, icon_folder, misc, settings, updater_custom, tutorial_video};
 use tauri::Manager;
 
 #[cfg(desktop)]
@@ -73,6 +73,7 @@ pub fn run() {
             misc::simpan_file_dialog,
             misc::print_window,
             misc::simpan_temp_file,
+            tutorial_video::get_tutorial_video,
             settings::get_settings,
             settings::save_settings,
             settings::restart_app,

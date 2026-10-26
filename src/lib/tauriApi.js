@@ -5,6 +5,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 
 export const tauriApi = {
     version: () => "1.0.8",
+    getTutorialVideo: (args) => invoke("get_tutorial_video", args),
 
     analisisFolderOrder: (folderPath) => invoke("analisis_folder_order", { folderPath }),
     buatFolderOrder: (args) => invoke("buat_folder_order", { args }),
