@@ -19,8 +19,10 @@ fn extract_leading_number(s: &str) -> Option<i32> {
 }
 
 fn folder_matches_nomor(entry_name: &str, nomorator: &str) -> bool {
+    let nomorator = nomorator.trim();
+    if nomorator.is_empty() { return false; }
     let escaped = regex::escape(nomorator);
-    let pattern = format!(r"(^|[_\-\s]){}$", escaped);
+    let pattern = format!(r"(^|[^0-9A-Za-z]){}($|[^0-9A-Za-z])", escaped);
     Regex::new(&pattern)
         .map(|re| re.is_match(entry_name))
         .unwrap_or(false)
@@ -181,6 +183,40 @@ fn find_folder_recursive(dir: &Path, nomorator: &str, depth: u32, max_depth: u32
     None
 }
 
+fn find_existing_order_folder(
+    base: &Path, year: i32, month: i32, month_name: &str, day: i32,
+    month_format: Option<&str>, product: Option<&str>, nomorator: &str,
+) -> Option<PathBuf> {
+    let mut searched = Vec::new();
+    // Format pengaturan menentukan folder baru; format lama tetap dapat ditemukan.
+    for format in [month_format, Some("number_name"), Some("number"), Some("name"), None] {
+        let Some(day_dir) = resolve_date_folder(base, year, month, month_name, day, format) else { continue };
+        if searched.contains(&day_dir) { continue; }
+        searched.push(day_dir.clone());
+        if let Some(product) = product {
+            let product_dir = day_dir.join(product);
+            if let Some(found) = find_folder_recursive(&product_dir, nomorator, 0, 12) { return Some(found); }
+            if let Some(alias) = find_matching_subfolder(&day_dir, |name| normalize_for_match(name) == normalize_for_match(product)) {
+                if let Some(found) = find_folder_recursive(&alias, nomorator, 0, 12) { return Some(found); }
+            }
+            // Periksa juga nota lama yang langsung berada di bawah tanggal.
+            if let Some(found) = find_matching_subfolder(&day_dir, |name| folder_matches_nomor(name, nomorator)) { return Some(found); }
+        } else if let Some(found) = find_folder_recursive(&day_dir, nomorator, 0, 12) {
+            return Some(found);
+        }
+    }
+    // Pemisahan produk hanya mengatur folder baru. Folder lama tetap dicari
+    // berdasarkan nomor nota di seluruh tanggal, setelah lokasi produk diutamakan.
+    if product.is_some() {
+        for day_dir in searched {
+            if let Some(found) = find_folder_recursive(&day_dir, nomorator, 0, 12) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
 fn duplicate_file_suffix(mut index: usize) -> String {
     let mut letters = Vec::new();
     while index > 0 {
@@ -256,6 +292,29 @@ mod production_format_tests {
         let temp = std::env::temp_dir();
         let root = temp.join(format!("mgo-production-format-{}-{}", std::process::id(),
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let existing = root.join("2026").join("10 Oktober").join("26").join("PRINT PRESS")
+            .join("SHOPEE EEF_17.00_CINDY_205712");
+        fs::create_dir_all(&existing).unwrap();
+        assert_eq!(find_existing_order_folder(&root, 2026, 10, "Oktober", 26,
+            Some("number"), Some("PRINTPRESS"), " 205712 "), Some(existing.clone()));
+        assert_eq!(find_existing_order_folder(&root, 2026, 10, "Oktober", 26,
+            Some("number"), Some("JERSEY"), "205712"), Some(existing.clone()));
+        assert_eq!(find_existing_order_folder(&root, 2026, 10, "Oktober", 26,
+            Some("number"), None, "205712"), Some(existing.clone()));
+        let jersey = root.join("2026").join("10").join("26").join("JERSEY").join("UJI_205712");
+        fs::create_dir_all(&jersey).unwrap();
+        assert_eq!(find_existing_order_folder(&root, 2026, 10, "Oktober", 26,
+            Some("number"), Some("JERSEY"), "205712"), Some(jersey));
+        let source = root.join("desain.txt");
+        fs::write(&source, b"desain").unwrap();
+        let target = find_existing_order_folder(&root, 2026, 10, "Oktober", 26,
+            None, Some("PRINT PRESS"), "205712").unwrap();
+        assert_eq!(move_file_into_folder(&source, &target, true).unwrap(), existing.join("desain.txt"));
+        assert!(source.exists());
+        assert!(folder_matches_nomor("205712_SHOPEE EEF", "205712"));
+        assert!(folder_matches_nomor("SHOPEE_205712 revisi", "205712"));
+        assert!(!folder_matches_nomor("SHOPEE_1205712", "205712"));
+        assert!(!folder_matches_nomor("SHOPEE_2057120", "205712"));
         for (format, expected) in [("number_name", "10 Oktober"), ("number", "10"), ("name", "Oktober")] {
             let day = resolve_or_create_date_folder(&root, 2026, 10, "Oktober", 26, Some(format)).unwrap();
             assert_eq!(day, root.join("2026").join(expected).join("26"));
@@ -320,6 +379,8 @@ pub struct BuatFolderArgs {
     pub month_format: Option<String>,
     #[serde(default, rename = "productFolder")]
     pub product_folder: Option<String>,
+    #[serde(default)]
+    pub nomorator: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -427,18 +488,9 @@ pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
             return serde_json::json!({ "found": false, "message": "Format folder tidak valid." });
         }
         let base = Path::new(&args.base_path);
-        match resolve_date_folder(base, args.year, args.month_num, &args.month_name, args.day, args.month_format.as_deref()) {
-            Some(day_dir) => {
-                let search_dir = args.product_folder.as_ref().map_or_else(|| day_dir.clone(), |product| day_dir.join(product));
-                let found_path = find_folder_recursive(&search_dir, &args.nomorator, 0, 12);
-                serde_json::json!({
-                    "found": found_path.is_some(),
-                    "path": found_path.map(|p| p.to_string_lossy().to_string()),
-                    "searchedPath": search_dir.to_string_lossy().to_string(),
-                })
-            }
-            None => serde_json::json!({ "found": false }),
-        }
+        let found = find_existing_order_folder(base, args.year, args.month_num, &args.month_name,
+            args.day, args.month_format.as_deref(), args.product_folder.as_deref(), &args.nomorator);
+        serde_json::json!({ "found": found.is_some(), "path": found.map(|p| p.to_string_lossy().to_string()) })
     })
     .await
     .unwrap()
@@ -452,6 +504,11 @@ pub async fn buat_folder_order(args: BuatFolderArgs) -> serde_json::Value {
             return serde_json::json!({ "success": false, "message": "Format atau nama folder tidak valid." });
         }
         let base = Path::new(&args.base_path);
+        let nomorator = args.nomorator.as_deref().unwrap_or_else(|| args.folder_name.rsplit('_').next().unwrap_or(""));
+        if let Some(existing) = find_existing_order_folder(base, args.year, args.month_num, &args.month_name,
+            args.day, args.month_format.as_deref(), args.product_folder.as_deref(), nomorator) {
+            return serde_json::json!({ "success": true, "path": existing.to_string_lossy() });
+        }
         match resolve_or_create_date_folder(base, args.year, args.month_num, &args.month_name, args.day, args.month_format.as_deref()) {
             Ok(day_dir) => {
                 let parent = args.product_folder.as_ref().map_or(day_dir.clone(), |product| day_dir.join(product));

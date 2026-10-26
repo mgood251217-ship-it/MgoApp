@@ -141,7 +141,7 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
     const categoriesInOrder = [...new Set(relevantItems.map(i => i.category))];
     const results = {};
     const dateParts = buildDateParts(orderData.date);
-    const nomorator = orderData.nomorator;
+    const nomorator = String(orderData.nomorator ?? "").trim();
 
     await Promise.all(categoriesInOrder.map(async (cat) => {
         const pathKeys = CATEGORY_PATH_MAP[String(cat).toUpperCase()];
@@ -183,7 +183,7 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
                 const parentPath = buildProductionPathPreview(basePath, options, orderData.date, product || "");
                 const createPath = dateParts ? joinPath(parentPath, folderName) : null;
                 const createInfo = dateParts ? {
-                    basePath, ...dateParts, folderName,
+                    basePath, ...dateParts, folderName, nomorator,
                     monthFormat: settings[`path_${key}_month_format`] ? options.monthFormat : null,
                     productFolder,
                 } : null;
