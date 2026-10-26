@@ -78,6 +78,7 @@ Var UpdateMode
 Var NoShortcutMode
 Var WixMode
 Var OldMainBinaryName
+Var MgoMigrationMode
 
 Name "${PRODUCTNAME}"
 BrandingText "${COPYRIGHT}"
@@ -388,7 +389,11 @@ Function PageLeaveReinstall
 FunctionEnd
 
 ; 5. Choose install directory page
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!if "${INSTALLMODE}" == "perMachine"
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE Skip
+!else
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!endif
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; 6. Start menu shortcut page
@@ -516,6 +521,39 @@ Function .onInit
   !if "${INSTALLMODE}" == "both"
     !insertmacro MULTIUSER_INIT
   !endif
+  !if "${INSTALLMODE}" == "perMachine"
+    ; One canonical machine location, including /D overrides and old saved paths.
+    SetShellVarContext all
+    StrCpy $INSTDIR "$APPDATA\${PRODUCTNAME}"
+    ReadRegStr $0 HKLM "${UNINSTKEY}" "InstallLocation"
+    ${If} $0 != ""
+    ${AndIf} $0 != "$INSTDIR"
+    ${AndIf} $0 != '$\"$INSTDIR$\"'
+      IfSilent mgo_noncanonical_abort
+      MessageBox MB_ICONSTOP|MB_OK "Instalasi MGO untuk semua pengguna berada di lokasi lain: $0. Hapus instalasi mesin lama melalui Installed Apps terlebih dahulu tanpa menghapus data pengguna, lalu jalankan installer ini kembali."
+      mgo_noncanonical_abort:
+      SetErrorLevel 2
+      Abort
+    ${EndIf}
+  !endif
+FunctionEnd
+
+Function MgoMigrateUserInstall
+  ${If} ${RunningX64}
+    StrCpy $2 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+  ${Else}
+    StrCpy $2 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
+  ${EndIf}
+  DetailPrint "Memeriksa/memigrasikan instalasi MGO per pengguna ($MgoMigrationMode)..."
+  nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -File $\"$PLUGINSDIR\migrate_user_install.ps1$\" -Mode $MgoMigrationMode -InstallDirectory $\"$INSTDIR$\"'
+  Pop $0
+  ${If} $0 != 0
+    IfSilent mgo_migration_failed
+    MessageBox MB_ICONSTOP|MB_OK "Migrasi MGO dari AppData belum selesai (kode $0). Periksa pesan pada rincian instalasi. Tutup MGO pada semua akun Windows lalu coba lagi. Pengaturan dan data pengguna tidak dihapus."
+    mgo_migration_failed:
+    SetErrorLevel 2
+    Abort "Migrasi instalasi lama gagal; pemasangan belum selesai."
+  ${EndIf}
 FunctionEnd
 
 
@@ -631,6 +669,10 @@ Section WebView2
 SectionEnd
 
 Section Install
+  !if "${INSTALLMODE}" == "perMachine"
+    SetShellVarContext all
+    StrCpy $INSTDIR "$APPDATA\${PRODUCTNAME}"
+  !endif
   SetOutPath $INSTDIR
 
   !ifmacrodef NSIS_HOOK_PREINSTALL
@@ -638,6 +680,23 @@ Section Install
   !endif
 
   !insertmacro CheckIfAppIsRunning "${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
+
+  !if "${INSTALLMODE}" == "perMachine"
+    !insertmacro CheckIfAppIsRunning "MgoDesktop.exe" "${PRODUCTNAME}"
+    InitPluginsDir
+    ; Extract the packaged helper before copying/replacing any application files.
+    {{#each resources}}
+      !if "{{this.[1]}}" == "migrate_user_install.ps1"
+        File "/oname=$PLUGINSDIR\migrate_user_install.ps1" "{{no-escape @key}}"
+        !define MGO_MIGRATION_HELPER_INCLUDED
+      !endif
+    {{/each}}
+    !ifndef MGO_MIGRATION_HELPER_INCLUDED
+      !error "The per-user migration helper must be included in bundle.resources"
+    !endif
+    StrCpy $MgoMigrationMode "Check"
+    Call MgoMigrateUserInstall
+  !endif
 
   ; Copy main executable
   File "${MAINBINARYSRCPATH}"
@@ -654,6 +713,12 @@ Section Install
   {{#each binaries}}
     File /a "/oname={{this}}" "{{no-escape @key}}"
   {{/each}}
+
+  !if "${INSTALLMODE}" == "perMachine"
+    ; Retire legacy launchers only after the replacement app has been copied.
+    StrCpy $MgoMigrationMode "Apply"
+    Call MgoMigrateUserInstall
+  !endif
 
   ; Create file associations
   {{#each file_associations as |association| ~}}
@@ -717,6 +782,14 @@ Section Install
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     Call CreateOrUpdateStartMenuShortcut
   !insertmacro MUI_STARTMENU_WRITE_END
+
+  !if "${INSTALLMODE}" == "perMachine"
+  !if "${STARTMENUFOLDER}" == ""
+    ; Also recreate the shared entry during /UPDATE after removing user entries.
+    CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
+  !endif
+  !endif
 
   ; Create desktop shortcut for silent and passive installers
   ; because finish page will be skipped
