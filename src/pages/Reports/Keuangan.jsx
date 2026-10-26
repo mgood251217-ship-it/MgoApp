@@ -75,6 +75,7 @@ export default function Keuangan() {
             await exportKeuanganExcel({
                 financeData,
                 expenditureData,
+                expenditureCategories,
                 incomeData,
                 startDate,
                 endDate

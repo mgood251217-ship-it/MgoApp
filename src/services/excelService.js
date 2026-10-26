@@ -1253,6 +1253,7 @@ export const exportOmsetPerItemExcel = async ({
 export const exportKeuanganExcel = async ({
     financeData,
     expenditureData,
+    expenditureCategories = [],
     incomeData,
     startDate,
     endDate
@@ -1435,6 +1436,68 @@ export const exportKeuanganExcel = async ({
         { key: 'col8', width: 25 },
         { key: 'col9', width: 18 }
     ];
+
+    const groups = new Map();
+    expData.forEach((exp) => {
+        const categoryId = String(exp.expenditure_category_id ?? "");
+        const categoryName = categoryId === "0" ? "Lainnya"
+            : exp.expenditure_category_name
+                || expenditureCategories.find((category) => String(category.value) === categoryId)?.label
+                || (categoryId ? `Kategori #${categoryId}` : "Tanpa kategori");
+        const key = categoryId || categoryName;
+        if (!groups.has(key)) groups.set(key, { name: categoryName, rows: [] });
+        groups.get(key).rows.push(exp);
+    });
+
+    const styleCategoryRow = (row, bold = false, color = null) => {
+        row.eachCell({ includeEmpty: true }, (cell, column) => {
+            cell.font = { bold };
+            cell.alignment = { vertical: 'middle', horizontal: column === 4 ? 'right' : 'left', wrapText: true };
+            cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+            if (color) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
+        });
+        row.getCell(4).numFmt = '#,##0';
+    };
+
+    const usedSheetNames = new Set(workbook.worksheets.map((item) => item.name.toLowerCase()));
+    [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, 'id')).forEach((group) => {
+        const baseName = group.name.replace(/[\\/?*\[\]:]/g, ' ').trim().replace(/^'+|'+$/g, '') || 'Kategori';
+        let sheetName = baseName.slice(0, 31).replace(/'+$/g, '');
+        let suffix = 2;
+        while (usedSheetNames.has(sheetName.toLowerCase()) || sheetName.toLowerCase() === 'history') {
+            const ending = ` (${suffix++})`;
+            sheetName = baseName.slice(0, 31 - ending.length) + ending;
+        }
+        usedSheetNames.add(sheetName.toLowerCase());
+        const categorySheet = workbook.addWorksheet(sheetName);
+        let categoryRow = generateExcelHeader(categorySheet, "D", "LAPORAN PENGELUARAN", tanggal);
+        categorySheet.columns = [{ width: 7 }, { width: 18 }, { width: 55 }, { width: 22 }];
+        categorySheet.pageSetup = { orientation: 'portrait', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+        categorySheet.mergeCells(`A${categoryRow}:D${categoryRow}`);
+        const heading = categorySheet.getCell(`A${categoryRow}`);
+        heading.value = group.name;
+        heading.font = { bold: true, size: 12 };
+        heading.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } };
+        heading.alignment = { wrapText: true, vertical: 'middle' };
+        categorySheet.getRow(categoryRow).height = 28;
+        categoryRow++;
+        const columns = categorySheet.getRow(categoryRow++);
+        columns.values = ['No', 'Tanggal', 'Keterangan', 'Nominal'];
+        styleCategoryRow(columns, true, 'FFCCE5FF');
+
+        let subtotal = 0;
+        group.rows.forEach((exp, index) => {
+            const nominal = Number(exp.nominal) || 0;
+            subtotal += nominal;
+            const row = categorySheet.getRow(categoryRow++);
+            row.values = [index + 1, formatTanggalId(exp.date), exp.information || '-', nominal];
+            styleCategoryRow(row);
+        });
+        const totalRow = categorySheet.getRow(categoryRow);
+        totalRow.values = [`Total ${group.name}`, '', '', subtotal];
+        styleCategoryRow(totalRow, true, 'FFF2F2F2');
+        categorySheet.mergeCells(`A${categoryRow}:C${categoryRow}`);
+    });
 
     const fileName = `Laporan_Keuangan_${startDate}_sd_${endDate}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
