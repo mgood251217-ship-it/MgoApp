@@ -19,6 +19,11 @@ pub struct Storage {
     protocol: OnceLock<Result<(), String>>,
 }
 
+pub struct DirectoryEntry {
+    pub name: String,
+    pub is_dir: bool,
+}
+
 fn validate_registrations(roots: &[Registration]) -> Result<(), String> {
     if roots.is_empty() || roots.len() > 64 {
         return Err("Invalid machine root catalog size".into());
@@ -163,6 +168,59 @@ impl Storage {
             self.classify(path)?,
             StorageBackend::ProtectedFilesystem { .. }
         ))
+    }
+
+    pub fn list_directory(&self, path: &Path) -> Result<Vec<DirectoryEntry>, String> {
+        match self.classify(path)? {
+            StorageBackend::DirectFilesystem => {
+                let entries = match fs::read_dir(path) {
+                    Ok(entries) => entries,
+                    Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+                    Err(error) => return Err(error.to_string()),
+                };
+                entries
+                    .map(|entry| {
+                        let entry = entry.map_err(|error| error.to_string())?;
+                        let is_dir = entry
+                            .file_type()
+                            .map_err(|error| error.to_string())?
+                            .is_dir();
+                        Ok(DirectoryEntry {
+                            name: entry.file_name().to_string_lossy().into_owned(),
+                            is_dir,
+                        })
+                    })
+                    .collect()
+            }
+            StorageBackend::ProtectedFilesystem {
+                root_id,
+                relative_path,
+            } => {
+                let response = self.call(
+                    &root_id,
+                    Request::ListDirectory {
+                        path: relative_path,
+                    },
+                )?;
+                let entries = response["entries"]
+                    .as_array()
+                    .ok_or("Folder Protection returned an invalid directory listing")?;
+                entries
+                    .iter()
+                    .map(|entry| {
+                        Ok(DirectoryEntry {
+                            name: entry["name"]
+                                .as_str()
+                                .ok_or("Folder Protection returned an invalid entry name")?
+                                .to_string(),
+                            is_dir: entry["is_dir"]
+                                .as_bool()
+                                .ok_or("Folder Protection returned an invalid entry type")?,
+                        })
+                    })
+                    .collect()
+            }
+        }
     }
 
     pub fn analyze_directory(&self, path: &Path) -> Result<Value, String> {
@@ -432,5 +490,34 @@ mod tests {
         let direct = temp.path().join("normal.txt");
         storage.write_file(&direct, b"normal").unwrap();
         assert_eq!(fs::read(direct).unwrap(), b"normal");
+    }
+
+    #[test]
+    fn protected_directory_listing_uses_service_transport() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("protected");
+        fs::create_dir(&root).unwrap();
+        let storage = Storage::for_test(
+            vec![Registration {
+                root_id: "test".into(),
+                aliases: vec![root.to_string_lossy().into()],
+            }],
+            Box::new(|request| match request {
+                Request::ForRoot { request, .. } => match *request {
+                    Request::Status => Ok(serde_json::json!({"protocol_version": 5})),
+                    Request::ListDirectory { path } => {
+                        assert!(path.is_empty());
+                        Ok(serde_json::json!({"entries":[{"name":"2026","is_dir":true}]}))
+                    }
+                    _ => Err("Unexpected request".into()),
+                },
+                _ => Err("Unexpected request".into()),
+            }),
+        );
+
+        let entries = storage.list_directory(&root).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].name, "2026");
+        assert!(entries[0].is_dir);
     }
 }

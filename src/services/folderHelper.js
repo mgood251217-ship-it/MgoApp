@@ -125,19 +125,34 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
         const pathKeys = CATEGORY_PATH_MAP[String(cat).toUpperCase()];
         if (!pathKeys) return;
 
+        let searchError = null;
         for (const key of pathKeys) {
             const basePath = settings?.[`path_${key}`];
             if (!basePath || !dateParts) continue;
             try {
                 const res = await window.electron.cariFolderOrder({ basePath, ...dateParts, nomorator });
+                if (res?.error) throw new Error(res.error);
                 if (res?.found) {
                     results[cat] = { status: "ada", path: res.path, createPath: null, createInfo: null, pathKey: key };
                     return;
                 }
-            } catch (err) {}
+            } catch (err) {
+                searchError = String(err?.message || err || "Kesalahan tidak diketahui.");
+            }
         }
 
         if (!results[cat]) {
+            if (searchError) {
+                results[cat] = {
+                    status: "error",
+                    path: null,
+                    createPath: null,
+                    createInfo: null,
+                    pathKey: null,
+                    error: searchError,
+                };
+                return;
+            }
             const configuredKey = pathKeys.find(key => settings?.[`path_${key}`]);
             if (!configuredKey) {
                 results[cat] = { status: "no-path", path: null, createPath: null, createInfo: null, pathKey: null };
@@ -212,6 +227,9 @@ export const listFilesForFolder = async (folderPath, pathKey) => {
         if (!res?.success) {
             return { success: false, message: res?.message || "Gagal membaca folder.", data: [] };
         }
+        if (!Array.isArray(res.data)) {
+            return { success: false, message: "Respons analisis folder dari layanan tidak valid.", data: [] };
+        }
 
         const data = res.data.map((file) => {
             const quantity = extractQuantityFromFilename(file.nama);
@@ -223,6 +241,7 @@ export const listFilesForFolder = async (folderPath, pathKey) => {
 
         return { success: true, data };
     } catch (err) {
-        return { success: false, message: "Gagal membaca folder.", data: [] };
+        const detail = String(err?.message || err || "Kesalahan tidak diketahui.");
+        return { success: false, message: `Gagal membaca folder: ${detail}`, data: [] };
     }
 };

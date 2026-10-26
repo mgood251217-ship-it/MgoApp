@@ -28,49 +28,56 @@ fn folder_matches_nomor(entry_name: &str, nomorator: &str) -> bool {
         || entry_name.eq_ignore_ascii_case(nomorator)
 }
 
-fn find_matching_subfolder<F>(dir: &Path, matcher: F) -> Option<PathBuf>
+fn find_matching_subfolder<F>(
+    storage: &Storage,
+    dir: &Path,
+    matcher: F,
+) -> Result<Option<PathBuf>, String>
 where
     F: Fn(&str) -> bool,
 {
-    let entries = fs::read_dir(dir).ok()?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if matcher(name) {
-                    return Some(path);
-                }
-            }
+    for entry in storage.list_directory(dir)? {
+        if entry.is_dir && matcher(&entry.name) {
+            return Ok(Some(dir.join(entry.name)));
         }
     }
-    None
+    Ok(None)
 }
 
 fn resolve_date_folder(
+    storage: &Storage,
     base_path: &Path,
     year: i32,
     month_num: i32,
     month_name: &str,
     day: i32,
-) -> Option<PathBuf> {
-    let year_dir = find_matching_subfolder(base_path, |name| {
+) -> Result<Option<PathBuf>, String> {
+    let Some(year_dir) = find_matching_subfolder(storage, base_path, |name| {
         Regex::new(r"\d{4}")
             .unwrap()
             .find(name)
             .and_then(|m| m.as_str().parse::<i32>().ok())
             .map(|d| d == year)
             .unwrap_or(false)
-    })?;
+    })?
+    else {
+        return Ok(None);
+    };
 
     let month_name_norm = normalize_for_match(month_name);
-    let month_dir = find_matching_subfolder(&year_dir, |name| {
+    let Some(month_dir) = find_matching_subfolder(storage, &year_dir, |name| {
         if extract_leading_number(name) == Some(month_num) {
             return true;
         }
         normalize_for_match(name).contains(&month_name_norm)
-    })?;
+    })?
+    else {
+        return Ok(None);
+    };
 
-    find_matching_subfolder(&month_dir, |name| extract_leading_number(name) == Some(day))
+    find_matching_subfolder(storage, &month_dir, |name| {
+        extract_leading_number(name) == Some(day)
+    })
 }
 
 fn resolve_or_create_subfolder<F>(
@@ -82,7 +89,7 @@ fn resolve_or_create_subfolder<F>(
 where
     F: Fn(&str) -> bool,
 {
-    if let Some(existing) = find_matching_subfolder(dir, matcher) {
+    if let Some(existing) = find_matching_subfolder(storage, dir, matcher).map_err(io_error)? {
         return Ok(existing);
     }
     let new_path = dir.join(default_name);
@@ -138,35 +145,33 @@ fn resolve_or_create_date_folder(
 }
 
 fn find_folder_recursive(
+    storage: &Storage,
     dir: &Path,
     nomorator: &str,
     depth: u32,
     max_depth: u32,
-) -> Option<PathBuf> {
+) -> Result<Option<PathBuf>, String> {
     if depth > max_depth {
-        return None;
+        return Ok(None);
     }
-    let entries: Vec<_> = fs::read_dir(dir).ok()?.flatten().collect();
+    let entries = storage.list_directory(dir)?;
 
     for entry in &entries {
-        let path = entry.path();
-        if path.is_dir() {
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if folder_matches_nomor(name, nomorator) {
-                    return Some(path);
-                }
-            }
+        if entry.is_dir && folder_matches_nomor(&entry.name, nomorator) {
+            return Ok(Some(dir.join(&entry.name)));
         }
     }
     for entry in &entries {
-        let path = entry.path();
-        if path.is_dir() {
-            if let Some(found) = find_folder_recursive(&path, nomorator, depth + 1, max_depth) {
-                return Some(found);
+        if entry.is_dir {
+            let path = dir.join(&entry.name);
+            if let Some(found) =
+                find_folder_recursive(storage, &path, nomorator, depth + 1, max_depth)?
+            {
+                return Ok(Some(found));
             }
         }
     }
-    None
+    Ok(None)
 }
 
 fn move_file_into_folder(
@@ -410,17 +415,37 @@ pub async fn save_folder_protection_smb_credential(
 #[tauri::command]
 pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
-        let base = Path::new(&args.base_path);
-        match resolve_date_folder(base, args.year, args.month_num, &args.month_name, args.day) {
-            Some(day_dir) => {
-                let found_path = find_folder_recursive(&day_dir, &args.nomorator, 0, 12);
-                serde_json::json!({
-                    "found": found_path.is_some(),
-                    "path": found_path.map(|p| p.to_string_lossy().to_string()),
-                    "searchedPath": day_dir.to_string_lossy().to_string(),
-                })
+        let storage = match Storage::new() {
+            Ok(storage) => storage,
+            Err(error) => {
+                return serde_json::json!({"found": false, "error": error});
             }
-            None => serde_json::json!({ "found": false }),
+        };
+        let base = Path::new(&args.base_path);
+        match resolve_date_folder(
+            &storage,
+            base,
+            args.year,
+            args.month_num,
+            &args.month_name,
+            args.day,
+        ) {
+            Ok(Some(day_dir)) => {
+                match find_folder_recursive(&storage, &day_dir, &args.nomorator, 0, 12) {
+                    Ok(found_path) => serde_json::json!({
+                        "found": found_path.is_some(),
+                        "path": found_path.map(|p| p.to_string_lossy().to_string()),
+                        "searchedPath": day_dir.to_string_lossy().to_string(),
+                    }),
+                    Err(error) => serde_json::json!({
+                        "found": false,
+                        "error": error,
+                        "searchedPath": day_dir.to_string_lossy().to_string(),
+                    }),
+                }
+            }
+            Ok(None) => serde_json::json!({ "found": false }),
+            Err(error) => serde_json::json!({"found": false, "error": error}),
         }
     })
     .await

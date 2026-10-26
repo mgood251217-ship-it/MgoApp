@@ -34,7 +34,14 @@ export default function useOrderFolderStatus(setAlertConfig) {
         const res = await listFilesForFolder(folderPath, pathKey);
         setFolderFilesByPath(prev => ({ ...prev, [folderPath]: res.success ? res.data : [] }));
         setLoadingFilesByPath(prev => ({ ...prev, [folderPath]: false }));
-    }, []);
+        if (!res.success) {
+            setAlertConfig({
+                show: true,
+                type: "error",
+                message: `${res.message || "Gagal menganalisis folder."} (${folderPath})`,
+            });
+        }
+    }, [setAlertConfig]);
 
     const checkFolders = useCallback(async (orderRow, itemsList) => {
         const categoriesInOrder = [...new Set((itemsList || []).map(i => i.category).filter(Boolean))];
@@ -53,6 +60,15 @@ export default function useOrderFolderStatus(setAlertConfig) {
 
         const results = await checkFoldersForItems(appSettings, orderRow, itemsList);
         setItemFolderStatus(results);
+        const searchFailure = Object.entries(results).find(([, info]) => info.status === "error");
+        if (searchFailure) {
+            const [category, info] = searchFailure;
+            setAlertConfig({
+                show: true,
+                type: "error",
+                message: `Gagal memeriksa folder ${category}: ${info.error}`,
+            });
+        }
 
         const fetchedPaths = new Set();
         Object.values(results).forEach((info) => {

@@ -233,6 +233,11 @@ export default function TransaksiDetail() {
                     const itemsList = rawItems.map((item, idx) => ({ ...item, no: idx + 1 }));
 
                     const folderCheck = await checkFoldersForItems(settings, order, itemsList);
+                    const folderError = Object.entries(folderCheck).find(([, info]) => info.status === "error");
+                    if (folderError) {
+                        const [category, info] = folderError;
+                        throw new Error(`Gagal memeriksa folder ${category}: ${info.error}`);
+                    }
                     const fileResults = {};
                     
                     for (const cat of Object.keys(folderCheck)) {
@@ -241,7 +246,7 @@ export default function TransaksiDetail() {
                             if (filesRes.success) {
                                 fileResults[cat] = filesRes.data;
                             } else {
-                                fileResults[cat] = [];
+                                throw new Error(`Gagal menganalisis folder ${folderCheck[cat].path}: ${filesRes.message}`);
                             }
                         }
                     }
@@ -255,7 +260,7 @@ export default function TransaksiDetail() {
                 setScannedFolders(newScannedFolders);
             } catch (err) {
                 console.error(err);
-                showAlert("Gagal mengecek folder secara massal.");
+                showAlert(err.message || "Gagal mengecek folder secara massal.");
                 setCheckAllFolders(false);
             } finally {
                 setIsScanningAll(false);

@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 
 export const tauriApi = {
-    version: () => "2.0.10",
+    version: () => "2.0.11",
 
     analisisFolderOrder: (folderPath) => invoke("analisis_folder_order", { folderPath }),
     buatFolderOrder: (args) => invoke("buat_folder_order", { args }),
