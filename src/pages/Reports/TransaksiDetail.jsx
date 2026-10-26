@@ -492,6 +492,13 @@ export default function TransaksiDetail() {
                                                                         {fData.status === "ada" ? "✅ Ada" : fData.status === "tidak-ada" ? "❌ Tidak ada" : "⚠️ Path belum diatur"}
                                                                     </Tag>
                                                                 </div>
+                                                                {(fData.path || fData.createPath) && (
+                                                                    <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "8px", overflowWrap: "anywhere" }}>
+                                                                        {fData.path ? "Lokasi folder:" : "Folder belum dibuat. Kalau dibuat, lokasinya:"}
+                                                                        <br />
+                                                                        <strong style={{ color: "var(--text)", userSelect: "text" }}>{fData.path || fData.createPath}</strong>
+                                                                    </div>
+                                                                )}
                                                                 {fData.status === "ada" && cFiles.length > 0 && (
                                                                     <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
                                                                         {cFiles.map((file, fIdx) => (

@@ -400,8 +400,16 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                                         </div>
                                     </div>
 
+                                    {folderPath && (
+                                        <div style={{ fontSize: 13, color: "var(--secondary)", marginBottom: 8, overflowWrap: "anywhere" }}>
+                                            Lokasi folder:
+                                            <br />
+                                            <strong style={{ color: "var(--text)", userSelect: "text" }}>{folderPath}</strong>
+                                        </div>
+                                    )}
+
                                     <div style={{ fontSize: 12, color: "var(--secondary)", marginBottom: 8 }}>
-                                        Seret file JPG/PNG/PDF/TIFF/CDR ke sini, atau klik "Pilih File" untuk memindahkan ke folder ini.
+                                        Seret file JPG/PNG/PDF/TIFF/CDR ke sini untuk memindahkan, atau klik "Pilih File" untuk menyalin ke folder ini.
                                     </div>
 
                                     {info.status === "tidak-ada" ? (
