@@ -6,11 +6,12 @@ import DateFilter from "../../components/DateFilter/DateFilter";
 import Table from "../../components/Table/Table";
 import Modal from "../../components/Modal/Modal";
 import Input from "../../components/Input/Input";
+import Select from "../../components/Select/Select";
 import Button from "../../components/Button/Button";
 import Icon from "../../components/Icon/Icon";
-import { formatRupiah, getTodayDate } from "../../services/helpers";
+import { formatRupiah, getTodayDate, titleCase } from "../../services/helpers";
 import { exportKeuanganExcel } from "../../services/excelService";
-import { getCachedFinance } from "../../services/apiCache";
+import { getCachedFinance, getCachedExpenditureCategories } from "../../services/apiCache";
 import usePageAlert from "../../hooks/usePageAlert";
 
 export default function Keuangan() {
@@ -30,7 +31,10 @@ export default function Keuangan() {
     const [editExpData, setEditExpData] = useState(null);
     const [editIncData, setEditIncData] = useState(null);
     
-    const [expForm, setExpForm] = useState({ information: "", nominal: "", picture: null });
+    const [expForm, setExpForm] = useState({ information: "", nominal: "", picture: null, expenditure_category_id: "" });
+    const [expenditureCategories, setExpenditureCategories] = useState([{ value: "0", label: "Lainnya" }]);
+    const [categoriesLoading, setCategoriesLoading] = useState(false);
+    const [categoriesError, setCategoriesError] = useState("");
     const [incForm, setIncForm] = useState({ information: "", nominal: "" });
 
     const applyFinanceData = (res) => {
@@ -58,6 +62,7 @@ export default function Keuangan() {
 
     useEffect(() => {
         fetchFinance();
+        fetchExpenditureCategories();
     }, []);
 
     const handleExportExcel = async () => {
@@ -107,9 +112,36 @@ export default function Keuangan() {
         }
     };
 
+    const fetchExpenditureCategories = async () => {
+        setCategoriesLoading(true);
+        setCategoriesError("");
+        try {
+            const applyCategories = (categories) => setExpenditureCategories([
+                ...categories.filter((category) => String(category.id) !== "0").map((category) => ({
+                    value: String(category.id),
+                    label: titleCase(category.name),
+                })),
+                { value: "0", label: "Lainnya" },
+            ]);
+            const categories = await getCachedExpenditureCategories(applyCategories);
+            if (!Array.isArray(categories)) throw new Error("Daftar kategori tidak tersedia.");
+            applyCategories(categories);
+        } catch (error) {
+            console.error("Gagal memuat kategori pengeluaran:", error);
+            setCategoriesError("Gagal memuat kategori pengeluaran. Silakan coba lagi.");
+        } finally {
+            setCategoriesLoading(false);
+        }
+    };
+
     const handleSaveExpenditure = async (e) => {
         e.preventDefault();
+        if (categoriesLoading || !expenditureCategories.some((category) => category.value === expForm.expenditure_category_id)) {
+            showAlert("Pilih kategori pengeluaran terlebih dahulu.", "warning");
+            return;
+        }
         const formData = new FormData();
+        formData.append("expenditure_category_id", expForm.expenditure_category_id);
         formData.append("information", expForm.information);
         formData.append("nominal", expForm.nominal);
         formData.append("date", startDate);
@@ -223,6 +255,11 @@ export default function Keuangan() {
             title: "Tanggal",
             render: (row) => <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.date}</span>
         },
+        {
+            key: "expenditure_category_name",
+            title: "Kategori",
+            render: (row) => <span style={{ fontWeight: "600", color: "var(--text)" }}>{titleCase(row.expenditure_category_name)}</span>
+        },
         { 
             key: "information", 
             title: "Keterangan",
@@ -255,7 +292,7 @@ export default function Keuangan() {
                 />
             ) : "-"
         }   
-    ], []);
+    ], [expenditureCategories]);
 
     const incomeColumns = useMemo(() => [
         { 
@@ -332,8 +369,9 @@ export default function Keuangan() {
                             <Button 
                                 onClick={() => {
                                     setEditExpData(null);
-                                    setExpForm({ information: "", nominal: "", picture: null });
+                                    setExpForm({ information: "", nominal: "", picture: null, expenditure_category_id: "" });
                                     setShowExpModal(true);
+                                    fetchExpenditureCategories();
                                 }}
                                 icon={<Icon name="add" />} 
                             >
@@ -404,6 +442,20 @@ export default function Keuangan() {
                 title={editExpData ? "Edit Pengeluaran" : "Tambah Pengeluaran"}
             >
                 <form onSubmit={handleSaveExpenditure} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <Select
+                        name="expenditure_category_id"
+                        label="Kategori Pengeluaran"
+                        value={expForm.expenditure_category_id}
+                        onChange={(e) => setExpForm({ ...expForm, expenditure_category_id: e.target.value })}
+                        options={expenditureCategories}
+                        placeholder={categoriesLoading ? "Memuat kategori..." : "Pilih kategori pengeluaran"}
+                        disabled={categoriesLoading}
+                        error={categoriesError}
+                        required
+                    />
+                    {categoriesError && (
+                        <Button type="button" onClick={fetchExpenditureCategories} disabled={categoriesLoading}>Muat ulang kategori</Button>
+                    )}
                     <Input 
                         label="Keterangan" 
                         type="text"

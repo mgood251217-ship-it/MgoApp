@@ -75,18 +75,6 @@ export const validateStoreCache = (newStoreName) => {
     }
 };
 
-/**
- * Pola umum semua getCached*:
- * 1. Baca cache lokal, langsung dikembalikan (kalau ada) supaya UI cepat tampil.
- * 2. Di belakang layar, cek dataset server. Kalau ternyata data server lebih baru
- *    dari cache (cachedTime < serverTime), fetch ulang dari server.
- * 3. Kalau ada data baru dari server, panggil onUpdate(result) supaya pemanggil
- *    (komponen React, dsb) bisa update state-nya tanpa perlu reload manual.
- *
- * onUpdate bersifat OPSIONAL. Kalau tidak diisi, fungsi berperilaku sama seperti
- * sebelumnya (fetch di background, hasil hanya disimpan ke localStorage).
- */
-
 export const getCachedStoreData = async (onUpdate) => {
     const cachedData = getStorage("storeData", null);
     const cachedTime = getStorage("storeData_time", 0);
@@ -901,6 +889,40 @@ export const getCachedStatistics = async (startDate, endDate, onUpdate) => {
     }
 
     return (await fetchLatest()) || {};
+};
+
+export const getCachedExpenditureCategories = async (onUpdate) => {
+    const cachedItem = getStorage("expenditureCategories", null);
+    const hasCache = Array.isArray(cachedItem?.data);
+
+    const fetchLatest = async () => {
+        const dataset = await getServerDataset();
+        const serverTime = dataset.finance_updated_at || 0;
+        const expired = Date.now() - (cachedItem?.fetchedAt || 0) >= 5 * 60 * 1000;
+
+        if (!hasCache || cachedItem.updatedAt < serverTime || expired) {
+            try {
+                const res = await api.get("", { params: { action: "expenditure_categories" } });
+                const payload = res.data?.data ?? res.data;
+                const result = Array.isArray(payload) ? payload : payload?.expenditure_categories;
+                if (res.data?.success === false || !Array.isArray(result)) {
+                    throw new Error("Daftar kategori tidak tersedia.");
+                }
+                setStorage("expenditureCategories", { data: result, updatedAt: serverTime, fetchedAt: Date.now() });
+                if (onUpdate) onUpdate(result);
+                return result;
+            } catch {
+                return null;
+            }
+        }
+        return cachedItem.data;
+    };
+
+    if (hasCache) {
+        fetchLatest();
+        return cachedItem.data;
+    }
+    return fetchLatest();
 };
 
 export const getCachedFinance = async (startDate, endDate, onUpdate) => {
