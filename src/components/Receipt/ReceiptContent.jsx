@@ -24,14 +24,25 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
     const note = data.note || "";
 
     const payments = paymentData.payments || [];
-    const totalBayar = parseFloat(paymentData.paid || 0);
-    let adaLunas = paymentData.is_lunas || false;
-    let adaDp = false;
-
-    payments.forEach((pay) => {
-        if ((pay.status || "").toUpperCase() === "DP") adaDp = true;
-        if ((pay.status || "").toUpperCase() === "LUNAS") adaLunas = true;
-    });
+    const totalNota = Number(orderData.total) || 0;
+    const totalBayar = Number(paymentData.paid) || 0;
+    const adaPembayaran = totalBayar > 0;
+    const adaLunas = totalNota > 0 && adaPembayaran && totalBayar >= totalNota;
+    const totalDp = payments.reduce((total, pay) =>
+        (pay.status || "").toUpperCase() === "DP"
+            ? total + Math.max(Number(pay.nominal) || 0, 0)
+            : total, 0
+    );
+    const totalPelunasan = Math.max(totalBayar - totalDp, 0);
+    const sisaBayar = Math.max(totalNota - totalBayar, 0);
+    const paymentMethods = (isDp) => [...new Set(payments
+        .filter((pay) => Number(pay.nominal) > 0 &&
+            ((pay.status || "").toUpperCase() === "DP") === isDp)
+        .map((pay) => (pay.payment_method || "").trim().toUpperCase())
+        .filter(Boolean)
+    )].join(" / ");
+    const metodeDp = paymentMethods(true);
+    const metodePelunasan = paymentMethods(false);
 
     const outdoor = {};
     const luasKurangDariSatu = {};
@@ -92,7 +103,9 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
                         </td>
                         <td style={{ width: "20%", textAlign: "center", verticalAlign: "middle", padding: 0 }}>
                             <div style={{ transform: "rotate(270deg)", fontWeight: "bold", lineHeight: "90%", fontSize: "15px" }}>
-                                <span dangerouslySetInnerHTML={{ __html: adaLunas ? "LUNAS" : "BELUM <br> LUNAS" }}></span>
+                                <span>
+                                    {adaLunas ? "LUNAS" : <>BELUM<br />{adaPembayaran ? "LUNAS" : "DP"}</>}
+                                </span>
                             </div>
                         </td>
                     </tr>
@@ -135,15 +148,38 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
 
             <div className="line"></div>
 
-            <table style={{ width: "92%", margin: "0 auto" }}>
+            <table className="receipt-payment-summary">
                 <tbody>
-                    <tr><td className="text-end"><strong>TOTAL: {formatRupiah(orderData.total)}</strong></td></tr>
-                    {totalBayar > 0 && !adaLunas && (
+                    <tr className="receipt-total">
+                        <td>TOTAL: {formatRupiah(totalNota)}</td>
+                    </tr>
+                    {adaPembayaran ? (
                         <>
-                            <tr><td className="text-end">{adaDp ? "Uang Muka" : "Total Bayar"}: {formatRupiah(totalBayar)}</td></tr>
-                            <tr><td className="text-end">Sisa: {formatRupiah(orderData.total - totalBayar)}</td></tr>
+                            {totalDp > 0 ? (
+                                <>
+                                    <tr>
+                                        <td>Uang Muka: {formatRupiah(totalDp)}{metodeDp && <span> {metodeDp}</span>}</td>
+                                    </tr>
+                                    {totalPelunasan > 0 && (
+                                        <tr>
+                                            <td>Pelunasan: {formatRupiah(totalPelunasan)}{metodePelunasan && <span> {metodePelunasan}</span>}</td>
+                                        </tr>
+                                    )}
+                                </>
+                            ) : (
+                                <tr>
+                                    <td>{adaLunas ? "Lunas" : "Total Bayar"}: {formatRupiah(totalBayar)}{metodePelunasan && <span> {metodePelunasan}</span>}</td>
+                                </tr>
+                            )}
                         </>
+                    ) : (
+                        <tr>
+                            <td>Uang Muka: {formatRupiah(0)}</td>
+                        </tr>
                     )}
+                    <tr className="receipt-balance">
+                        <td>Sisa: {formatRupiah(sisaBayar)}</td>
+                    </tr>
                 </tbody>
             </table>
 

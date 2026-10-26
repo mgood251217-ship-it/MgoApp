@@ -88,6 +88,26 @@
     padding-right: 6px;
 }
 
+.receipt .receipt-payment-summary {
+    width: 92%;
+    margin: 0 auto;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.receipt-payment-summary td {
+    text-align: right;
+}
+
+.receipt-payment-summary .receipt-total {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.receipt-payment-summary .receipt-balance {
+    font-weight: 700;
+}
+
 @media print {
     @page { 
         margin: 0; 
