@@ -8,6 +8,7 @@ import Alert from "../../components/Alert/Alert";
 import { authStore } from "../../services/session";
 import api from "../../api/axios";
 import { testConnection } from "../../api/testApi";
+import { isDesktop } from "../../services/platform";
 import "./Login.css";
 
 async function getRecaptchaSiteKey() {
@@ -31,14 +32,13 @@ async function login(payload) {
     return data;
 }
 
-function LoginInternal() {
+function LoginInternal({ executeRecaptcha, requiresRecaptcha = true }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const { executeRecaptcha } = useGoogleReCaptcha();
 
     useEffect(() => {
         const savedUsername = localStorage.getItem("mgo_remember_username");
@@ -73,7 +73,7 @@ function LoginInternal() {
     async function handleLogin() {
         setError("");
 
-        if (!executeRecaptcha) {
+        if (requiresRecaptcha && !executeRecaptcha) {
             setError("reCAPTCHA sedang disiapkan. Tunggu sebentar.");
             return;
         }
@@ -81,7 +81,15 @@ function LoginInternal() {
         try {
             setLoading(true);
 
-            const token = await executeRecaptcha("login");
+            let token = "";
+            if (requiresRecaptcha) {
+                try {
+                    token = await executeRecaptcha("login");
+                } catch {
+                    setError("Verifikasi reCAPTCHA gagal. Coba lagi.");
+                    return;
+                }
+            }
 
             const response = await login({
                 username,
@@ -113,7 +121,7 @@ function LoginInternal() {
 
             await authStore.checkSession();
         } catch (err) {
-            setError("Server tidak dapat dihubungi.");
+            setError(err.response?.data?.message || "Server tidak dapat dihubungi. Coba lagi.");
         } finally {
             setLoading(false);
         }
@@ -174,7 +182,12 @@ function LoginInternal() {
     );
 }
 
-export default function Login() {
+function RecaptchaLoginForm() {
+    const { executeRecaptcha } = useGoogleReCaptcha();
+    return <LoginInternal executeRecaptcha={executeRecaptcha} />;
+}
+
+function LoginWithRecaptcha() {
     const [siteKey, setSiteKey] = useState("");
     const [loadingKey, setLoadingKey] = useState(true);
 
@@ -233,7 +246,10 @@ export default function Login() {
 
     return (
         <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
-            <LoginInternal />
+            <RecaptchaLoginForm />
         </GoogleReCaptchaProvider>
     );
+}
+export default function Login() {
+    return isDesktop ? <LoginInternal requiresRecaptcha={false} /> : <LoginWithRecaptcha />;
 }
