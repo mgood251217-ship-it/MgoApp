@@ -1,7 +1,7 @@
 import "./UpdatePrompt.css";
 import logo from "/logo.png";
 
-export default function UpdatePrompt({ latestVersion, downloading, progress, mandatory, releaseNotes, onContinueOld, onUpdateNow }) {
+export default function UpdatePrompt({ latestVersion, downloading, progress, mandatory, releaseNotes, onContinueOld, onUpdateNow, installing = false, error, installerReady = false, onDownloadAgain }) {
     return (
         <div className="update-prompt">
             <div className="update-prompt-container">
@@ -28,12 +28,14 @@ export default function UpdatePrompt({ latestVersion, downloading, progress, man
                     </div>
                 )}
 
+                {error && <p role="alert" className="update-prompt-message">{error}</p>}
+
                 {downloading ? (
                     <div className="update-prompt-progress">
                         <div className="update-prompt-progress-track">
                             <div className="update-prompt-progress-bar" style={{ width: `${progress}%` }}></div>
                         </div>
-                        <span className="update-prompt-progress-text">{progress}%</span>
+                        <span className="update-prompt-progress-text">{installing ? "Membuka installer. Jika Windows meminta izin administrator, izinkan untuk melanjutkan." : `${progress}%`}</span>
                     </div>
                 ) : (
                     <div className="update-prompt-actions">
@@ -43,8 +45,13 @@ export default function UpdatePrompt({ latestVersion, downloading, progress, man
                             </button>
                         )}
                         <button className="update-prompt-button-primary" onClick={onUpdateNow}>
-                            Update Sekarang
+                            {installerReady ? "Coba Jalankan Installer Lagi" : "Update Sekarang"}
                         </button>
+                        {installerReady && onDownloadAgain && (
+                            <button className="update-prompt-button-secondary" onClick={onDownloadAgain}>
+                                Unduh Ulang
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

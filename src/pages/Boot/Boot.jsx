@@ -11,6 +11,9 @@ export default function Boot({ onComplete }) {
     const [updateInfo, setUpdateInfo] = useState(null);
     const [downloading, setDownloading] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [installerPath, setInstallerPath] = useState(null);
+    const [installing, setInstalling] = useState(false);
+    const [updateError, setUpdateError] = useState("");
 
     const runSteps = useCallback(async (startIndex) => {
         try {
@@ -77,30 +80,31 @@ export default function Boot({ onComplete }) {
     };
 
     const handleUpdateNowDesktop = async () => {
+        if (downloading) return;
         setDownloading(true);
-        setProgress(0);
-
-        const stopListening = window.electron.onDownloadProgress((percent) => {
-            setProgress(percent);
-        });
-
+        setUpdateError("");
+        let stopListening = () => {};
         try {
-            const res = await window.electron.downloadUpdate(updateInfo.downloadUrl);
-            stopListening();
-
-            if (!res.success) {
-                setDownloading(false);
-                setUpdateInfo(null);
-                setError(res.message || "Gagal download update.");
-                return;
+            let filePath = installerPath;
+            if (!filePath) {
+                setProgress(0);
+                stopListening = window.electron.onDownloadProgress(setProgress);
+                const res = await window.electron.downloadUpdate(updateInfo.downloadUrl);
+                if (!res.success || !res.filePath) throw new Error(res.message || "Gagal download update.");
+                filePath = res.filePath;
+                setInstallerPath(filePath);
             }
-
-            await window.electron.jalankanInstaller(res.filePath);
+            setProgress(100);
+            setInstalling(true);
+            const result = await window.electron.jalankanInstaller(filePath);
+            if (!result?.success) throw new Error(result?.message || "Gagal membuka installer.");
+            // Keep the busy state until the native command closes MGO after launch succeeds.
         } catch (err) {
-            stopListening();
+            setUpdateError(err.message || String(err) || "Gagal memperbarui aplikasi.");
             setDownloading(false);
-            setUpdateInfo(null);
-            setError("Gagal download update.");
+            setInstalling(false);
+        } finally {
+            stopListening();
         }
     };
 
@@ -112,6 +116,10 @@ export default function Boot({ onComplete }) {
                 latestVersion={updateInfo.latestVersion}
                 downloading={downloading}
                 progress={progress}
+                installing={installing}
+                error={updateError}
+                installerReady={!!installerPath}
+                onDownloadAgain={() => { setInstallerPath(null); setProgress(0); setUpdateError(""); }}
                 mandatory={updateInfo.forceUpdate}
                 releaseNotes={updateInfo.releaseNotes}
                 onContinueOld={handleContinueOld}

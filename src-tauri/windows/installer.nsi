@@ -545,7 +545,9 @@ Function MgoMigrateUserInstall
     StrCpy $2 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
   ${EndIf}
   DetailPrint "Memeriksa/memigrasikan instalasi MGO per pengguna ($MgoMigrationMode)..."
-  nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -File $\"$PLUGINSDIR\migrate_user_install.ps1$\" -Mode $MgoMigrationMode -InstallDirectory $\"$INSTDIR$\"'
+  ; Allow the bundled helper for this process only; leave saved policies unchanged.
+  ; Organization Group Policy still takes precedence over this process setting.
+  nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $\"$PLUGINSDIR\migrate_user_install.ps1$\" -Mode $MgoMigrationMode -InstallDirectory $\"$INSTDIR$\"'
   Pop $0
   ${If} $0 != 0
     IfSilent mgo_migration_failed
