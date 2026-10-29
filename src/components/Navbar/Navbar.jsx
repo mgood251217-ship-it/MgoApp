@@ -350,7 +350,7 @@ export default function Navbar() {
                 open={helpModalOpen} 
                 onClose={() => setHelpModalOpen(false)} 
                 title="Help Center" 
-                size="md"
+                size="lg"
             >
                 <div style={{ padding: "0 16px 16px" }}>
                     {alertConfig.show && (
@@ -552,6 +552,13 @@ export default function Navbar() {
                                             {selectedTicket.detail}
                                         </div>
 
+                                        <div style={{ marginTop: "16px" }}>
+                                            <h4 style={{ margin: "0 0 8px", color: "var(--text)" }}>Jawaban Admin</h4>
+                                            <div style={{ padding: "12px", backgroundColor: "var(--bg-body)", border: "1px solid var(--border)", borderRadius: "var(--radius)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: "14px", color: selectedTicket.answer?.trim() ? "var(--text)" : "var(--text-muted)" }}>
+                                                {selectedTicket.answer?.trim() ? selectedTicket.answer : "Belum ada jawaban dari admin."}
+                                            </div>
+                                        </div>
+
                                         {selectedTicket.picture_link && (
                                             <div style={{ marginTop: "16px" }}>
                                                 <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", marginBottom: "8px" }}>Lampiran</div>
@@ -594,6 +601,11 @@ export default function Navbar() {
                                                         style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px", border: "1px solid var(--border)", cursor: "pointer" }}
                                                     />
                                                 )}
+                                            </span>
+                                        ) },
+                                        { key: "answer", title: "Jawaban", render: (row) => (
+                                            <span title={row.answer || ""} style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxWidth: "280px", fontSize: "13px", color: row.answer?.trim() ? "var(--text)" : "var(--text-muted)" }}>
+                                                {row.answer?.trim() ? row.answer : "Belum dijawab"}
                                             </span>
                                         ) },
                                         { key: "status", title: "Status", render: (row) => (
