@@ -1,9 +1,7 @@
 const config = {
     appName: "MGO Desktop",
     version: "2.0.7",
-    // serverUrl: "http://localhost:5000",
-    // serverUrl: "http://localhost/MgoAll/admin",
-    serverUrl: "https://mgood.my.id/admin",
+    serverUrl: import.meta.env.VITE_SERVER_URL.replace(/\/+$/, ""),
     timeout: 30000
 };
 

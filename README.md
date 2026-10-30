@@ -13,6 +13,15 @@
 ## 📖 Tentang Aplikasi
 **MGO Desktop** adalah sistem kasir (Point of Sale) profesional berbasis desktop yang dirancang khusus untuk memenuhi kebutuhan operasional kantor dan bisnis dengan mobilitas tinggi. Dibangun menggunakan ekosistem modern berperforma tinggi (**Tauri**, **React**, dan **Vite**), aplikasi ini menawarkan efisiensi luar biasa dengan ukuran file **kurang dari 10 MB**, konsumsi RAM yang sangat rendah, serta kestabilan dan keamanan server yang terjamin.
 
+## Konfigurasi Server
+
+Salin `.env.example` menjadi `.env.development` dan `.env.production`, lalu sesuaikan `VITE_SERVER_URL` mengikuti contoh di dalamnya. Kedua file tersebut tidak ikut Git; hanya `.env.example` yang disertakan.
+
+- `npm run dev` / `npm run dev:vite`: memakai `.env.development` (localhost).
+- `npm run build` / `npm run dist`: memakai `.env.production` (server produksi).
+
+Tidak perlu mengganti `src/services/config.js` setiap berpindah mode. Untuk URL development khusus komputer Anda, buat `.env.development.local` berisi `VITE_SERVER_URL=http://alamat-server/admin`. File `*.local` sudah diabaikan Git. Restart proses dev setelah mengubah env.
+
 ## ✨ Fitur Unggulan
 - 🛒 **Transaksi Full Fitur:** Sistem manajemen kasir super lengkap untuk menangani berbagai skenario transaksi.
 - ⚡ **Smart Caching System:** Menggunakan implementasi *cache* tingkat lanjut agar aplikasi tidak selalu *hit* ke database. Server dijamin aman, ringan, dan terhindar dari *overload*.
