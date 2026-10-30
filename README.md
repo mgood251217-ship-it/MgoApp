@@ -22,6 +22,8 @@ Salin `.env.example` menjadi `.env.development` dan `.env.production`, lalu sesu
 
 Tidak perlu mengganti `src/services/config.js` setiap berpindah mode. Untuk URL development khusus komputer Anda, buat `.env.development.local` berisi `VITE_SERVER_URL=http://alamat-server/admin`. File `*.local` sudah diabaikan Git. Restart proses dev setelah mengubah env.
 
+Pengaturan aplikasi juga terpisah di folder data aplikasi: `npm run dev` (debug) memakai `settings.development.json`, sedangkan installer `npm run dist` (release) tetap memakai `settings.json`. Pengaturan produksi lama tetap tersedia; development mulai dengan pengaturan default. Build dengan opsi `--debug` juga memakai pengaturan development.
+
 ## ✨ Fitur Unggulan
 - 🛒 **Transaksi Full Fitur:** Sistem manajemen kasir super lengkap untuk menangani berbagai skenario transaksi.
 - ⚡ **Smart Caching System:** Menggunakan implementasi *cache* tingkat lanjut agar aplikasi tidak selalu *hit* ke database. Server dijamin aman, ringan, dan terhindar dari *overload*.

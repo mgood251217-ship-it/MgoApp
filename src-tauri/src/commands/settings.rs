@@ -5,7 +5,13 @@ use tauri::{AppHandle, Manager};
 fn settings_path(app: &AppHandle) -> std::path::PathBuf {
     let dir = app.path().app_data_dir().expect("app data dir tidak tersedia");
     let _ = fs::create_dir_all(&dir);
-    dir.join("settings.json")
+    // Pertahankan file produksi agar pengaturan instalasi lama tetap terbaca.
+    let file_name = if cfg!(debug_assertions) {
+        "settings.development.json"
+    } else {
+        "settings.json"
+    };
+    dir.join(file_name)
 }
 
 fn read_settings(app: &AppHandle) -> Value {
