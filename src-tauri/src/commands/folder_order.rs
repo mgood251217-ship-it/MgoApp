@@ -263,6 +263,38 @@ mod production_format_tests {
     use super::*;
 
     #[test]
+    fn nota_files_remain_listed_without_design_dimensions() {
+        let root = std::env::temp_dir().join(format!("mgo-nota-scan-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        fs::create_dir_all(root.join("nested")).unwrap();
+        // Header PNG 100 x 200 yang dapat dibaca parser metadata.
+        let mut png = vec![0u8; 33];
+        png[..8].copy_from_slice(b"\x89PNG\r\n\x1a\n");
+        png[8..12].copy_from_slice(&13u32.to_be_bytes());
+        png[12..16].copy_from_slice(b"IHDR");
+        png[16..20].copy_from_slice(&100u32.to_be_bytes());
+        png[20..24].copy_from_slice(&200u32.to_be_bytes());
+        png[25] = 2;
+        for name in ["NOTA_123.png", "nested/nota_456.png", "desain.png"] {
+            fs::write(root.join(name), &png).unwrap();
+        }
+        let files = collect_order_files(&root).unwrap();
+        assert_eq!(files.len(), 3);
+        for file in &files {
+            assert_eq!(file.ukuran_byte, png.len() as u64);
+            if file.nama == "desain.png" {
+                assert_eq!(file.meta.width_px, Some(100));
+                assert!(file.meta.panjang_m.is_some());
+            } else {
+                assert!(file.meta.width_px.is_none());
+                assert!(file.meta.panjang_m.is_none());
+                assert!(file.meta.lebar_m.is_none());
+            }
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn scan_includes_nested_files_with_distinct_paths() {
         let temp = std::env::temp_dir();
         let root = temp.join(format!("mgo-nested-test-{}-{}", std::process::id(),
@@ -572,12 +604,19 @@ fn collect_order_files(root: &Path) -> std::io::Result<Vec<AnalisisItem>> {
             }
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
             if !meta.is_file() || !allowed_ext.contains(&ext.as_str()) { continue; }
+            let nama = entry.file_name().to_string_lossy().to_string();
+            // Nota tetap ditampilkan, tetapi tidak dibaca sebagai file desain.
+            let file_meta = if nama.to_ascii_uppercase().starts_with("NOTA_") {
+                crate::commands::file_meta::FileMeta::empty()
+            } else {
+                get_file_meta(&path)
+            };
             hasil.push(AnalisisItem {
-                nama: entry.file_name().to_string_lossy().to_string(),
+                nama,
                 path: path.to_string_lossy().to_string(),
                 relative_path: path.strip_prefix(root).unwrap_or(&path).to_string_lossy().to_string(),
                 ukuran_byte: meta.len(),
-                meta: get_file_meta(&path),
+                meta: file_meta,
             });
         }
     }

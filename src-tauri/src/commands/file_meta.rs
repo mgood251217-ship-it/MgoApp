@@ -21,7 +21,7 @@ pub struct FileMeta {
 }
 
 impl FileMeta {
-    fn empty() -> Self {
+    pub(super) fn empty() -> Self {
         FileMeta {
             color_mode: "unknown".into(),
             width_px: None,
