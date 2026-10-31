@@ -253,6 +253,7 @@ export default function OrderItemForm({
     const isNoSize = selectedProduct?.unit_type?.toUpperCase() === "PCS" || selectedProduct?.unit_type === "~";
 
     const isDTF = selectedCategoryName === "DTF";
+    const isDTFUV = selectedCategoryName === "DTF UV";
     const isAkrilik = selectedCategoryName === "AKRILIK";
     const isJersey = selectedCategoryName === "JERSEY";
     const isDtfKaosPcs = isDTF && selectedProductName.includes("KAOS") && selectedProduct?.unit_type?.toUpperCase() === "PCS";
@@ -268,10 +269,10 @@ export default function OrderItemForm({
     const showFinishing = !hideFinishing && finishings.length > 0;
 
     useEffect(() => {
-        if (isDTF && formItem.lebar !== "0.58") {
+        if ((isDTF || isDTFUV) && formItem.lebar !== "0.58") {
             setFormItem(prev => ({ ...prev, lebar: "0.58" }));
         }
-    }, [isDTF, formItem.lebar]);
+    }, [isDTF, isDTFUV, formItem.lebar]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -444,8 +445,8 @@ export default function OrderItemForm({
                                         step="any"
                                         placeholder={isAkrilik ? "Lebar (cm)" : "Lebar (m)"}
                                         value={formItem.lebar}
-                                        onChange={isDTF ? undefined : handleFormChange}
-                                        readOnly={isDTF}
+                                        onChange={isDTF || isDTFUV ? undefined : handleFormChange}
+                                        readOnly={isDTF || isDTFUV}
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") {
                                                 e.preventDefault();
