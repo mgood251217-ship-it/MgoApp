@@ -17,6 +17,7 @@ const PATH_FIELDS = [
     { key: "path_laser", label: "Path Laser" },
     { key: "path_akrilik", label: "Path Akrilik" },
     { key: "path_dtf", label: "Path DTF" },
+    { key: "path_dtf_uv", label: "Path DTF UV" },
 ];
 
 const LAYOUT_COLORS = [

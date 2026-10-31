@@ -113,12 +113,14 @@ const CATEGORY_PATH_MAP = {
     "PAKET INDOOR OUTDOOR": ["indoor", "outdoor"],
     OUTDOOR: ["outdoor"],
     DTF: ["dtf"],
+    "DTF UV": ["dtf_uv"],
     SUBLIM: ["sublim"],
 };
 
 const STANDARD_WIDTHS = {
     sublim: [1.2, 1.5, 1.8],
     dtf: [0.58],
+    dtf_uv: [0.58],
 };
 
 export const roundUpToStandardWidth = (value, pathKey) => {
