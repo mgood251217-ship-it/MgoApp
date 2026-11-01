@@ -15,6 +15,11 @@ const setStorage = (key, val) => {
     } catch (e) {}
 };
 
+// Cache lama memakai milidetik ketika penanda server belum tersedia.
+// Ambil ulang sekali saat server sudah memiliki penanda dalam detik.
+const isCacheOutdated = (cachedTime, serverTime) => cachedTime < serverTime
+    || (serverTime > 0 && serverTime < 1e12 && cachedTime > 1e12);
+
 const getCleanedDailyMap = (key) => {
     const map = getStorage(key, {});
     const today = new Date().toDateString();
@@ -83,7 +88,7 @@ export const getCachedStoreData = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.store_data_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "store" } });
                 const result = res.data?.data || [];
@@ -238,7 +243,7 @@ export const getCachedStoreNames = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.store_names_updated_at || dataset.storeNames_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "store_names" } });
                 const result = res.data?.data || [];
@@ -302,7 +307,7 @@ export const getCachedCategories = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.categories_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "categories" } });
                 const result = res.data?.data || [];
@@ -335,7 +340,7 @@ export const getCachedProductsByCategory = async (categoryId, onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.products_updated_at || dataset.categories_updated_at || 0;
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "products_by_category", category_id: categoryId } });
                 const result = res.data?.data || [];
@@ -401,9 +406,9 @@ export const getCachedFinishingsByCategory = async (categoryId, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = dataset.finishings_updated_at || dataset.categories_updated_at || 0;
+        const serverTime = Math.max(dataset.finishings_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_finishing_prices_updated_at || 0);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "finishing_by_category", category_id: categoryId } });
                 const result = res.data?.data || [];
@@ -427,6 +432,32 @@ export const getCachedFinishingsByCategory = async (categoryId, onUpdate) => {
     return (await fetchLatest()) || [];
 };
 
+export const getCachedProductFinishingPrices = async (categoryId, onUpdate) => {
+    if (!categoryId) return [];
+    const cacheKey = "productFinishingPricesByCategory";
+    const stored = getStorage(cacheKey, {})[categoryId];
+    const cached = stored?.version === 2 ? stored : null;
+    const fetchLatest = async () => {
+        const dataset = await getServerDataset();
+        const serverTime = dataset.product_finishing_prices_updated_at || 0;
+        if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
+        const res = await api.get("", { params: { action: "product_finishing_prices", category_id: categoryId } });
+        if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error("Gagal memuat harga paket.");
+        const rows = res.data.data;
+        const map = getStorage(cacheKey, {});
+        map[categoryId] = { data: rows, updatedAt: serverTime, version: 2 };
+        setStorage(cacheKey, map);
+        onUpdate?.(rows);
+        return rows;
+    };
+    if (cached) {
+        fetchLatest().catch(() => {});
+        return cached.data;
+    }
+    // Server lama belum memiliki endpoint ini; form biasa tetap dapat digunakan.
+    return fetchLatest().catch(() => []);
+};
+
 export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) => {
     const cacheKey = `${page}_${limit}_${search}`;
     const paginatedMap = getStorage("paginatedProducts", {});
@@ -436,7 +467,7 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) 
         const dataset = await getServerDataset();
         const serverTime = dataset.products_updated_at || 0;
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "pagination_products", page, limit, search } });
                 const result = {
@@ -471,7 +502,7 @@ export const getCachedFinishings = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.finishings_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "finishings" } });
                 const result = res.data?.data || [];
@@ -1071,6 +1102,7 @@ export const clearFinishingCache = () => {
     localStorage.removeItem("mgo_cache_finishings");
     localStorage.removeItem("mgo_cache_finishings_time");
     setStorage("finishingsByCategory", {});
+    setStorage("productFinishingPricesByCategory", {});
 };
 
 export const clearCategoryCache = () => {
@@ -1095,6 +1127,7 @@ export const clearCache = () => {
     localStorage.removeItem("mgo_cache_categories_time");
     setStorage("productsByCategory", {});
     setStorage("finishingsByCategory", {});
+    setStorage("productFinishingPricesByCategory", {});
     setStorage("paginatedProducts", {});
     localStorage.removeItem("mgo_cache_finishings");
     localStorage.removeItem("mgo_cache_finishings_time");

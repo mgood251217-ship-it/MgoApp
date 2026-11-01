@@ -6,7 +6,8 @@ import Icon from "../Icon/Icon";
 import { 
     getCachedCategories, 
     getCachedProductsByCategory, 
-    getCachedFinishingsByCategory 
+    getCachedFinishingsByCategory,
+    getCachedProductFinishingPrices
 } from "../../services/apiCache";
 
 const EMPTY_ITEM = {
@@ -50,7 +51,8 @@ export default function OrderItemForm({
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [paketSizesMap, setPaketSizesMap] = useState({});
-    const [finishings, setFinishings] = useState([]);
+    const [allFinishings, setFinishings] = useState([]);
+    const [packageRules, setPackageRules] = useState([]);
     const finishingRefs = useRef([]);
     const isFirstRenderRef = useRef(true);
 
@@ -68,7 +70,7 @@ export default function OrderItemForm({
 
     const loadCategories = useCallback(async () => {
         try {
-            const data = await getCachedCategories();
+            const data = await getCachedCategories(setCategories);
             setCategories(data);
         } catch (err) {}
     }, []);
@@ -80,7 +82,46 @@ export default function OrderItemForm({
     const selectedCategory = categories.find(c => String(c.category_id) === String(formItem.category_id));
     const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
 
+    const categoryPackageRules = useMemo(() => packageRules.filter(rule => String(rule.category_id) === String(formItem.category_id)), [packageRules, formItem.category_id]);
+    const packageFinishingIds = useMemo(() => new Set([
+        ...categoryPackageRules.map(rule => String(rule.finishing_id)),
+        ...allFinishings.filter(f => ["INDOOR", "OUTDOOR"].includes(selectedCategoryName) && ["XBANNER", "ROLLUP"].includes(f.name?.trim().toUpperCase()) && Number(f.price) === 0).map(f => String(f.finishing_id)),
+    ]), [categoryPackageRules, allFinishings, selectedCategoryName]);
+    const productPackageRules = useMemo(() => categoryPackageRules.filter(rule => Number(rule.valid) === 1 && String(rule.product_id) === String(formItem.product_id)), [categoryPackageRules, formItem.product_id]);
+    const finishings = allFinishings.filter(f => {
+        return !packageFinishingIds.has(String(f.finishing_id)) || formItem.finishings.includes(String(f.finishing_id))
+            || productPackageRules.some(rule => String(rule.finishing_id) === String(f.finishing_id));
+    });
+    const packageChoices = useMemo(() => productPackageRules.filter(rule => formItem.finishings.includes(String(rule.finishing_id))), [productPackageRules, formItem.finishings]);
+    const hasPackageFinishing = formItem.finishings.some(id => packageFinishingIds.has(String(id)));
+    const selectedPackage = packageChoices.find(rule => (Number(rule.panjang) === 0 && Number(rule.lebar) === 0)
+        || (Number(rule.panjang) === Number(formItem.panjang) && Number(rule.lebar) === Number(formItem.lebar)));
+    const packageNeedsSize = packageChoices.some(rule => Number(rule.panjang) > 0 && Number(rule.lebar) > 0);
+
     useEffect(() => {
+        let cancelled = false;
+        setPackageRules([]);
+        if (!["INDOOR", "OUTDOOR", "LASER", "LASER A3"].includes(selectedCategoryName)) return;
+        const apply = rows => { if (!cancelled) setPackageRules(rows); };
+        getCachedProductFinishingPrices(formItem.category_id, apply).then(apply);
+        return () => { cancelled = true; };
+    }, [formItem.category_id, selectedCategoryName]);
+
+    useEffect(() => {
+        if (!packageChoices.length) return;
+        setFormItem(prev => {
+            const rule = packageChoices.find(row => Number(row.panjang) === Number(prev.panjang) && Number(row.lebar) === Number(prev.lebar))
+                || (packageChoices.length === 1 ? packageChoices[0] : null);
+            const sized = rule && Number(rule.panjang) > 0 && Number(rule.lebar) > 0;
+            const panjang = sized ? String(Number(rule.panjang)) : "";
+            const lebar = sized ? String(Number(rule.lebar)) : "";
+            const size = rule ? (sized ? `${panjang}x${lebar}` : "-") : "";
+            return prev.panjang === panjang && prev.lebar === lebar && prev.size === size ? prev : { ...prev, panjang, lebar, size };
+        });
+    }, [packageChoices]);
+
+    useEffect(() => {
+        let cancelled = false;
         const fetchProductsAndFinishings = async () => {
             if (!formItem.category_id) {
                 setProducts([]);
@@ -89,40 +130,47 @@ export default function OrderItemForm({
                 return;
             }
             try {
-                const fetchedProducts = await getCachedProductsByCategory(formItem.category_id);
+                const applyProducts = (fetchedProducts) => {
+                    if (cancelled) return;
                 
-                let mappedProducts = [];
-                let sizesMap = {};
+                    let mappedProducts = [];
+                    let sizesMap = {};
 
-                if (selectedCategoryName === "PAKET INDOOR OUTDOOR") {
-                    const seen = new Set();
-                    fetchedProducts.forEach(p => {
-                        let nameOnly = p.name.replace(/\s*\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?/gi, '').trim();
-                        const ukuranMatch = p.name.match(/(\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?)/i);
-                        const ukuran = ukuranMatch ? ukuranMatch[0].replace(/×/gi, 'x') : null;
+                    if (selectedCategoryName === "PAKET INDOOR OUTDOOR") {
+                        const seen = new Set();
+                        fetchedProducts.forEach(p => {
+                            let nameOnly = p.name.replace(/\s*\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?/gi, '').trim();
+                            const ukuranMatch = p.name.match(/(\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?)/i);
+                            const ukuran = ukuranMatch ? ukuranMatch[0].replace(/×/gi, 'x') : null;
 
-                        if (!sizesMap[nameOnly]) sizesMap[nameOnly] = [];
-                        if (ukuran && !sizesMap[nameOnly].includes(ukuran)) {
-                            sizesMap[nameOnly].push(ukuran);
-                        }
+                            if (!sizesMap[nameOnly]) sizesMap[nameOnly] = [];
+                            if (ukuran && !sizesMap[nameOnly].includes(ukuran)) {
+                                sizesMap[nameOnly].push(ukuran);
+                            }
 
-                        if (!seen.has(nameOnly)) {
-                            seen.add(nameOnly);
-                            mappedProducts.push({ ...p, display_name: nameOnly });
-                        }
-                    });
-                } else {
-                    mappedProducts = fetchedProducts.map(p => ({ ...p, display_name: p.name }));
-                }
+                            if (!seen.has(nameOnly)) {
+                                seen.add(nameOnly);
+                                mappedProducts.push({ ...p, display_name: nameOnly });
+                            }
+                        });
+                    } else {
+                        mappedProducts = fetchedProducts.map(p => ({ ...p, display_name: p.name }));
+                    }
 
-                setProducts(mappedProducts);
-                setPaketSizesMap(sizesMap);
+                    setProducts(mappedProducts);
+                    setPaketSizesMap(sizesMap);
+                };
+                const fetchedProducts = await getCachedProductsByCategory(formItem.category_id, applyProducts);
+                applyProducts(fetchedProducts);
+                if (cancelled) return;
 
-                const fetchedFinishings = await getCachedFinishingsByCategory(formItem.category_id);
-                setFinishings(fetchedFinishings);
+                const applyFinishings = rows => { if (!cancelled) setFinishings(rows); };
+                const fetchedFinishings = await getCachedFinishingsByCategory(formItem.category_id, applyFinishings);
+                applyFinishings(fetchedFinishings);
             } catch (err) {}
         };
         fetchProductsAndFinishings();
+        return () => { cancelled = true; };
     }, [formItem.category_id, selectedCategoryName]);
 
     const handleFormChange = (e) => {
@@ -131,7 +179,8 @@ export default function OrderItemForm({
     };
 
     const handleCategoryChange = (e) => {
-        handleFormChange(e);
+        const category_id = e.target.value;
+        setFormItem(prev => ({ ...prev, category_id, product_id: "", finishings: [], paketSize: "", size: "" }));
         focusField("product_id");
     };
 
@@ -163,7 +212,8 @@ export default function OrderItemForm({
     };
 
     const handleProductChange = (e) => {
-        handleFormChange(e);
+        const product_id = e.target.value;
+        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.has(String(id))), size: "", paketSize: "" }));
         focusField(resolveNextFieldAfterProduct(e.target.value));
     };
 
@@ -200,9 +250,9 @@ export default function OrderItemForm({
     const handleFinishingChange = (e) => {
         const { value, checked } = e.target;
         setFormItem(prev => {
-            const newFinishings = checked
-                ? [...prev.finishings, value]
-                : prev.finishings.filter(f => f !== value);
+            const newFinishings = !checked ? prev.finishings.filter(f => f !== value)
+                : packageFinishingIds.has(value) ? [value]
+                : [...prev.finishings.filter(id => !packageFinishingIds.has(String(id))), value];
             return { ...prev, finishings: newFinishings };
         });
     };
@@ -211,13 +261,7 @@ export default function OrderItemForm({
         const f = finishings[idx];
         if (!f) return;
         const fid = String(f.finishing_id);
-        setFormItem(prev => {
-            const has = prev.finishings.includes(fid);
-            const newFinishings = has
-                ? prev.finishings.filter(x => x !== fid)
-                : [...prev.finishings, fid];
-            return { ...prev, finishings: newFinishings };
-        });
+        handleFinishingChange({ target: { value: fid, checked: !formItem.finishings.includes(fid) } });
     };
 
     const handleFinishingKeyDown = (e) => {
@@ -276,6 +320,7 @@ export default function OrderItemForm({
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (hasPackageFinishing && !selectedPackage) return;
         if (onSubmit) {
             onSubmit({ ...formItem, selectedProductName }); 
         }
@@ -369,6 +414,32 @@ export default function OrderItemForm({
                     placeholder="Pilih Ukuran"
                 />
             )}
+
+            {hasPackageFinishing && (
+                <div>
+                    {packageNeedsSize && (
+                    <Select
+                        labelPosition="left"
+                        labelWidth={110}
+                        name="packagePrice"
+                        label="Ukuran Paket"
+                        value={selectedPackage ? String(selectedPackage.id) : ""}
+                        onChange={(e) => {
+                            const rule = packageChoices.find(row => String(row.id) === e.target.value);
+                            if (!rule) return;
+                            const sized = Number(rule.panjang) > 0 && Number(rule.lebar) > 0;
+                            const panjang = sized ? String(Number(rule.panjang)) : "";
+                            const lebar = sized ? String(Number(rule.lebar)) : "";
+                            setFormItem(prev => ({ ...prev, panjang, lebar, size: sized ? `${panjang}x${lebar}` : "-" }));
+                        }}
+                        options={packageChoices.map(rule => ({ value: String(rule.id), label: `${Number(rule.panjang)} × ${Number(rule.lebar)} m — Rp${Number(rule.price).toLocaleString("id-ID")}/set` }))}
+                        placeholder="Pilih ukuran paket"
+                        required
+                    />
+                    )}
+                    <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>{packageChoices.length ? `Harga paket sudah termasuk bahan dan finishing ${packageChoices[0].finishing_name}.${!packageNeedsSize ? ` Tanpa ukuran — Rp${Number(packageChoices[0].price).toLocaleString("id-ID")}/paket.` : ""}` : "Paket belum tersedia untuk bahan ini. Lepas finishing paket atau pilih bahan lain."}</p>
+                </div>
+            )}
             
             <div style={{ marginBottom: "16px" }}>
                 {isWaktu ? (
@@ -419,7 +490,8 @@ export default function OrderItemForm({
                                     step="any"
                                     placeholder={isAkrilik ? "Panjang (cm)" : "Panjang (m)"}
                                     value={formItem.panjang}
-                                    onChange={handleFormChange}
+                                    onChange={hasPackageFinishing ? undefined : handleFormChange}
+                                    readOnly={hasPackageFinishing}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
                                             e.preventDefault();
@@ -445,8 +517,8 @@ export default function OrderItemForm({
                                         step="any"
                                         placeholder={isAkrilik ? "Lebar (cm)" : "Lebar (m)"}
                                         value={formItem.lebar}
-                                        onChange={isDTF || isDTFUV ? undefined : handleFormChange}
-                                        readOnly={isDTF || isDTFUV}
+                                        onChange={isDTF || isDTFUV || hasPackageFinishing ? undefined : handleFormChange}
+                                        readOnly={isDTF || isDTFUV || hasPackageFinishing}
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") {
                                                 e.preventDefault();
@@ -534,7 +606,7 @@ export default function OrderItemForm({
             {children}
 
             <div style={{ display: "flex", gap: "8px" }}>
-                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
+                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting || (hasPackageFinishing && !selectedPackage)} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
                     {isSubmitting ? "Loading..." : submitText}
                 </Button>
                 {showCancel && onCancel && (
