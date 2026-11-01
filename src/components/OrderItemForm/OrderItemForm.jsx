@@ -16,6 +16,8 @@ const EMPTY_ITEM = {
     paketSize: "", size: ""
 };
 
+const normalizeId = value => value?.toString() ?? value;
+
 const focusField = (fieldName, delay = 100) => {
     if (!fieldName) return;
     setTimeout(() => {
@@ -79,24 +81,24 @@ export default function OrderItemForm({
         loadCategories();
     }, [loadCategories]);
 
-    const selectedCategory = categories.find(c => String(c.category_id) === String(formItem.category_id));
+    const selectedCategory = categories.find(c => normalizeId(c.category_id) === normalizeId(formItem.category_id));
     const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
 
-    const categoryPackageRules = useMemo(() => packageRules.filter(rule => String(rule.category_id) === String(formItem.category_id)), [packageRules, formItem.category_id]);
-    const packageFinishingIds = useMemo(() => new Set([
-        ...categoryPackageRules.map(rule => String(rule.finishing_id)),
-        ...allFinishings.filter(f => ["INDOOR", "OUTDOOR"].includes(selectedCategoryName) && ["XBANNER", "ROLLUP"].includes(f.name?.trim().toUpperCase()) && Number(f.price) === 0).map(f => String(f.finishing_id)),
-    ]), [categoryPackageRules, allFinishings, selectedCategoryName]);
-    const productPackageRules = useMemo(() => categoryPackageRules.filter(rule => Number(rule.valid) === 1 && String(rule.product_id) === String(formItem.product_id)), [categoryPackageRules, formItem.product_id]);
+    const categoryPackageRules = useMemo(() => packageRules.filter(rule => normalizeId(rule.category_id) === normalizeId(formItem.category_id)), [packageRules, formItem.category_id]);
+    const packageFinishingIds = useMemo(() => [
+        ...categoryPackageRules.map(rule => normalizeId(rule.finishing_id)),
+        ...allFinishings.filter(f => ["INDOOR", "OUTDOOR"].includes(selectedCategoryName) && ["XBANNER", "ROLLUP"].includes(f.name?.trim().toUpperCase()) && parseFloat(f.price || 0) === 0).map(f => normalizeId(f.finishing_id)),
+    ], [categoryPackageRules, allFinishings, selectedCategoryName]);
+    const productPackageRules = useMemo(() => categoryPackageRules.filter(rule => parseFloat(rule.valid || 0) === 1 && normalizeId(rule.product_id) === normalizeId(formItem.product_id)), [categoryPackageRules, formItem.product_id]);
     const finishings = allFinishings.filter(f => {
-        return !packageFinishingIds.has(String(f.finishing_id)) || formItem.finishings.includes(String(f.finishing_id))
-            || productPackageRules.some(rule => String(rule.finishing_id) === String(f.finishing_id));
+        return !packageFinishingIds.includes(normalizeId(f.finishing_id)) || formItem.finishings.includes(normalizeId(f.finishing_id))
+            || productPackageRules.some(rule => normalizeId(rule.finishing_id) === normalizeId(f.finishing_id));
     });
-    const packageChoices = useMemo(() => productPackageRules.filter(rule => formItem.finishings.includes(String(rule.finishing_id))), [productPackageRules, formItem.finishings]);
-    const hasPackageFinishing = formItem.finishings.some(id => packageFinishingIds.has(String(id)));
-    const selectedPackage = packageChoices.find(rule => (Number(rule.panjang) === 0 && Number(rule.lebar) === 0)
-        || (Number(rule.panjang) === Number(formItem.panjang) && Number(rule.lebar) === Number(formItem.lebar)));
-    const packageNeedsSize = packageChoices.some(rule => Number(rule.panjang) > 0 && Number(rule.lebar) > 0);
+    const packageChoices = useMemo(() => productPackageRules.filter(rule => formItem.finishings.includes(normalizeId(rule.finishing_id))), [productPackageRules, formItem.finishings]);
+    const hasPackageFinishing = formItem.finishings.some(id => packageFinishingIds.includes(normalizeId(id)));
+    const selectedPackage = packageChoices.find(rule => (parseFloat(rule.panjang || 0) === 0 && parseFloat(rule.lebar || 0) === 0)
+        || (parseFloat(rule.panjang || 0) === parseFloat(formItem.panjang || 0) && parseFloat(rule.lebar || 0) === parseFloat(formItem.lebar || 0)));
+    const packageNeedsSize = packageChoices.some(rule => parseFloat(rule.panjang || 0) > 0 && parseFloat(rule.lebar || 0) > 0);
 
     useEffect(() => {
         let cancelled = false;
@@ -110,11 +112,11 @@ export default function OrderItemForm({
     useEffect(() => {
         if (!packageChoices.length) return;
         setFormItem(prev => {
-            const rule = packageChoices.find(row => Number(row.panjang) === Number(prev.panjang) && Number(row.lebar) === Number(prev.lebar))
+            const rule = packageChoices.find(row => parseFloat(row.panjang || 0) === parseFloat(prev.panjang || 0) && parseFloat(row.lebar || 0) === parseFloat(prev.lebar || 0))
                 || (packageChoices.length === 1 ? packageChoices[0] : null);
-            const sized = rule && Number(rule.panjang) > 0 && Number(rule.lebar) > 0;
-            const panjang = sized ? String(Number(rule.panjang)) : "";
-            const lebar = sized ? String(Number(rule.lebar)) : "";
+            const sized = rule && parseFloat(rule.panjang || 0) > 0 && parseFloat(rule.lebar || 0) > 0;
+            const panjang = sized ? parseFloat(rule.panjang).toString() : "";
+            const lebar = sized ? parseFloat(rule.lebar).toString() : "";
             const size = rule ? (sized ? `${panjang}x${lebar}` : "-") : "";
             return prev.panjang === panjang && prev.lebar === lebar && prev.size === size ? prev : { ...prev, panjang, lebar, size };
         });
@@ -137,7 +139,7 @@ export default function OrderItemForm({
                     let sizesMap = {};
 
                     if (selectedCategoryName === "PAKET INDOOR OUTDOOR") {
-                        const seen = new Set();
+                        const seen = [];
                         fetchedProducts.forEach(p => {
                             let nameOnly = p.name.replace(/\s*\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?/gi, '').trim();
                             const ukuranMatch = p.name.match(/(\d+(\.\d+)?\s*[x×X]\s*\d+(\.\d+)?)/i);
@@ -148,8 +150,8 @@ export default function OrderItemForm({
                                 sizesMap[nameOnly].push(ukuran);
                             }
 
-                            if (!seen.has(nameOnly)) {
-                                seen.add(nameOnly);
+                            if (!seen.includes(nameOnly)) {
+                                seen.push(nameOnly);
                                 mappedProducts.push({ ...p, display_name: nameOnly });
                             }
                         });
@@ -185,7 +187,7 @@ export default function OrderItemForm({
     };
 
     const resolveNextFieldAfterProduct = (pId) => {
-        const prod = products.find(p => String(p.product_id) === String(pId));
+        const prod = products.find(p => normalizeId(p.product_id) === normalizeId(pId));
         const pName = (prod?.display_name || prod?.name || "").toUpperCase();
         const pUnit = prod?.unit_type?.toUpperCase();
         const noSizeCheck = pUnit === "PCS" || pUnit === "~";
@@ -213,7 +215,7 @@ export default function OrderItemForm({
 
     const handleProductChange = (e) => {
         const product_id = e.target.value;
-        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.has(String(id))), size: "", paketSize: "" }));
+        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), size: "", paketSize: "" }));
         focusField(resolveNextFieldAfterProduct(e.target.value));
     };
 
@@ -251,8 +253,8 @@ export default function OrderItemForm({
         const { value, checked } = e.target;
         setFormItem(prev => {
             const newFinishings = !checked ? prev.finishings.filter(f => f !== value)
-                : packageFinishingIds.has(value) ? [value]
-                : [...prev.finishings.filter(id => !packageFinishingIds.has(String(id))), value];
+            : packageFinishingIds.includes(value) ? [value]
+            : [...prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), value];
             return { ...prev, finishings: newFinishings };
         });
     };
@@ -260,7 +262,7 @@ export default function OrderItemForm({
     const toggleFinishingByIndex = (idx) => {
         const f = finishings[idx];
         if (!f) return;
-        const fid = String(f.finishing_id);
+        const fid = normalizeId(f.finishing_id);
         handleFinishingChange({ target: { value: fid, checked: !formItem.finishings.includes(fid) } });
     };
 
@@ -268,7 +270,7 @@ export default function OrderItemForm({
         const key = e.key;
 
         if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[0-9]$/.test(key)) {
-            const idx = key === "0" ? 9 : Number(key) - 1;
+            const idx = key === "0" ? 9 : parseFloat(key) - 1;
             if (idx < finishings.length) {
                 e.preventDefault();
                 toggleFinishingByIndex(idx);
@@ -291,7 +293,7 @@ export default function OrderItemForm({
         }
     };
 
-    const selectedProduct = products.find(p => String(p.product_id) === String(formItem.product_id));
+    const selectedProduct = products.find(p => normalizeId(p.product_id) === normalizeId(formItem.product_id));
     const selectedProductName = selectedProduct?.display_name?.toUpperCase() || selectedProduct?.name?.toUpperCase() || "";
     
     const isNoSize = selectedProduct?.unit_type?.toUpperCase() === "PCS" || selectedProduct?.unit_type === "~";
@@ -423,21 +425,21 @@ export default function OrderItemForm({
                         labelWidth={110}
                         name="packagePrice"
                         label="Ukuran Paket"
-                        value={selectedPackage ? String(selectedPackage.id) : ""}
+                        value={selectedPackage ? normalizeId(selectedPackage.id) : ""}
                         onChange={(e) => {
-                            const rule = packageChoices.find(row => String(row.id) === e.target.value);
+                            const rule = packageChoices.find(row => normalizeId(row.id) === e.target.value);
                             if (!rule) return;
-                            const sized = Number(rule.panjang) > 0 && Number(rule.lebar) > 0;
-                            const panjang = sized ? String(Number(rule.panjang)) : "";
-                            const lebar = sized ? String(Number(rule.lebar)) : "";
+                            const sized = parseFloat(rule.panjang || 0) > 0 && parseFloat(rule.lebar || 0) > 0;
+                            const panjang = sized ? parseFloat(rule.panjang).toString() : "";
+                            const lebar = sized ? parseFloat(rule.lebar).toString() : "";
                             setFormItem(prev => ({ ...prev, panjang, lebar, size: sized ? `${panjang}x${lebar}` : "-" }));
                         }}
-                        options={packageChoices.map(rule => ({ value: String(rule.id), label: `${Number(rule.panjang)} × ${Number(rule.lebar)} m — Rp${Number(rule.price).toLocaleString("id-ID")}/set` }))}
+                        options={packageChoices.map(rule => ({ value: normalizeId(rule.id), label: `${parseFloat(rule.panjang || 0)} × ${parseFloat(rule.lebar || 0)} m — Rp${parseFloat(rule.price || 0).toLocaleString("id-ID")}/set` }))}
                         placeholder="Pilih ukuran paket"
                         required
                     />
                     )}
-                    <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>{packageChoices.length ? `Harga paket sudah termasuk bahan dan finishing ${packageChoices[0].finishing_name}.${!packageNeedsSize ? ` Tanpa ukuran — Rp${Number(packageChoices[0].price).toLocaleString("id-ID")}/paket.` : ""}` : "Paket belum tersedia untuk bahan ini. Lepas finishing paket atau pilih bahan lain."}</p>
+                    <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>{packageChoices.length ? `Harga paket sudah termasuk bahan dan finishing ${packageChoices[0].finishing_name}.${!packageNeedsSize ? ` Tanpa ukuran — Rp${parseFloat(packageChoices[0].price || 0).toLocaleString("id-ID")}/paket.` : ""}` : "Paket belum tersedia untuk bahan ini. Lepas finishing paket atau pilih bahan lain."}</p>
                 </div>
             )}
             
@@ -565,7 +567,7 @@ export default function OrderItemForm({
                                     type="checkbox"
                                     ref={(el) => (finishingRefs.current[idx] = el)}
                                     value={f.finishing_id}
-                                    checked={formItem.finishings.includes(String(f.finishing_id))}
+                                    checked={formItem.finishings.includes(normalizeId(f.finishing_id))}
                                     onChange={handleFinishingChange}
                                 />
                                 {idx < 10 && (
