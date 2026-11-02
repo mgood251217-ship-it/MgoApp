@@ -458,6 +458,29 @@ export const getCachedProductFinishingPrices = async (categoryId, onUpdate) => {
     return fetchLatest().catch(() => []);
 };
 
+export const getCachedProductLaserConversions = async (categoryId, onUpdate) => {
+    if (!categoryId) return [];
+    const key = "productLaserConversionsByCategory";
+    const cached = getStorage(key, {})[categoryId];
+    const fetchLatest = async () => {
+        const dataset = await getServerDataset();
+        const serverTime = Math.max(dataset.product_laser_conversion_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0);
+        if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
+        const res = await api.get("", { params: { action: "product_laser_conversions", category_id: categoryId } });
+        if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error("Gagal memuat varian print laser.");
+        const map = getStorage(key, {});
+        map[categoryId] = { data: res.data.data, updatedAt: serverTime };
+        setStorage(key, map);
+        onUpdate?.(res.data.data);
+        return res.data.data;
+    };
+    if (cached) {
+        fetchLatest().catch(() => {});
+        return cached.data;
+    }
+    return fetchLatest().catch(() => []);
+};
+
 export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) => {
     const cacheKey = `${page}_${limit}_${search}`;
     const paginatedMap = getStorage("paginatedProducts", {});

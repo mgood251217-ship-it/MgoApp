@@ -7,7 +7,8 @@ import {
     getCachedCategories, 
     getCachedProductsByCategory, 
     getCachedFinishingsByCategory,
-    getCachedProductFinishingPrices
+    getCachedProductFinishingPrices,
+    getCachedProductLaserConversions
 } from "../../services/apiCache";
 
 const EMPTY_ITEM = {
@@ -17,6 +18,8 @@ const EMPTY_ITEM = {
 };
 
 const normalizeId = value => value?.toString() ?? value;
+const finishingKey = value => [...new Set((Array.isArray(value) ? value : String(value || '').split(',')).filter(id => Number(id) > 0).map(Number))].sort((a, b) => a - b).join(',');
+const sizeKey = value => String(value || '').trim() === '-' ? '' : String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
 
 const focusField = (fieldName, delay = 100) => {
     if (!fieldName) return;
@@ -55,6 +58,7 @@ export default function OrderItemForm({
     const [paketSizesMap, setPaketSizesMap] = useState({});
     const [allFinishings, setFinishings] = useState([]);
     const [packageRules, setPackageRules] = useState([]);
+    const [laserConversions, setLaserConversions] = useState([]);
     const finishingRefs = useRef([]);
     const isFirstRenderRef = useRef(true);
 
@@ -83,6 +87,31 @@ export default function OrderItemForm({
 
     const selectedCategory = categories.find(c => normalizeId(c.category_id) === normalizeId(formItem.category_id));
     const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
+    const isAnekaCetak = selectedCategoryName === "ANEKA CETAK";
+    const hasLaserRules = isAnekaCetak && laserConversions.some(rule => normalizeId(rule.product_id) === normalizeId(formItem.product_id));
+    const productLaserRules = useMemo(() => laserConversions.filter(rule => Number(rule.valid) === 1 && normalizeId(rule.product_id) === normalizeId(formItem.product_id)), [laserConversions, formItem.product_id]);
+    const laserSizeOptions = useMemo(() => [...new Map(productLaserRules.map(rule => [sizeKey(rule.size), {
+        value: rule.size || '-', label: rule.size || 'Tanpa ukuran'
+    }])).values()], [productLaserRules]);
+    const selectedLaserSize = laserSizeOptions.find(option => sizeKey(option.value) === sizeKey(formItem.size))?.value || '';
+    const selectedLaserVariant = productLaserRules.find(rule => sizeKey(rule.size) === sizeKey(formItem.size) && finishingKey(rule.finishing_ids) === finishingKey(formItem.finishings))
+        || productLaserRules.find(rule => rule.legacy_fallback && rule.price == null && !rule.size && !rule.finishing_ids);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLaserConversions([]);
+        if (!isAnekaCetak) return;
+        const apply = rows => { if (!cancelled) setLaserConversions(rows); };
+        getCachedProductLaserConversions(formItem.category_id, apply).then(apply);
+        return () => { cancelled = true; };
+    }, [formItem.category_id, isAnekaCetak]);
+
+    useEffect(() => {
+        if (laserSizeOptions.length !== 1 || !isAnekaCetak) return;
+        setFormItem(prev => prev.size ? prev : {
+            ...prev, size: laserSizeOptions[0].value, panjang: '', lebar: ''
+        });
+    }, [laserSizeOptions, isAnekaCetak]);
 
     const categoryPackageRules = useMemo(() => packageRules.filter(rule => normalizeId(rule.category_id) === normalizeId(formItem.category_id)), [packageRules, formItem.category_id]);
     const packageFinishingIds = useMemo(() => [
@@ -191,6 +220,7 @@ export default function OrderItemForm({
         const pName = (prod?.display_name || prod?.name || "").toUpperCase();
         const pUnit = prod?.unit_type?.toUpperCase();
         const noSizeCheck = pUnit === "PCS" || pUnit === "~";
+        if (isAnekaCetak && laserConversions.some(rule => normalizeId(rule.product_id) === normalizeId(pId))) return "laserVariant";
 
         if (selectedCategoryName === "PAKET INDOOR OUTDOOR" && paketSizesMap[pName]?.length > 0) {
             return "paketSize";
@@ -322,7 +352,7 @@ export default function OrderItemForm({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (hasPackageFinishing && !selectedPackage) return;
+        if ((hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)) return;
         if (onSubmit) {
             onSubmit({ ...formItem, selectedProductName }); 
         }
@@ -403,6 +433,19 @@ export default function OrderItemForm({
                 placeholder="Pilih Produk"
                 required
             />
+
+            {isAnekaCetak && hasLaserRules && (
+                <div>
+                    <Select labelPosition="left" labelWidth={110} name="laserVariant" label="Ukuran"
+                        value={selectedLaserSize}
+                        options={laserSizeOptions}
+                        placeholder="Pilih ukuran"
+                        onChange={e => {
+                            setFormItem(prev => ({ ...prev, size: e.target.value, panjang: '', lebar: '', kiloan: '', waktu: '' }));
+                        }}
+                    />
+                </div>
+            )}
 
             {isPaketIndoorOutdoor && paketSizesMap[selectedProductName]?.length > 0 && (
                 <Select
@@ -608,7 +651,7 @@ export default function OrderItemForm({
             {children}
 
             <div style={{ display: "flex", gap: "8px" }}>
-                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting || (hasPackageFinishing && !selectedPackage)} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
+                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
                     {isSubmitting ? "Loading..." : submitText}
                 </Button>
                 {showCancel && onCancel && (
