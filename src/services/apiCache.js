@@ -634,7 +634,7 @@ export const getCachedOrderDetail = async (orderId, onUpdate) => {
 
         const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || !Array.isArray(cachedItem.data?.discounts) || cachedItem.updatedAt < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "order_detail", order_id: orderId } });
                 const result = res.data?.data || null;

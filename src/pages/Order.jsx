@@ -29,6 +29,7 @@ export default function Order() {
     const [orderInfo, setOrderInfo] = useState({
         total: 0,
         diskon_per_produk: {},
+        discounts: null,
         note: ""
     });
 
@@ -37,6 +38,7 @@ export default function Order() {
     const [noteInput, setNoteInput] = useState("");
     const [previewPrice, setPreviewPrice] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deletingDiscountProduct, setDeletingDiscountProduct] = useState(null);
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
 
     const [activeFormItem, setActiveFormItem] = useState({});
@@ -102,6 +104,7 @@ export default function Order() {
         setOrderInfo({
             total: data.total || 0,
             diskon_per_produk: data.diskon_per_produk || {},
+            discounts: Array.isArray(data.discounts) ? data.discounts : null,
             note: data.note || ""
         });
         setNoteInput(data.note || "");
@@ -119,6 +122,27 @@ export default function Order() {
             applyOrderData(res, { autoFocus: true });
         } catch (err) {}
     }, [order_id]);
+
+    const handleDeleteDiscount = async discount => {
+        if (deletingDiscountProduct !== null || Number(discount.can_delete) !== 1) return;
+        setDeletingDiscountProduct(discount.product_id);
+        try {
+            const payload = new FormData();
+            payload.append('order_id', order_id);
+            payload.append('product_id', discount.product_id);
+            const res = await api.post('', payload, { params: { action: 'delete_order_discount' } });
+            if (!res.data?.success) throw new Error(res.data?.message || 'Gagal menghapus diskon.');
+            await clearCacheOrderDetail(order_id);
+            await loadOrderData();
+            notifyOrderUpdate();
+        } catch (err) {
+            setAlertConfig({ show: true, type: 'error', message: err.response?.data?.message || err.message || 'Gagal menghapus diskon.' });
+        } finally {
+            setDeletingDiscountProduct(null);
+        }
+    };
+
+    const productDiscounts = orderInfo.discounts ?? Object.entries(orderInfo.diskon_per_produk).map(([name, value]) => ({ product_name: name, discount: value, can_delete: 0 }));
 
     const loadStores = useCallback(async () => {
         try {
@@ -511,17 +535,27 @@ export default function Order() {
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)", alignItems: "center"}}>
                             <div>
                                 <h4 style={{ margin: "0 0 8px 0" }}>Diskon Produk:</h4>
-                                {Object.keys(orderInfo.diskon_per_produk || {}).length > 0 ? (
+                                {productDiscounts.length > 0 ? (
                                     <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--text)" }}>
-                                        {Object.entries(orderInfo.diskon_per_produk).map(([nama, diskon], index) => (
-                                            <li key={index} style={{ marginBottom: "4px" }}>
-                                                {nama || "Produk tanpa nama"}: <strong style={{ color: "var(--danger)" }}>{formatRupiah(diskon)}</strong>
+                                        {productDiscounts.map((discount, index) => (
+                                            <li key={discount.product_id ?? index} style={{ marginBottom: "8px" }}>
+                                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                                    <span>{discount.product_name || 'Produk tanpa nama'}: <strong style={{ color: 'var(--danger)' }}>{formatRupiah(discount.discount)}</strong></span>
+                                                    {discount.product_id && (
+                                                        <span title={Number(discount.can_delete) !== 1 ? 'Hapus semua item produk ini dari order terlebih dahulu.' : 'Hapus diskon produk dari order ini'}>
+                                                            <Button variant="danger" size="sm" disabled={Number(discount.can_delete) !== 1 || deletingDiscountProduct !== null} onClick={() => handleDeleteDiscount(discount)}>
+                                                                {String(deletingDiscountProduct) === String(discount.product_id) ? 'Menghapus...' : 'Hapus Diskon'}
+                                                            </Button>
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
                                 ) : (
                                     <span style={{ color: "var(--secondary)" }}>Tidak ada diskon</span>
                                 )}
+                                {productDiscounts.length > 0 && <small>Hapus semua item produk terkait dari order terlebih dahulu untuk menghapus diskonnya.</small>}
                             </div>
                             <div style={{ textAlign: "right" }}>
                                 <h5 style={{ margin: "0 0 4px 0", color: "var(--secondary)" }}>Total Bayar</h5>
