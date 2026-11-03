@@ -128,7 +128,7 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
                         return (
                             <React.Fragment key={idx}>
                                 <tr style={{ borderTop: "0.5px solid #000" }}>
-                                    <td width="45%">{item.judul || item.product_name || "-"}</td>
+                                    <td width="45%">{item.judul || item.product_name || "-"}{item.laser_material_name && <div>Bahan: {item.laser_material_name}</div>}</td>
                                     <td width="20%">{item.size}</td>
                                     <td width="35%" className="text-end">{hidePrice ? "" : formatRupiah(harga)}</td>
                                 </tr>

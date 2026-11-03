@@ -17,7 +17,7 @@ import { formatTime } from "../services/helpers"
 
 const EMPTY_FORM_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
-    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: ""
+    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "", laser_product_id: ""
 };
 
 export default function Order() {
@@ -168,6 +168,7 @@ export default function Order() {
                 const payload = new FormData();
                 payload.append("order_id", order_id);
                 payload.append("product_id", activeFormItem.product_id);
+                payload.append("laser_product_id", activeFormItem.laser_product_id || 0);
                 payload.append("quantity", activeFormItem.qty || 0);
                 payload.append("finishing", (activeFormItem.finishings || []).join(","));
                 payload.append("panjang", activeFormItem.panjang || 0);
@@ -218,6 +219,7 @@ export default function Order() {
             if (submittedForm.order_item_id) payload.append("order_item_id", submittedForm.order_item_id);
 
             payload.append("product_id", submittedForm.product_id);
+            payload.append("laser_product_id", submittedForm.laser_product_id || 0);
             payload.append("judul", submittedForm.selectedProductName || "");
             payload.append("quantity", submittedForm.qty || 0);
             payload.append("finishing", submittedForm.finishings.join(","));
@@ -319,6 +321,7 @@ export default function Order() {
             order_item_id: row.order_item_id,
             category_id: row.category_id || "",
             product_id: row.product_id || "",
+            laser_product_id: row.laser_product_id?.toString() || "",
             panjang: p,
             lebar: w,
             qty: row.quantity || "",
@@ -384,7 +387,7 @@ export default function Order() {
     const storeOptions = useMemo(() => stores.map(s => ({ value: s.store_id, label: s.name })), [stores]);
 
     const tableColumns = useMemo(() => [
-        { key: "judul", title: "Product" },
+        { key: "judul", title: "Product", render: row => <>{row.judul}{row.laser_material_name && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bahan: {row.laser_material_name}</small>}</> },
         { key: "finishing_names", title: "Finishing" },
         { key: "size", title: "Ukuran" },
         { key: "quantity", title: "Qty" },

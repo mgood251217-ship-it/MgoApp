@@ -14,7 +14,7 @@ import {
 const EMPTY_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
     qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "",
-    paketSize: "", size: ""
+    paketSize: "", size: "", laser_product_id: ""
 };
 
 const normalizeId = value => value?.toString() ?? value;
@@ -90,12 +90,16 @@ export default function OrderItemForm({
     const isAnekaCetak = selectedCategoryName === "ANEKA CETAK";
     const hasLaserRules = isAnekaCetak && laserConversions.some(rule => normalizeId(rule.product_id) === normalizeId(formItem.product_id));
     const productLaserRules = useMemo(() => laserConversions.filter(rule => Number(rule.valid) === 1 && normalizeId(rule.product_id) === normalizeId(formItem.product_id)), [laserConversions, formItem.product_id]);
-    const laserSizeOptions = useMemo(() => [...new Map(productLaserRules.map(rule => [sizeKey(rule.size), {
-        value: rule.size || '-', label: rule.size || 'Tanpa ukuran'
+    const laserMaterialOptions = useMemo(() => [...new Map(productLaserRules.map(rule => [normalizeId(rule.laser_product_id), {
+        value: normalizeId(rule.laser_product_id), label: rule.laser_name
     }])).values()], [productLaserRules]);
+    const materialLaserRules = useMemo(() => productLaserRules.filter(rule => normalizeId(rule.laser_product_id) === normalizeId(formItem.laser_product_id)), [productLaserRules, formItem.laser_product_id]);
+    const laserSizeOptions = useMemo(() => [...new Map(materialLaserRules.map(rule => [sizeKey(rule.size), {
+        value: rule.size || '-', label: rule.size || 'Tanpa ukuran'
+    }])).values()], [materialLaserRules]);
     const selectedLaserSize = laserSizeOptions.find(option => sizeKey(option.value) === sizeKey(formItem.size))?.value || '';
-    const selectedLaserVariant = productLaserRules.find(rule => sizeKey(rule.size) === sizeKey(formItem.size) && finishingKey(rule.finishing_ids) === finishingKey(formItem.finishings))
-        || productLaserRules.find(rule => rule.legacy_fallback && rule.price == null && !rule.size && !rule.finishing_ids);
+    const selectedLaserVariant = materialLaserRules.find(rule => sizeKey(rule.size) === sizeKey(formItem.size) && finishingKey(rule.finishing_ids) === finishingKey(formItem.finishings))
+        || materialLaserRules.find(rule => rule.legacy_fallback && rule.price == null && !rule.size && !rule.finishing_ids);
 
     useEffect(() => {
         let cancelled = false;
@@ -107,11 +111,16 @@ export default function OrderItemForm({
     }, [formItem.category_id, isAnekaCetak]);
 
     useEffect(() => {
+        if (laserMaterialOptions.length !== 1 || !isAnekaCetak) return;
+        setFormItem(prev => prev.laser_product_id ? prev : { ...prev, laser_product_id: laserMaterialOptions[0].value });
+    }, [laserMaterialOptions, isAnekaCetak, formItem.laser_product_id]);
+
+    useEffect(() => {
         if (laserSizeOptions.length !== 1 || !isAnekaCetak) return;
         setFormItem(prev => prev.size ? prev : {
             ...prev, size: laserSizeOptions[0].value, panjang: '', lebar: ''
         });
-    }, [laserSizeOptions, isAnekaCetak]);
+    }, [laserSizeOptions, isAnekaCetak, formItem.size]);
 
     const categoryPackageRules = useMemo(() => packageRules.filter(rule => normalizeId(rule.category_id) === normalizeId(formItem.category_id)), [packageRules, formItem.category_id]);
     const packageFinishingIds = useMemo(() => [
@@ -125,8 +134,8 @@ export default function OrderItemForm({
     });
     const packageChoices = useMemo(() => productPackageRules.filter(rule => formItem.finishings.includes(normalizeId(rule.finishing_id))), [productPackageRules, formItem.finishings]);
     const hasPackageFinishing = formItem.finishings.some(id => packageFinishingIds.includes(normalizeId(id)));
-    const selectedPackage = packageChoices.find(rule => (parseFloat(rule.panjang || 0) === 0 && parseFloat(rule.lebar || 0) === 0)
-        || (parseFloat(rule.panjang || 0) === parseFloat(formItem.panjang || 0) && parseFloat(rule.lebar || 0) === parseFloat(formItem.lebar || 0)));
+    const selectedPackage = packageChoices.find(rule => parseFloat(rule.panjang || 0) === parseFloat(formItem.panjang || 0)
+        && parseFloat(rule.lebar || 0) === parseFloat(formItem.lebar || 0));
     const packageNeedsSize = packageChoices.some(rule => parseFloat(rule.panjang || 0) > 0 && parseFloat(rule.lebar || 0) > 0);
 
     useEffect(() => {
@@ -211,7 +220,7 @@ export default function OrderItemForm({
 
     const handleCategoryChange = (e) => {
         const category_id = e.target.value;
-        setFormItem(prev => ({ ...prev, category_id, product_id: "", finishings: [], paketSize: "", size: "" }));
+        setFormItem(prev => ({ ...prev, category_id, product_id: "", finishings: [], paketSize: "", size: "", laser_product_id: "" }));
         focusField("product_id");
     };
 
@@ -220,7 +229,7 @@ export default function OrderItemForm({
         const pName = (prod?.display_name || prod?.name || "").toUpperCase();
         const pUnit = prod?.unit_type?.toUpperCase();
         const noSizeCheck = pUnit === "PCS" || pUnit === "~";
-        if (isAnekaCetak && laserConversions.some(rule => normalizeId(rule.product_id) === normalizeId(pId))) return "laserVariant";
+        if (isAnekaCetak && laserConversions.some(rule => normalizeId(rule.product_id) === normalizeId(pId))) return "laser_product_id";
 
         if (selectedCategoryName === "PAKET INDOOR OUTDOOR" && paketSizesMap[pName]?.length > 0) {
             return "paketSize";
@@ -245,7 +254,7 @@ export default function OrderItemForm({
 
     const handleProductChange = (e) => {
         const product_id = e.target.value;
-        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), size: "", paketSize: "" }));
+        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), size: "", paketSize: "", laser_product_id: "" }));
         focusField(resolveNextFieldAfterProduct(e.target.value));
     };
 
@@ -285,7 +294,9 @@ export default function OrderItemForm({
             const newFinishings = !checked ? prev.finishings.filter(f => f !== value)
             : packageFinishingIds.includes(value) ? [value]
             : [...prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), value];
-            return { ...prev, finishings: newFinishings };
+            const clearPackageSize = ['LASER', 'LASER A3'].includes(selectedCategoryName)
+                && !newFinishings.some(id => packageFinishingIds.includes(normalizeId(id)));
+            return { ...prev, finishings: newFinishings, ...(clearPackageSize ? { panjang: '', lebar: '', size: '-' } : {}) };
         });
     };
 
@@ -436,6 +447,13 @@ export default function OrderItemForm({
 
             {isAnekaCetak && hasLaserRules && (
                 <div>
+                    <Select labelPosition="left" labelWidth={110} name="laser_product_id" label="Bahan"
+                        value={formItem.laser_product_id}
+                        options={laserMaterialOptions}
+                        placeholder="Pilih bahan"
+                        onChange={e => setFormItem(prev => ({ ...prev, laser_product_id: e.target.value, size: '', panjang: '', lebar: '', kiloan: '', waktu: '' }))}
+                        required
+                    />
                     <Select labelPosition="left" labelWidth={110} name="laserVariant" label="Ukuran"
                         value={selectedLaserSize}
                         options={laserSizeOptions}
@@ -477,7 +495,7 @@ export default function OrderItemForm({
                             const lebar = sized ? parseFloat(rule.lebar).toString() : "";
                             setFormItem(prev => ({ ...prev, panjang, lebar, size: sized ? `${panjang}x${lebar}` : "-" }));
                         }}
-                        options={packageChoices.map(rule => ({ value: normalizeId(rule.id), label: `${parseFloat(rule.panjang || 0)} × ${parseFloat(rule.lebar || 0)} m — Rp${parseFloat(rule.price || 0).toLocaleString("id-ID")}/set` }))}
+                        options={packageChoices.map(rule => ({ value: normalizeId(rule.id), label: `${parseFloat(rule.panjang || 0) > 0 && parseFloat(rule.lebar || 0) > 0 ? `${parseFloat(rule.panjang)} × ${parseFloat(rule.lebar)} m` : 'Tanpa ukuran'} — Rp${parseFloat(rule.price || 0).toLocaleString("id-ID")}/set` }))}
                         placeholder="Pilih ukuran paket"
                         required
                     />

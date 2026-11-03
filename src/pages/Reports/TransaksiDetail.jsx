@@ -265,7 +265,7 @@ export default function TransaksiDetail() {
 
     const itemColumns = useMemo(() => [
         { key: "no", title: "No" },
-        { key: "judul", title: "Nama Item" },
+        { key: "judul", title: "Nama Item", render: row => <>{row.judul}{row.laser_material_name && <small style={{ display: "block" }}>Bahan: {row.laser_material_name}</small>}</> },
         { key: "finishing_names", title: "Finishing", render: (row) => row.finishing_names || "-" },
         { key: "category", title: "Kategori", render: (row) => row.category || "-" },
         { key: "size", title: "Ukuran", render: (row) => row.size || "-" },
