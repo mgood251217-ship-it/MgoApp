@@ -269,7 +269,7 @@ export default function TransaksiDetail() {
         { key: "finishing_names", title: "Finishing", render: (row) => row.finishing_names || "-" },
         { key: "category", title: "Kategori", render: (row) => row.category || "-" },
         { key: "size", title: "Ukuran", render: (row) => row.size || "-" },
-        { key: "quantity", title: "Qty" },
+        { key: "quantity", title: "Qty", render: row => <>{row.quantity}{row.promotion && <small style={{ display: "block" }}>Bayar {row.promotion.paid_quantity}, gratis {row.promotion.bonus_quantity}</small>}</> },
         { key: "unit", title: "Satuan", render: (row) => formatRupiah(Number(row.unit)) },
         { key: "amount", title: "Jumlah", render: (row) => formatRupiah(Number(row.amount)) }
     ], []);

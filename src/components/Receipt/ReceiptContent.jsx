@@ -47,7 +47,7 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
     const outdoor = {};
     const luasKurangDariSatu = {};
     items.forEach((item) => {
-        if ((item.category || "").toUpperCase() === "OUTDOOR" && item.product_id) {
+        if ((item.category || "").toUpperCase() === "OUTDOOR" && item.product_id && !item.promotion) {
             const pid = item.product_id;
             const match = item.size?.match(/^([\d.]+)[xX]([\d.]+)$/);
             const luas = match ? (parseFloat(match[1]) * parseFloat(match[2])) : 0;
@@ -120,7 +120,7 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
                         const pid = item.product_id;
                         let hidePrice = false;
                         let customPrice = null;
-                        if ((item.category || "").toUpperCase() === "OUTDOOR" && luasKurangDariSatu[pid]) {
+                        if ((item.category || "").toUpperCase() === "OUTDOOR" && luasKurangDariSatu[pid] && !item.promotion) {
                             if (printedPriceFor.includes(pid)) hidePrice = true;
                             else { customPrice = luasKurangDariSatu[pid]; printedPriceFor.push(pid); }
                         }
@@ -135,7 +135,9 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
                                 <tr style={{ borderBottom: "0.5px solid #000" }}>
                                     <td colSpan="3">
                                         {item.finishing_names && item.finishing_names.trim() !== "" ? `${item.finishing_names} | ` : ""}
-                                        {item.quantity} x {hidePrice ? "" : formatRupiah(harga / item.quantity)}
+                                        {item.promotion ? <>
+                                            {item.promotion.paid_quantity} x {formatRupiah(item.unit)} + gratis {item.promotion.bonus_quantity} pcs (total {item.quantity} pcs)
+                                        </> : <>{item.quantity} x {hidePrice ? "" : formatRupiah(harga / item.quantity)}</>}
                                     </td>
                                 </tr>
                             </React.Fragment>

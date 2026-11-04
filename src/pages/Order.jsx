@@ -40,6 +40,7 @@ export default function Order() {
     const [noteInput, setNoteInput] = useState("");
     const [previewPrice, setPreviewPrice] = useState(0);
     const [previewTier, setPreviewTier] = useState(null);
+    const [previewPromotion, setPreviewPromotion] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deletingDiscountProduct, setDeletingDiscountProduct] = useState(null);
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
@@ -165,7 +166,7 @@ export default function Order() {
         let cancelled = false;
         const getPrice = async () => {
             if (!activeFormItem.product_id || !activeFormItem.qty) {
-                if (!cancelled) { setPreviewPrice(0); setPreviewTier(null); }
+                if (!cancelled) { setPreviewPrice(0); setPreviewTier(null); setPreviewPromotion(null); }
                 return;
             }
             try {
@@ -188,9 +189,10 @@ export default function Order() {
                 if (!cancelled) {
                     setPreviewPrice(res.data?.total || res.data?.data?.total || 0);
                     setPreviewTier(res.data?.data?.tier_pricing || null);
+                    setPreviewPromotion(res.data?.data?.promotion || null);
                 }
             } catch (err) {
-                if (!cancelled) { setPreviewPrice(0); setPreviewTier(null); }
+                if (!cancelled) { setPreviewPrice(0); setPreviewTier(null); setPreviewPromotion(null); }
             }
         };
 
@@ -398,7 +400,7 @@ export default function Order() {
         { key: "judul", title: "Product", render: row => <>{row.judul}{row.laser_material_name && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bahan: {row.laser_material_name}</small>}{row.tier_pricing?.price != null && <small style={{ display: "block", color: "var(--text-secondary)" }}>Harga dasar bertingkat: {formatRupiah(row.tier_pricing.price)}/{tierUnitLabel(row.tier_pricing)}</small>}</> },
         { key: "finishing_names", title: "Finishing" },
         { key: "size", title: "Ukuran" },
-        { key: "quantity", title: "Qty" },
+        { key: "quantity", title: "Qty", render: row => <>{row.quantity}{row.promotion && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bayar {row.promotion.paid_quantity}, gratis {row.promotion.bonus_quantity}</small>}</> },
         { key: "unit", title: "Harga" },
         { key: "formatted_amount", title: "Jumlah" }
     ], []);
@@ -478,6 +480,9 @@ export default function Order() {
                             {previewTier?.price != null && <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}>
                                 Harga dasar bertingkat: {formatRupiah(previewTier.price)}/{tierUnitLabel(previewTier)}.
                                 {' '}Total produk di nota: {Number(previewTier.quantity).toLocaleString('id-ID', { maximumFractionDigits: 8 })} {tierUnitLabel(previewTier)}.
+                            </p>}
+                            {previewPromotion && <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}>
+                                Promo beli {previewPromotion.buy_quantity} gratis {previewPromotion.free_quantity}: total {previewPromotion.quantity} pcs, bayar {previewPromotion.paid_quantity}, gratis {previewPromotion.bonus_quantity}.
                             </p>}
                         </OrderItemForm>
                     </div>
