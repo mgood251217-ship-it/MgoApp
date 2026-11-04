@@ -79,6 +79,8 @@ Var NoShortcutMode
 Var WixMode
 Var OldMainBinaryName
 Var MgoMigrationMode
+Var MgoMigrationLog
+Var MgoMigrationError
 
 Name "${PRODUCTNAME}"
 BrandingText "${COPYRIGHT}"
@@ -539,23 +541,38 @@ Function .onInit
 FunctionEnd
 
 Function MgoMigrateUserInstall
-  ${If} ${RunningX64}
-    StrCpy $2 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
-  ${Else}
-    StrCpy $2 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
-  ${EndIf}
   DetailPrint "Memeriksa/memigrasikan instalasi MGO per pengguna ($MgoMigrationMode)..."
-  ; Allow the bundled helper for this process only; leave saved policies unchanged.
-  ; Organization Group Policy still takes precedence over this process setting.
-  nsExec::ExecToLog '$\"$2$\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $\"$PLUGINSDIR\migrate_user_install.ps1$\" -Mode $MgoMigrationMode -InstallDirectory $\"$INSTDIR$\"'
-  Pop $0
+  GetTempFileName $MgoMigrationLog
+  Delete "$PLUGINSDIR\mgo-migration-error.txt"
+  ; The bundled EXE handles migration before Tauri starts. No script host/policy needed.
+  ClearErrors
+  ExecWait '$\"$PLUGINSDIR\mgo-migration.exe$\" --mgo-installer-migrate $MgoMigrationMode $\"$INSTDIR$\" $\"$MgoMigrationLog$\" $\"$PLUGINSDIR\mgo-migration-error.txt$\"' $0
+  ${If} ${Errors}
+    StrCpy $0 "gagal dijalankan"
+  ${EndIf}
   ${If} $0 != 0
+    StrCpy $MgoMigrationError "Komponen migrasi tidak dapat dijalankan (kode $0). Unduh ulang installer terbaru."
+    StrCpy $3 ""
+    ClearErrors
+    FileOpen $1 "$PLUGINSDIR\mgo-migration-error.txt" r
+    ${IfNot} ${Errors}
+      ; The helper writes UTF-16LE with a BOM, independently of the Windows code page.
+      FileSeek $1 2 SET
+      FileReadUTF16LE $1 $3
+      FileClose $1
+      ${If} $3 != ""
+        StrCpy $MgoMigrationError $3
+      ${EndIf}
+    ${EndIf}
+    DetailPrint "$MgoMigrationError"
+    DetailPrint "Log migrasi: $MgoMigrationLog"
     IfSilent mgo_migration_failed
-    MessageBox MB_ICONSTOP|MB_OK "Migrasi MGO dari AppData belum selesai (kode $0). Periksa pesan pada rincian instalasi. Tutup MGO pada semua akun Windows lalu coba lagi. Pengaturan dan data pengguna tidak dihapus."
+    MessageBox MB_ICONSTOP|MB_OK "Migrasi MGO dari AppData belum selesai.$\r$\n$\r$\n$MgoMigrationError$\r$\n$\r$\nLog: $MgoMigrationLog$\r$\nPengaturan dan data pengguna tidak dihapus."
     mgo_migration_failed:
     SetErrorLevel 2
     Abort "Migrasi instalasi lama gagal; pemasangan belum selesai."
   ${EndIf}
+  Delete "$MgoMigrationLog"
 FunctionEnd
 
 
@@ -686,16 +703,8 @@ Section Install
   !if "${INSTALLMODE}" == "perMachine"
     !insertmacro CheckIfAppIsRunning "MgoDesktop.exe" "${PRODUCTNAME}"
     InitPluginsDir
-    ; Extract the packaged helper before copying/replacing any application files.
-    {{#each resources}}
-      !if "{{this.[1]}}" == "migrate_user_install.ps1"
-        File "/oname=$PLUGINSDIR\migrate_user_install.ps1" "{{no-escape @key}}"
-        !define MGO_MIGRATION_HELPER_INCLUDED
-      !endif
-    {{/each}}
-    !ifndef MGO_MIGRATION_HELPER_INCLUDED
-      !error "The per-user migration helper must be included in bundle.resources"
-    !endif
+    ; Run a temporary copy so Check works before the shared app is installed.
+    File "/oname=$PLUGINSDIR\mgo-migration.exe" "${MAINBINARYSRCPATH}"
     StrCpy $MgoMigrationMode "Check"
     Call MgoMigrateUserInstall
   !endif
@@ -720,6 +729,8 @@ Section Install
     ; Retire legacy launchers only after the replacement app has been copied.
     StrCpy $MgoMigrationMode "Apply"
     Call MgoMigrateUserInstall
+    ; Remove the helper left by older installers; user settings are elsewhere.
+    Delete "$INSTDIR\migrate_user_install.ps1"
   !endif
 
   ; Create file associations

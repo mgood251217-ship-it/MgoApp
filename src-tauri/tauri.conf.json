@@ -39,8 +39,7 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../src/assets/icons/*": "icons/",
-      "windows/migrate_user_install.ps1": "migrate_user_install.ps1"
+      "../src/assets/icons/*": "icons/"
     },
     "windows": {
       "nsis": {
