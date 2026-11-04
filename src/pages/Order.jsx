@@ -15,6 +15,8 @@ import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
 import { getCachedOrderDetail, getCachedStoreNames, clearCacheOrderDetail } from "../services/apiCache";
 import { formatTime } from "../services/helpers"
 
+const tierUnitLabel = tier => tier?.unit_label || ({ pcs: 'pcs', m2: 'm\u00b2', cm2: 'cm\u00b2' })[tier?.measure] || 'pcs';
+
 const EMPTY_FORM_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
     qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "", laser_product_id: ""
@@ -37,6 +39,7 @@ export default function Order() {
 
     const [noteInput, setNoteInput] = useState("");
     const [previewPrice, setPreviewPrice] = useState(0);
+    const [previewTier, setPreviewTier] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deletingDiscountProduct, setDeletingDiscountProduct] = useState(null);
     const [alertConfig, setAlertConfig] = useState({ show: false, type: "error", message: "" });
@@ -159,14 +162,16 @@ export default function Order() {
     }, [loadOrderData, loadStores]);
 
     useEffect(() => {
+        let cancelled = false;
         const getPrice = async () => {
             if (!activeFormItem.product_id || !activeFormItem.qty) {
-                setPreviewPrice(0);
+                if (!cancelled) { setPreviewPrice(0); setPreviewTier(null); }
                 return;
             }
             try {
                 const payload = new FormData();
                 payload.append("order_id", order_id);
+                payload.append("order_item_id", activeFormItem.order_item_id || "");
                 payload.append("product_id", activeFormItem.product_id);
                 payload.append("laser_product_id", activeFormItem.laser_product_id || 0);
                 payload.append("quantity", activeFormItem.qty || 0);
@@ -180,9 +185,12 @@ export default function Order() {
                 payload.append("size", activeFormItem.size || activeFormItem.ukuranJersey || activeFormItem.paketSize || "");
 
                 const res = await api.post("", payload, { params: { action: "item_price" } });
-                setPreviewPrice(res.data?.total || res.data?.data?.total || 0);
+                if (!cancelled) {
+                    setPreviewPrice(res.data?.total || res.data?.data?.total || 0);
+                    setPreviewTier(res.data?.data?.tier_pricing || null);
+                }
             } catch (err) {
-                setPreviewPrice(0);
+                if (!cancelled) { setPreviewPrice(0); setPreviewTier(null); }
             }
         };
 
@@ -190,8 +198,8 @@ export default function Order() {
             getPrice();
         }, 300);
 
-        return () => clearTimeout(timeoutId);
-    }, [activeFormItem, order_id]);
+        return () => { cancelled = true; clearTimeout(timeoutId); };
+    }, [activeFormItem, order_id, items]);
 
     useEffect(() => {
         window.addEventListener("beforeunload", notifyOrderUpdate);
@@ -387,7 +395,7 @@ export default function Order() {
     const storeOptions = useMemo(() => stores.map(s => ({ value: s.store_id, label: s.name })), [stores]);
 
     const tableColumns = useMemo(() => [
-        { key: "judul", title: "Product", render: row => <>{row.judul}{row.laser_material_name && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bahan: {row.laser_material_name}</small>}</> },
+        { key: "judul", title: "Product", render: row => <>{row.judul}{row.laser_material_name && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bahan: {row.laser_material_name}</small>}{row.tier_pricing?.price != null && <small style={{ display: "block", color: "var(--text-secondary)" }}>Harga dasar bertingkat: {formatRupiah(row.tier_pricing.price)}/{tierUnitLabel(row.tier_pricing)}</small>}</> },
         { key: "finishing_names", title: "Finishing" },
         { key: "size", title: "Ukuran" },
         { key: "quantity", title: "Qty" },
@@ -467,6 +475,10 @@ export default function Order() {
                                     {formatRupiah(previewPrice)}
                                 </span>
                             </div>
+                            {previewTier?.price != null && <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}>
+                                Harga dasar bertingkat: {formatRupiah(previewTier.price)}/{tierUnitLabel(previewTier)}.
+                                {' '}Total produk di nota: {Number(previewTier.quantity).toLocaleString('id-ID', { maximumFractionDigits: 8 })} {tierUnitLabel(previewTier)}.
+                            </p>}
                         </OrderItemForm>
                     </div>
 

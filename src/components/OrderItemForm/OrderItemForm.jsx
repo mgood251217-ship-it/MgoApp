@@ -342,6 +342,7 @@ export default function OrderItemForm({
     const isDTF = selectedCategoryName === "DTF";
     const isDTFUV = selectedCategoryName === "DTF UV";
     const isAkrilik = selectedCategoryName === "AKRILIK";
+    const usesCentimeters = isAkrilik || selectedProduct?.unit_type?.toUpperCase() === "CM2";
     const isJersey = selectedCategoryName === "JERSEY";
     const isDtfKaosPcs = isDTF && selectedProductName.includes("KAOS") && selectedProduct?.unit_type?.toUpperCase() === "PCS";
     const isSublim = selectedCategoryName === "SUBLIM";
@@ -551,7 +552,7 @@ export default function OrderItemForm({
                                     name="panjang"
                                     type="number"
                                     step="any"
-                                    placeholder={isAkrilik ? "Panjang (cm)" : "Panjang (m)"}
+                                    placeholder={usesCentimeters ? "Panjang (cm)" : "Panjang (m)"}
                                     value={formItem.panjang}
                                     onChange={hasPackageFinishing ? undefined : handleFormChange}
                                     readOnly={hasPackageFinishing}
@@ -578,7 +579,7 @@ export default function OrderItemForm({
                                         name="lebar"
                                         type="number"
                                         step="any"
-                                        placeholder={isAkrilik ? "Lebar (cm)" : "Lebar (m)"}
+                                        placeholder={usesCentimeters ? "Lebar (cm)" : "Lebar (m)"}
                                         value={formItem.lebar}
                                         onChange={isDTF || isDTFUV || hasPackageFinishing ? undefined : handleFormChange}
                                         readOnly={isDTF || isDTFUV || hasPackageFinishing}
