@@ -42,6 +42,7 @@ export const exportMeteranExcel = async ({
 
     const categoryLabelMap = {
         meter_jersey_finishing_jersey: "Jersey + Finishing Jersey",
+        meter_components: "Komponen Produksi",
         meter_akrilik_merchandise_akrilik: "Akrilik + Merchandise Akrilik",
         meter_laser_merchandise: "Laser A3 + Merchandise"
     };

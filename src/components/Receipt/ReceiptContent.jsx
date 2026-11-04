@@ -48,10 +48,10 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
     const luasKurangDariSatu = {};
     items.forEach((item) => {
         if ((item.category || "").toUpperCase() === "OUTDOOR" && item.product_id && !item.promotion) {
-            const pid = item.product_id;
+            const pid = `${item.product_id}:${item.variant?.id || 0}`;
             const match = item.size?.match(/^([\d.]+)[xX]([\d.]+)$/);
             const luas = match ? (parseFloat(match[1]) * parseFloat(match[2])) : 0;
-            const pad = Math.max((item.price || 0) - (item.diskon || 0), 0);
+            const pad = Math.max((item.variant?.price ?? item.price ?? 0) - (item.diskon || 0), 0);
             if (!outdoor[pid]) outdoor[pid] = { luas: 0, min_pad: pad };
             outdoor[pid].luas += (luas * item.quantity);
             outdoor[pid].min_pad = Math.min(outdoor[pid].min_pad, pad);
@@ -117,7 +117,7 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
             <table style={{ fontSize: "11px", marginTop: "10px", width: "92%", margin: "10px auto 0" }}>
                 <tbody>
                     {items.map((item, idx) => {
-                        const pid = item.product_id;
+                        const pid = `${item.product_id}:${item.variant?.id || 0}`;
                         let hidePrice = false;
                         let customPrice = null;
                         if ((item.category || "").toUpperCase() === "OUTDOOR" && luasKurangDariSatu[pid] && !item.promotion) {
@@ -128,7 +128,7 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
                         return (
                             <React.Fragment key={idx}>
                                 <tr style={{ borderTop: "0.5px solid #000" }}>
-                                    <td width="45%">{item.judul || item.product_name || "-"}{item.laser_material_name && <div>Bahan: {item.laser_material_name}</div>}</td>
+                                    <td width="45%">{item.judul || item.product_name || "-"}{item.variant && <div>Varian: {item.variant.label}</div>}{item.laser_material_name && <div>Bahan: {item.laser_material_name}</div>}</td>
                                     <td width="20%">{item.size}</td>
                                     <td width="35%" className="text-end">{hidePrice ? "" : formatRupiah(harga)}</td>
                                 </tr>

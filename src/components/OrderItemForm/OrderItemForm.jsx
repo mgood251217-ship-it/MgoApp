@@ -8,13 +8,15 @@ import {
     getCachedProductsByCategory, 
     getCachedFinishingsByCategory,
     getCachedProductFinishingPrices,
-    getCachedProductLaserConversions
+    getCachedProductLaserConversions,
+    getCachedProductVariants
 } from "../../services/apiCache";
+import { variantGroups, variantChoices, matchProductVariant } from '../../services/productVariants';
 
 const EMPTY_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
     qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "",
-    paketSize: "", size: "", laser_product_id: ""
+    paketSize: "", size: "", laser_product_id: "", product_variant_id: "", variant_options: {}, variant: null
 };
 
 const normalizeId = value => value?.toString() ?? value;
@@ -59,14 +61,16 @@ export default function OrderItemForm({
     const [allFinishings, setFinishings] = useState([]);
     const [packageRules, setPackageRules] = useState([]);
     const [laserConversions, setLaserConversions] = useState([]);
+    const [productVariants, setProductVariants] = useState([]);
+    const [variantsLoading, setVariantsLoading] = useState(false);
     const finishingRefs = useRef([]);
     const isFirstRenderRef = useRef(true);
 
-    const [formItem, setFormItem] = useState({ ...EMPTY_ITEM, ...initialData });
+    const [formItem, setFormItem] = useState({ ...EMPTY_ITEM, ...initialData, variant_options: initialData?.variant?.options || initialData?.variant_options || {} });
 
     useEffect(() => {
         if (initialData) {
-            setFormItem(prev => ({ ...prev, ...initialData }));
+            setFormItem(prev => ({ ...prev, ...initialData, variant_options: initialData.variant?.options || initialData.variant_options || {} }));
         }
     }, [initialData]);
 
@@ -88,6 +92,40 @@ export default function OrderItemForm({
     const selectedCategory = categories.find(c => normalizeId(c.category_id) === normalizeId(formItem.category_id));
     const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
     const isAnekaCetak = selectedCategoryName === "ANEKA CETAK";
+    const savedVariant = formItem.order_item_id && normalizeId(formItem.product_id) === normalizeId(initialData?.product_id) ? initialData?.variant : null;
+    const variantRows = useMemo(() => savedVariant ? [savedVariant, ...productVariants.filter(row => Number(row.id) !== Number(savedVariant.id))] : productVariants, [productVariants, savedVariant]);
+    const optionGroups = variantGroups(variantRows);
+    const selectedProductVariant = matchProductVariant(variantRows, formItem.variant_options || {});
+    const legacyWithoutVariant = !!formItem.order_item_id && !initialData?.product_variant_id && normalizeId(formItem.product_id) === normalizeId(initialData?.product_id);
+    const hasVariantSelection = Object.values(formItem.variant_options || {}).some(Boolean);
+    const variantIncomplete = variantRows.length > 0 && !selectedProductVariant && (!legacyWithoutVariant || hasVariantSelection);
+
+    useEffect(() => {
+        if (variantsLoading || normalizeId(formItem.order_item_id || '') !== normalizeId(initialData?.order_item_id || '')) return;
+        const id = selectedProductVariant?.id?.toString() || '';
+        setFormItem(prev => String(prev.product_variant_id || '') === id ? prev : { ...prev, product_variant_id: id });
+    }, [selectedProductVariant?.id, variantsLoading, formItem.order_item_id, initialData?.order_item_id]);
+
+    useEffect(() => {
+        let cancelled = false, focused = false;
+        setProductVariants([]);
+        if (!formItem.product_id) { setVariantsLoading(false); return; }
+        setVariantsLoading(true);
+        const apply = rows => {
+            if (cancelled) return;
+            setProductVariants(rows); setVariantsLoading(false);
+            if (rows.length && !focused && !initialData?.order_item_id) { focused = true; focusField('variant_option_0'); }
+        };
+        getCachedProductVariants(formItem.product_id, apply).then(apply);
+        return () => { cancelled = true; };
+    }, [formItem.product_id]);
+
+    const handleVariantChange = (index, value) => {
+        const values = Object.fromEntries(optionGroups.map((name, i) => [name, i < index ? formItem.variant_options?.[name] || '' : i === index ? value : '']));
+        const selected = matchProductVariant(variantRows, values);
+        setFormItem(prev => ({ ...prev, variant_options: values, product_variant_id: selected?.id?.toString() || '' }));
+        focusField(index + 1 < optionGroups.length ? `variant_option_${index + 1}` : resolveNextFieldAfterProduct(formItem.product_id));
+    };
     const hasLaserRules = isAnekaCetak && laserConversions.some(rule => normalizeId(rule.product_id) === normalizeId(formItem.product_id));
     const productLaserRules = useMemo(() => laserConversions.filter(rule => Number(rule.valid) === 1 && normalizeId(rule.product_id) === normalizeId(formItem.product_id)), [laserConversions, formItem.product_id]);
     const laserMaterialOptions = useMemo(() => [...new Map(productLaserRules.map(rule => [normalizeId(rule.laser_product_id), {
@@ -215,12 +253,12 @@ export default function OrderItemForm({
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
-        setFormItem(prev => ({ ...prev, [name]: value }));
+        setFormItem(prev => ({ ...prev, [name]: value, ...(name === 'ukuranJersey' ? { size: value } : {}) }));
     };
 
     const handleCategoryChange = (e) => {
         const category_id = e.target.value;
-        setFormItem(prev => ({ ...prev, category_id, product_id: "", finishings: [], paketSize: "", size: "", laser_product_id: "" }));
+        setFormItem(prev => ({ ...prev, category_id, product_id: "", finishings: [], paketSize: "", size: "", laser_product_id: "", product_variant_id: "", variant_options: {}, variant: null }));
         focusField("product_id");
     };
 
@@ -254,7 +292,7 @@ export default function OrderItemForm({
 
     const handleProductChange = (e) => {
         const product_id = e.target.value;
-        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), size: "", paketSize: "", laser_product_id: "" }));
+        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), size: "", paketSize: "", laser_product_id: "", product_variant_id: "", variant_options: {}, variant: null }));
         focusField(resolveNextFieldAfterProduct(e.target.value));
     };
 
@@ -364,7 +402,7 @@ export default function OrderItemForm({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if ((hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)) return;
+        if (variantsLoading || variantIncomplete || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)) return;
         if (onSubmit) {
             onSubmit({ ...formItem, selectedProductName }); 
         }
@@ -445,6 +483,13 @@ export default function OrderItemForm({
                 placeholder="Pilih Produk"
                 required
             />
+            {optionGroups.map((group, index) => (
+                <Select key={group} name={`variant_option_${index}`} label={group} labelPosition="left" labelWidth={110}
+                    value={formItem.variant_options?.[group] || ''} onChange={event => handleVariantChange(index, event.target.value)}
+                    options={variantChoices(variantRows, formItem.variant_options || {}, index).map(value => ({ value, label: value }))}
+                    placeholder={legacyWithoutVariant ? 'Sesuai nota lama / pilih varian' : `Pilih ${group}`} required={!legacyWithoutVariant} />
+            ))}
+            {selectedProductVariant && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Harga dasar varian: Rp{Number(selectedProductVariant.price).toLocaleString('id-ID')}. {savedVariant && Number(selectedProductVariant.id) === Number(savedVariant.id) ? 'Mengikuti varian yang tersimpan di nota.' : ''}</p>}
 
             {isAnekaCetak && hasLaserRules && (
                 <div>
@@ -670,7 +715,7 @@ export default function OrderItemForm({
             {children}
 
             <div style={{ display: "flex", gap: "8px" }}>
-                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
+                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting || variantsLoading || variantIncomplete || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
                     {isSubmitting ? "Loading..." : submitText}
                 </Button>
                 {showCancel && onCancel && (

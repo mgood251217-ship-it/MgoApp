@@ -481,6 +481,25 @@ export const getCachedProductLaserConversions = async (categoryId, onUpdate) => 
     return fetchLatest().catch(() => []);
 };
 
+export const getCachedProductVariants = async (productId, onUpdate) => {
+    if (!productId) return [];
+    const key = 'productVariantsByProduct';
+    const cached = getStorage(key, {})[productId];
+    const fetchLatest = async () => {
+        const dataset = await getServerDataset();
+        const serverTime = Math.max(dataset.product_variants_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0);
+        if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
+        const res = await api.get('', { params: { action: 'product_variants', product_id: productId } });
+        if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('Gagal memuat varian produk.');
+        const map = getStorage(key, {});
+        map[productId] = { data: res.data.data, updatedAt: serverTime };
+        setStorage(key, map); onUpdate?.(res.data.data);
+        return res.data.data;
+    };
+    if (cached) { fetchLatest().catch(() => {}); return cached.data; }
+    return fetchLatest().catch(() => []);
+};
+
 export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) => {
     const cacheKey = `${page}_${limit}_${search}`;
     const paginatedMap = getStorage("paginatedProducts", {});
@@ -634,7 +653,7 @@ export const getCachedOrderDetail = async (orderId, onUpdate) => {
 
         const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
 
-        if (!cachedItem || !Array.isArray(cachedItem.data?.discounts) || cachedItem.data?.items?.some(item => !Object.prototype.hasOwnProperty.call(item, 'laser_product_id') || !Object.prototype.hasOwnProperty.call(item, 'tier_pricing') || !Object.prototype.hasOwnProperty.call(item, 'promotion')) || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || !Array.isArray(cachedItem.data?.discounts) || cachedItem.data?.items?.some(item => !Object.prototype.hasOwnProperty.call(item, 'laser_product_id') || !Object.prototype.hasOwnProperty.call(item, 'tier_pricing') || !Object.prototype.hasOwnProperty.call(item, 'promotion') || !Object.prototype.hasOwnProperty.call(item, 'variant')) || cachedItem.updatedAt < serverTime) {
             try {
                 const res = await api.get("", { params: { action: "order_detail", order_id: orderId } });
                 const result = res.data?.data || null;

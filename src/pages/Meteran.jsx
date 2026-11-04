@@ -97,6 +97,7 @@ export default function Meteran() {
         { value: "meter_outdoor", label: "Outdoor" },
         { value: "meter_indoor", label: "Indoor" },
         { value: "meter_jersey_finishing_jersey", label: "Jersey + Finishing Jersey" },
+        { value: "meter_components", label: "Komponen Produksi" },
         { value: "meter_akrilik_merchandise_akrilik", label: "Akrilik + Merchandise Akrilik" },
         { value: "meter_laser_merchandise", label: "Laser A3 + Merchandise" },
         { value: "meter_sublim_bahan_sublim", label: "Sublim + Bahan Sublim" },

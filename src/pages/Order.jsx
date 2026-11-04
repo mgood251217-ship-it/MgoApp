@@ -19,7 +19,7 @@ const tierUnitLabel = tier => tier?.unit_label || ({ pcs: 'pcs', m2: 'm\u00b2', 
 
 const EMPTY_FORM_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
-    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "", laser_product_id: ""
+    qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "", laser_product_id: "", product_variant_id: "", variant: null
 };
 
 export default function Order() {
@@ -82,10 +82,14 @@ export default function Order() {
 
     const focusNextField = () => {
         setTimeout(() => {
+            const variantInput = document.querySelector('[name="variant_option_0"]');
             const panjangInput = document.querySelector('input[name="panjang"]');
             const qtyInput = document.querySelector('input[name="qty"]');
 
-            if (panjangInput && panjangInput.offsetParent !== null) {
+            if (variantInput && variantInput.offsetParent !== null) {
+                variantInput.focus();
+            }
+            else if (panjangInput && panjangInput.offsetParent !== null) {
                 panjangInput.focus();
                 if (typeof panjangInput.select === 'function') panjangInput.select();
             }
@@ -175,6 +179,7 @@ export default function Order() {
                 payload.append("order_item_id", activeFormItem.order_item_id || "");
                 payload.append("product_id", activeFormItem.product_id);
                 payload.append("laser_product_id", activeFormItem.laser_product_id || 0);
+                payload.append("product_variant_id", activeFormItem.product_variant_id || 0);
                 payload.append("quantity", activeFormItem.qty || 0);
                 payload.append("finishing", (activeFormItem.finishings || []).join(","));
                 payload.append("panjang", activeFormItem.panjang || 0);
@@ -230,6 +235,7 @@ export default function Order() {
 
             payload.append("product_id", submittedForm.product_id);
             payload.append("laser_product_id", submittedForm.laser_product_id || 0);
+            payload.append("product_variant_id", submittedForm.product_variant_id || 0);
             payload.append("judul", submittedForm.selectedProductName || "");
             payload.append("quantity", submittedForm.qty || 0);
             payload.append("finishing", submittedForm.finishings.join(","));
@@ -332,6 +338,8 @@ export default function Order() {
             category_id: row.category_id || "",
             product_id: row.product_id || "",
             laser_product_id: row.laser_product_id?.toString() || "",
+            product_variant_id: row.product_variant_id?.toString() || "",
+            variant: row.variant || null,
             panjang: p,
             lebar: w,
             qty: row.quantity || "",
@@ -397,7 +405,7 @@ export default function Order() {
     const storeOptions = useMemo(() => stores.map(s => ({ value: s.store_id, label: s.name })), [stores]);
 
     const tableColumns = useMemo(() => [
-        { key: "judul", title: "Product", render: row => <>{row.judul}{row.laser_material_name && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bahan: {row.laser_material_name}</small>}{row.tier_pricing?.price != null && <small style={{ display: "block", color: "var(--text-secondary)" }}>Harga dasar bertingkat: {formatRupiah(row.tier_pricing.price)}/{tierUnitLabel(row.tier_pricing)}</small>}</> },
+        { key: "judul", title: "Product", render: row => <>{row.judul}{row.variant && <small style={{ display: "block", color: "var(--text-secondary)" }}>Varian: {row.variant.label}</small>}{row.laser_material_name && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bahan: {row.laser_material_name}</small>}{row.tier_pricing?.price != null && <small style={{ display: "block", color: "var(--text-secondary)" }}>Harga dasar bertingkat: {formatRupiah(row.tier_pricing.price)}/{tierUnitLabel(row.tier_pricing)}</small>}</> },
         { key: "finishing_names", title: "Finishing" },
         { key: "size", title: "Ukuran" },
         { key: "quantity", title: "Qty", render: row => <>{row.quantity}{row.promotion && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bayar {row.promotion.paid_quantity}, gratis {row.promotion.bonus_quantity}</small>}</> },
