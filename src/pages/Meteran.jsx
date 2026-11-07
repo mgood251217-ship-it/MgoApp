@@ -96,7 +96,7 @@ export default function Meteran() {
     const categoryOptions = useMemo(() => [
         { value: "meter_outdoor", label: "Outdoor" },
         { value: "meter_indoor", label: "Indoor" },
-        { value: "meter_jersey_finishing_jersey", label: "Jersey + Finishing Jersey" },
+        { value: "meter_pakaian_finishing_pakaian", label: "Pakaian + Finishing Pakaian" },
         { value: "meter_components", label: "Komponen Produksi" },
         { value: "meter_akrilik_merchandise_akrilik", label: "Akrilik + Merchandise Akrilik" },
         { value: "meter_laser_merchandise", label: "Laser A3 + Merchandise" },
@@ -108,7 +108,7 @@ export default function Meteran() {
     const loadData = async () => {
         try {
             const groupedActions = {
-                meter_jersey_finishing_jersey: ["meter_jersey", "meter_finishing_jersey"],
+                meter_pakaian_finishing_pakaian: ["meter_pakaian", "meter_finishing_pakaian"],
                 meter_akrilik_merchandise_akrilik: ["meter_akrilik", "meter_mercendise_akrilik"],
                 meter_laser_merchandise: ["meter_laser", "meter_merchandise"],
                 meter_sublim_bahan_sublim: ["meter_sublim", "meter_bahan_sublim"]
@@ -128,8 +128,8 @@ export default function Meteran() {
                 );
 
                 const groupedSections = [
-                    { title: "Jersey", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} },
-                    { title: "Finishing Jersey", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} }
+                    { title: "Pakaian", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} },
+                    { title: "Finishing Pakaian", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} }
                 ];
 
                 if (category === "meter_akrilik_merchandise_akrilik") {

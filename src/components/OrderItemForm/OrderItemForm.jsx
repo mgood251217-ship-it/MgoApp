@@ -281,7 +281,7 @@ export default function OrderItemForm({
         if (selectedCategoryName === "DTF" && pName.includes("KAOS") && pUnit === "PCS") {
             return "ukuranJersey";
         }
-        if (selectedCategoryName === "JERSEY") {
+        if (["PAKAIAN", "JERSEY"].includes(selectedCategoryName)) {
             return "ukuranJersey";
         }
         if (noSizeCheck) {
@@ -381,7 +381,7 @@ export default function OrderItemForm({
     const isDTFUV = selectedCategoryName === "DTF UV";
     const isAkrilik = selectedCategoryName === "AKRILIK";
     const usesCentimeters = isAkrilik || selectedProduct?.unit_type?.toUpperCase() === "CM2";
-    const isJersey = selectedCategoryName === "JERSEY";
+    const isPakaian = ["PAKAIAN", "JERSEY"].includes(selectedCategoryName);
     const isDtfKaosPcs = isDTF && selectedProductName.includes("KAOS") && selectedProduct?.unit_type?.toUpperCase() === "PCS";
     const isSublim = selectedCategoryName === "SUBLIM";
     const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
@@ -575,7 +575,7 @@ export default function OrderItemForm({
                         value={formItem.kiloan}
                         onChange={handleFormChange}
                     />
-                ) : (isJersey || isDtfKaosPcs) ? (
+                ) : (isPakaian || isDtfKaosPcs) ? (
                     <Select
                         labelPosition="left"
                         labelWidth={110}
