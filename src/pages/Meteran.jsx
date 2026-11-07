@@ -98,7 +98,7 @@ export default function Meteran() {
         { value: "meter_indoor", label: "Indoor" },
         { value: "meter_pakaian_finishing_pakaian", label: "Pakaian + Finishing Pakaian" },
         { value: "meter_akrilik_merchandise_akrilik", label: "Akrilik + Merchandise Akrilik" },
-        { value: "meter_laser_merchandise", label: "Laser A3 + Merchandise" },
+        { value: "meter_laser", label: "Laser A3" },
         { value: "meter_sublim_bahan_sublim", label: "Sublim + Bahan Sublim" },
         { value: "meter_dtf", label: "DTF" },
         { value: "meter_cetakan", label: "Cetakan" }
@@ -109,7 +109,6 @@ export default function Meteran() {
             const groupedActions = {
                 meter_pakaian_finishing_pakaian: ["meter_pakaian", "meter_finishing_pakaian"],
                 meter_akrilik_merchandise_akrilik: ["meter_akrilik", "meter_mercendise_akrilik"],
-                meter_laser_merchandise: ["meter_laser", "meter_merchandise"],
                 meter_sublim_bahan_sublim: ["meter_sublim", "meter_bahan_sublim"]
             };
 
@@ -134,11 +133,6 @@ export default function Meteran() {
                 if (category === "meter_akrilik_merchandise_akrilik") {
                     groupedSections[0] = { title: "Akrilik", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} };
                     groupedSections[1] = { title: "Merchandise Akrilik", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} };
-                }
-
-                if (category === "meter_laser_merchandise") {
-                    groupedSections[0] = { title: "Laser A3", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} };
-                    groupedSections[1] = { title: "Merchandise", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} };
                 }
 
                 if (category === "meter_sublim_bahan_sublim") {
