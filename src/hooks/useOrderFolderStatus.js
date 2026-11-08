@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { buildFolderName, checkFoldersForItems, listFilesForFolder } from "../services/folderHelper";
 import { generateNotaBase64 } from "../services/notaPdf";
+import { authStore } from "../services/session";
 
 export default function useOrderFolderStatus(setAlertConfig) {
     const [appSettings, setAppSettings] = useState({});
@@ -46,7 +47,7 @@ export default function useOrderFolderStatus(setAlertConfig) {
         });
 
         const currentSettings = await window.electron.getSettings().catch(() => appSettings);
-        const results = await checkFoldersForItems(currentSettings || appSettings, orderRow, itemsList);
+        const results = await checkFoldersForItems(currentSettings || appSettings, orderRow, itemsList, authStore.getUser()?.store?.name || "");
         setItemFolderStatus(results);
 
         const fetchedPaths = new Set();

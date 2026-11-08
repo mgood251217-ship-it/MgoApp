@@ -217,6 +217,48 @@ fn find_existing_order_folder(
     None
 }
 
+fn find_order_folder_with_store(
+    base: &Path, year: i32, month: i32, month_name: &str, day: i32,
+    month_format: Option<&str>, product: Option<&str>, store: Option<&str>, nomorator: &str,
+) -> Option<PathBuf> {
+    let Some(store) = store else {
+        return find_existing_order_folder(base, year, month, month_name, day, month_format, product, nomorator);
+    };
+    let mut searched = Vec::new();
+    let mut legacy_parents = Vec::new();
+    for format in [month_format, Some("number_name"), Some("number"), Some("name"), None] {
+        let Some(day_dir) = resolve_date_folder(base, year, month, month_name, day, format) else { continue };
+        if searched.contains(&day_dir) { continue; }
+        searched.push(day_dir.clone());
+        let mut parents = Vec::new();
+        if let Some(product) = product {
+            parents.push(day_dir.join(product));
+            if let Some(alias) = find_matching_subfolder(&day_dir, |name| normalize_for_match(name) == normalize_for_match(product)) {
+                if !parents.contains(&alias) { parents.push(alias); }
+            }
+        }
+        parents.push(day_dir.clone());
+        legacy_parents.extend(parents.iter().cloned());
+        // Produk bisa diubah namanya atau pemisahannya dimatikan setelah folder dibuat.
+        if let Ok(entries) = fs::read_dir(&day_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() && !parents.contains(&path) { parents.push(path); }
+            }
+        }
+        for parent in parents {
+            if let Some(store_dir) = find_matching_subfolder(&parent, |name| name.eq_ignore_ascii_case(store)) {
+                if let Some(found) = find_folder_recursive(&store_dir, nomorator, 0, 12) { return Some(found); }
+            }
+        }
+    }
+    // Nota lama boleh langsung di bawah tanggal/produk. Jangan masuk ke toko lain.
+    for parent in legacy_parents {
+        if let Some(found) = find_matching_subfolder(&parent, |name| folder_matches_nomor(name, nomorator)) { return Some(found); }
+    }
+    None
+}
+
 fn duplicate_file_suffix(mut index: usize) -> String {
     let mut letters = Vec::new();
     while index > 0 {
@@ -415,6 +457,8 @@ pub struct CariFolderArgs {
     pub month_format: Option<String>,
     #[serde(default, rename = "productFolder")]
     pub product_folder: Option<String>,
+    #[serde(default, rename = "storeFolder")]
+    pub store_folder: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -433,6 +477,8 @@ pub struct BuatFolderArgs {
     pub month_format: Option<String>,
     #[serde(default, rename = "productFolder")]
     pub product_folder: Option<String>,
+    #[serde(default, rename = "storeFolder")]
+    pub store_folder: Option<String>,
     #[serde(default)]
     pub nomorator: Option<String>,
 }
@@ -541,12 +587,13 @@ pub async fn buka_folder(folder_path: String) -> SimpleResult {
 #[tauri::command]
 pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
-        if !validate_folder_options(args.month_format.as_deref(), args.product_folder.as_deref()) {
+        if !validate_folder_options(args.month_format.as_deref(), args.product_folder.as_deref())
+            || !args.store_folder.as_deref().map_or(true, valid_folder_component) {
             return serde_json::json!({ "found": false, "message": "Format folder tidak valid." });
         }
         let base = Path::new(&args.base_path);
-        let found = find_existing_order_folder(base, args.year, args.month_num, &args.month_name,
-            args.day, args.month_format.as_deref(), args.product_folder.as_deref(), &args.nomorator);
+        let found = find_order_folder_with_store(base, args.year, args.month_num, &args.month_name,
+            args.day, args.month_format.as_deref(), args.product_folder.as_deref(), args.store_folder.as_deref(), &args.nomorator);
         serde_json::json!({ "found": found.is_some(), "path": found.map(|p| p.to_string_lossy().to_string()) })
     })
     .await
@@ -557,18 +604,20 @@ pub async fn cari_folder_order(args: CariFolderArgs) -> serde_json::Value {
 pub async fn buat_folder_order(args: BuatFolderArgs) -> serde_json::Value {
     tauri::async_runtime::spawn_blocking(move || {
         if !validate_folder_options(args.month_format.as_deref(), args.product_folder.as_deref())
+            || !args.store_folder.as_deref().map_or(true, valid_folder_component)
             || !valid_folder_component(&args.folder_name) || !valid_folder_component(&args.month_name) {
             return serde_json::json!({ "success": false, "message": "Format atau nama folder tidak valid." });
         }
         let base = Path::new(&args.base_path);
         let nomorator = args.nomorator.as_deref().unwrap_or_else(|| args.folder_name.rsplit('_').next().unwrap_or(""));
-        if let Some(existing) = find_existing_order_folder(base, args.year, args.month_num, &args.month_name,
-            args.day, args.month_format.as_deref(), args.product_folder.as_deref(), nomorator) {
+        if let Some(existing) = find_order_folder_with_store(base, args.year, args.month_num, &args.month_name,
+            args.day, args.month_format.as_deref(), args.product_folder.as_deref(), args.store_folder.as_deref(), nomorator) {
             return serde_json::json!({ "success": true, "path": existing.to_string_lossy() });
         }
         match resolve_or_create_date_folder(base, args.year, args.month_num, &args.month_name, args.day, args.month_format.as_deref()) {
             Ok(day_dir) => {
                 let parent = args.product_folder.as_ref().map_or(day_dir.clone(), |product| day_dir.join(product));
+                let parent = args.store_folder.as_ref().map_or(parent.clone(), |store| parent.join(store));
                 let target = parent.join(&args.folder_name);
                 match fs::create_dir_all(&target) {
                     Ok(_) => serde_json::json!({ "success": true, "path": target.to_string_lossy() }),

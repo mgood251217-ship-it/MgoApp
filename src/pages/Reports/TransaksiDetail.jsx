@@ -18,6 +18,7 @@ import { getCachedTransactionsDetail } from "../../services/apiCache";
 import { checkFoldersForItems, listFilesForFolder, formatUkuran, folderInfoMatchesItem } from "../../services/folderHelper";
 import { isDesktop } from "../../services/platform";
 import usePageAlert from "../../hooks/usePageAlert";
+import { authStore } from "../../services/session";
 
 export default function TransaksiDetail() {
     const { showAlert, alertElement } = usePageAlert();
@@ -232,7 +233,7 @@ export default function TransaksiDetail() {
                     const rawItems = itemsByOrder[order.order_id] || [];
                     const itemsList = rawItems.map((item, idx) => ({ ...item, no: idx + 1 }));
 
-                    const folderCheck = await checkFoldersForItems(settings, order, itemsList);
+                    const folderCheck = await checkFoldersForItems(settings, order, itemsList, authStore.getUser()?.store?.name || "");
                     const fileResults = {};
                     
                     for (const cat of Object.keys(folderCheck)) {

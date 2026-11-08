@@ -9,6 +9,7 @@ import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { applyTheme } from "../services/theme";
 import { clearAllCache } from "../services/apiCache";
+import { useSession } from "../services/session";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
@@ -499,6 +500,8 @@ const toHex = (str) => {
 };
 
 export default function Settings() {
+    const session = useSession();
+    const storeName = session?.store?.name || "NAMA TOKO";
     const [settings, setSettings] = useState({});
     const [defaultColors, setDefaultColors] = useState({});
     const [loading, setLoading] = useState(true);
@@ -961,9 +964,17 @@ export default function Settings() {
                                             />
                                             Pisahkan per produk
                                         </label>
+                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text)", fontSize: 13 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={getProductionFolderOptions(settings, key).addStoreName}
+                                                onChange={(e) => handleInputChange(`${key}_add_store_name`, e.target.checked)}
+                                            />
+                                            Tambahkan nama toko
+                                        </label>
                                         <div style={{ padding: "10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", color: "var(--text-secondary)", fontSize: 12, overflowWrap: "anywhere" }}>
                                             <strong>Preview folder produksi</strong>
-                                            <div>{buildProductionPathPreview(settings[key], getProductionFolderOptions(settings, key), "2026-10-26")}</div>
+                                            <div>{buildProductionPathPreview(settings[key], getProductionFolderOptions(settings, key), "2026-10-26", "PRINTPRESS", storeName)}</div>
                                             <small>Contoh tanggal 26 Oktober 2026, produk PRINTPRESS. Folder nota dibuat di dalamnya.</small>
                                         </div>
                                     </div>

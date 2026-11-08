@@ -3,6 +3,7 @@ export const FOLDER_STATUS_LABEL = {
     ada: "✅ Ada",
     "tidak-ada": "❌ Tidak ada",
     "no-path": "⚠️ Path belum diatur",
+    "no-store": "Nama toko belum tersedia",
 };
 
 const sanitizeFolderPart = (str) => String(str || "").replace(/[\\/:*?"<>|]/g, "").trim();
@@ -28,6 +29,7 @@ export const getProductionFolderOptions = (settings, pathKey) => {
     return {
         monthFormat: ["number_name", "number", "name"].includes(monthFormat) ? monthFormat : "number_name",
         separateByProduct: settings?.[`${key}_separate_by_product`] === true,
+        addStoreName: settings?.[`${key}_add_store_name`] === true,
     };
 };
 
@@ -45,11 +47,15 @@ export const buildDateSubPath = (dateStr, monthFormat = "number_name") => {
     return `${year}\\${month}\\${day}`;
 };
 
-export const buildProductionPathPreview = (basePath, options, dateStr, productName = "PRINTPRESS") => {
+export const buildProductionPathPreview = (basePath, options, dateStr, productName = "PRINTPRESS", storeName = "NAMA TOKO") => {
     if (!basePath) return "Pilih atau isi path terlebih dahulu.";
-    const path = joinPath(basePath, buildDateSubPath(dateStr, options.monthFormat));
-    return options.separateByProduct ? joinPath(path, sanitizeFolderPart(productName).toUpperCase()) : path;
+    let path = joinPath(basePath, buildDateSubPath(dateStr, options.monthFormat));
+    if (options.separateByProduct) path = joinPath(path, sanitizeFolderPart(productName).toUpperCase());
+    if (options.addStoreName) path = joinPath(path, getStoreFolderName(storeName));
+    return path;
 };
+
+const getStoreFolderName = (name) => sanitizeFolderPart(name).replace(/[\u0000-\u001f]/g, "").replace(/[. ]+$/g, "").toUpperCase();
 
 export const buildDateParts = (dateStr) => {
     if (!dateStr) return null;
@@ -140,7 +146,7 @@ export const folderInfoMatchesItem = (info, item) => info.category === item.cate
 export const getItemFolderStatus = (statuses, item) => Object.values(statuses).find(info => folderInfoMatchesItem(info, item))
     || statuses[item.category];
 
-export const checkFoldersForItems = async (settings, orderData, itemsList) => {
+export const checkFoldersForItems = async (settings, orderData, itemsList, storeName = "") => {
     const relevantItems = (itemsList || []).filter(i => i.category && !i.maklun_store);
     const categoriesInOrder = [...new Set(relevantItems.map(i => i.category))];
     const results = {};
@@ -153,6 +159,11 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
         const configuredKeys = pathKeys.filter(key => settings?.[`path_${key}`]);
         if (!configuredKeys.length) {
             results[cat] = { status: "no-path", category: cat, path: null, createPath: null, createInfo: null, pathKey: null };
+            return;
+        }
+        const storeFolderName = getStoreFolderName(orderData.store_name || storeName);
+        if (!storeFolderName && configuredKeys.some(key => getProductionFolderOptions(settings, key).addStoreName)) {
+            results[cat] = { status: "no-store", category: cat, path: null, createPath: null, createInfo: null, pathKey: null };
             return;
         }
         const splitProducts = configuredKeys.some(key => getProductionFolderOptions(settings, key).separateByProduct);
@@ -171,6 +182,7 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
                         basePath, ...dateParts, nomorator,
                         monthFormat: settings[`path_${key}_month_format`] ? options.monthFormat : null,
                         productFolder,
+                        storeFolder: options.addStoreName ? storeFolderName : null,
                     });
                     if (res?.found) {
                         results[resultKey] = { status: "ada", category: cat, productFolder, path: res.path, createPath: null, createInfo: null, pathKey: key };
@@ -184,12 +196,13 @@ export const checkFoldersForItems = async (settings, orderData, itemsList) => {
                 const options = getProductionFolderOptions(settings, key);
                 const productFolder = options.separateByProduct ? product : null;
                 const folderName = buildFolderName(orderData);
-                const parentPath = buildProductionPathPreview(basePath, options, orderData.date, product || "");
+                const parentPath = buildProductionPathPreview(basePath, options, orderData.date, product || "", storeFolderName);
                 const createPath = dateParts ? joinPath(parentPath, folderName) : null;
                 const createInfo = dateParts ? {
                     basePath, ...dateParts, folderName, nomorator,
                     monthFormat: settings[`path_${key}_month_format`] ? options.monthFormat : null,
                     productFolder,
+                    storeFolder: options.addStoreName ? storeFolderName : null,
                 } : null;
                 results[resultKey] = { status: "tidak-ada", category: cat, productFolder, path: null, createPath, createInfo, pathKey: key };
             }
