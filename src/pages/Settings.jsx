@@ -13,7 +13,7 @@ import { clearAllCache } from "../services/apiCache";
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
     { key: "path_outdoor", label: "Path Outdoor" },
-    { key: "path_sublim", label: "Path Sublim" },
+    { key: "path_sublim", label: "Path Sublim / Pakaian" },
     { key: "path_laser", label: "Path Laser" },
     { key: "path_akrilik", label: "Path Akrilik" },
     { key: "path_dtf", label: "Path DTF" },

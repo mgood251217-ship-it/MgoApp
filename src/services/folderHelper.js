@@ -93,8 +93,9 @@ export const buildFolderName = (orderData) => {
 
 export const resolveBasePath = (settings, kategori) => {
     if (!kategori) return null;
-    const key = `path_${String(kategori).toLowerCase()}`;
-    return settings?.[key] || null;
+    const category = String(kategori).trim().toUpperCase();
+    const pathKeys = CATEGORY_PATH_MAP[category] || [category.toLowerCase()];
+    return pathKeys.map(key => settings?.[`path_${key}`]).find(Boolean) || null;
 };
 
 export const joinPath = (base, name) => {
@@ -115,6 +116,7 @@ const CATEGORY_PATH_MAP = {
     DTF: ["dtf"],
     "DTF UV": ["dtf_uv"],
     SUBLIM: ["sublim"],
+    PAKAIAN: ["sublim"],
 };
 
 const STANDARD_WIDTHS = {
