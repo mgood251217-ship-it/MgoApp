@@ -3,6 +3,10 @@ import { formatRupiah, formatTime, titleCase } from "../../services/helpers";
 import config from "../../services/config";
 import "../PrintPdf/PrintPdf.css";
 
+const usesOutdoorMinimum = (item) => (item.category || "").toUpperCase() === "OUTDOOR"
+    && item.product_id && !Number(item.product_finishing_price_id)
+    && !item.variant && !Number(item.product_variant_id) && !item.tier_pricing && !item.promotion;
+
 export default function ReceiptContent({ data, store, paymentData, id = "pdf-content" }) {
     if (!data || !store || !paymentData) return null;
 
@@ -47,7 +51,7 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
     const outdoor = {};
     const luasKurangDariSatu = {};
     items.forEach((item) => {
-        if ((item.category || "").toUpperCase() === "OUTDOOR" && item.product_id && !item.promotion) {
+        if (usesOutdoorMinimum(item)) {
             const pid = `${item.product_id}:${item.variant?.id || 0}`;
             const match = item.size?.match(/^([\d.]+)[xX]([\d.]+)$/);
             const luas = match ? (parseFloat(match[1]) * parseFloat(match[2])) : 0;
@@ -120,11 +124,14 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
                         const pid = `${item.product_id}:${item.variant?.id || 0}`;
                         let hidePrice = false;
                         let customPrice = null;
-                        if ((item.category || "").toUpperCase() === "OUTDOOR" && luasKurangDariSatu[pid] && !item.promotion) {
+                        if (usesOutdoorMinimum(item) && luasKurangDariSatu[pid]) {
                             if (printedPriceFor.includes(pid)) hidePrice = true;
                             else { customPrice = luasKurangDariSatu[pid]; printedPriceFor.push(pid); }
                         }
                         const harga = customPrice !== null ? customPrice : item.amount;
+                        const hargaSatuan = customPrice !== null
+                            ? harga / (Number(item.quantity) || 1)
+                            : (item.unit ?? (harga / (Number(item.quantity) || 1)));
                         return (
                             <React.Fragment key={idx}>
                                 <tr style={{ borderTop: "0.5px solid #000" }}>
@@ -137,7 +144,7 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
                                         {item.finishing_names && item.finishing_names.trim() !== "" ? `${item.finishing_names} | ` : ""}
                                         {item.promotion ? <>
                                             {item.promotion.paid_quantity} x {formatRupiah(item.unit)} + gratis {item.promotion.bonus_quantity} pcs (total {item.quantity} pcs)
-                                        </> : <>{item.quantity} x {hidePrice ? "" : formatRupiah(harga / item.quantity)}</>}
+                                        </> : <>{item.quantity} x {hidePrice ? "" : formatRupiah(hargaSatuan)}</>}
                                     </td>
                                 </tr>
                             </React.Fragment>
