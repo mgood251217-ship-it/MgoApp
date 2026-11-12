@@ -5,6 +5,7 @@ export async function checkServer() {
 		const result = await testConnection();
 		return result.success === true;
 	} catch (error) {
+		if (["HOSTING_CHALLENGE", "SERVER_RESPONSE_INVALID"].includes(error.code)) throw error;
 		return false;
 	}
 }

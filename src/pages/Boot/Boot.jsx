@@ -43,7 +43,11 @@ export default function Boot({ onComplete }) {
             onComplete(false);
         } catch (err) {
             console.error(err);
-            setError("Terjadi kesalahan saat memulai aplikasi.");
+            const messages = {
+                HOSTING_CHALLENGE: "Akses MGO diblokir verifikasi keamanan hosting. Hubungi administrator hosting, lalu klik Coba Lagi.",
+                SERVER_RESPONSE_INVALID: "Server mengirim respons yang tidak sesuai. Periksa alamat server atau pengaturan hosting, lalu klik Coba Lagi."
+            };
+            setError(messages[err.code] || "Terjadi kesalahan saat memulai aplikasi.");
         }
     }, [onComplete]);
 
