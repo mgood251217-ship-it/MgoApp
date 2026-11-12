@@ -18,8 +18,7 @@ export default function ReportNav() {
         { label: "Piutang", path: "/reports/piutang" },
         { label: "Pelunasan", path: "/reports/pelunasan" },
         { label: "Keuangan", path: "/reports/keuangan" },
-        { label: "Statistik Karyawan", path: "/reports/statistik-karyawan" },
-        { label: "Aktivitas", path: "/reports/aktivitas" }
+        { label: "Statistik Karyawan", path: "/reports/statistik-karyawan" }
     ];
 
     const handleNavClick = (e, item) => {

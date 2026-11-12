@@ -123,12 +123,7 @@ export default function Report() {
             description2: data?.topUserName || "-",
             path: "/reports/statistik-karyawan"
         },
-        {
-            title: "Aktivitas",
-            description1: "Log Aktivitas User",
-            description2: "-",
-            path: "/reports/aktivitas"
-        }
+
     ];
 
     const handleCardClick = (e, card) => {

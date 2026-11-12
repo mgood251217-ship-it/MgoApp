@@ -28,7 +28,6 @@ import Piutang from "../pages/Reports/Piutang";
 import Pelunasan from "../pages/Reports/Pelunasan";
 import Keuangan from "../pages/Reports/Keuangan";
 import StatistikKaryawan from "../pages/Reports/StatistikKaryawan";
-import Aktivitas from "../pages/Reports/Aktivitas";
 
 const TITLE_BY_PATH = {
     "/store": "Store",
@@ -86,7 +85,6 @@ function TabMainRoutes() {
             <Route path="/reports/pelunasan" element={<Pelunasan />} />
             <Route path="/reports/keuangan" element={<Keuangan />} />
             <Route path="/reports/statistik-karyawan" element={<StatistikKaryawan />} />
-            <Route path="/reports/aktivitas" element={<Aktivitas />} />
 
             <Route path="/settings" element={<Settings />} />
         </Routes>
@@ -120,6 +118,11 @@ function TabPanels() {
 }
 
 export default function MainLayout() {
+    useEffect(() => {
+        localStorage.removeItem("mgo_cache_activity");
+        localStorage.removeItem("mgo_cache_orderArchive");
+    }, []);
+
     return (
         <TabsProvider initialPath="/orders" initialTitle="Orders">
             <div className="app-shell">
