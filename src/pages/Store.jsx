@@ -58,7 +58,6 @@ export default function Store() {
     const [stats, setStats] = useState({ chart_30: {}, chart_365: {}, summary: {} });
 
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-    const [isUserEditMode, setIsUserEditMode] = useState(false);
     const [loadingUserForm, setLoadingUserForm] = useState(false);
 
     const initialUserFormState = {
@@ -127,12 +126,6 @@ export default function Store() {
         }
     };
 
-    const openAddUserModal = () => {
-        setUserFormData(initialUserFormState);
-        setIsUserEditMode(false);
-        setIsUserModalOpen(true);
-    };
-
     const openEditUserModal = (row) => {
         setUserFormData({
             user_id: row.user_id,
@@ -144,7 +137,6 @@ export default function Store() {
             picture: null,
             old_picture: row.picture || "",
         });
-        setIsUserEditMode(true);
         setIsUserModalOpen(true);
     };
 
@@ -155,10 +147,8 @@ export default function Store() {
         try {
             const payload = new FormData();
             
-            if (isUserEditMode) {
-                payload.append("user_id", userFormData.user_id);
-                payload.append("old_picture", userFormData.old_picture);
-            }
+            payload.append("user_id", userFormData.user_id);
+            payload.append("old_picture", userFormData.old_picture);
             
             payload.append("name", userFormData.name);
             payload.append("username", userFormData.username);
@@ -173,17 +163,15 @@ export default function Store() {
                 payload.append("picture", userFormData.picture);
             }
 
-            const actionType = isUserEditMode ? "update_user" : "create_user";
-
             const res = await api.post("", payload, {
-                params: { action: actionType },
+                params: { action: "update_user" },
                 headers: { "Content-Type": "multipart/form-data" }
             });
 
             if (res.data?.success) {
-                showAlert(res.data?.message || `User berhasil ${isUserEditMode ? 'diperbarui' : 'ditambahkan'}.`, "success");
+                showAlert(res.data?.message || "User berhasil diperbarui.", "success");
             } else {
-                showAlert(res.data?.message || `Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`, "error");
+                showAlert(res.data?.message || "Gagal mengedit user.", "error");
             }
 
             setIsUserModalOpen(false);
@@ -191,33 +179,11 @@ export default function Store() {
             await clearUsersCache();
             loadData();
         } catch (error) {
-            showAlert(`Gagal ${isUserEditMode ? 'mengedit' : 'menambah'} user.`, "error");
+            showAlert("Gagal mengedit user.", "error");
         } finally {
             setLoadingUserForm(false);
         }
     };
-
-    const handleDeleteUser = useCallback(async (userId) => {
-        if (!window.confirm("Apakah Anda yakin ingin menghapus user ini?")) return;
-
-        try {
-            const payload = new FormData();
-            payload.append("user_id", userId);
-
-            const res = await api.post("", payload, {
-                params: { action: "delete_user" }
-            });
-            if (res.data?.success) {
-                showAlert(res.data?.message || "User berhasil dihapus.");
-            }else{
-                showAlert(res.data?.message || "Gagal menghapus user.", "error");
-            }
-            await clearUsersCache();
-            loadData();
-        } catch (error) {
-            showAlert("Gagal menghapus user.", "error");
-        }
-    }, [loadData]);
 
     const handleMachineInputChange = (e) => {
         const { name, value } = e.target;
@@ -411,14 +377,8 @@ export default function Store() {
                 icon={<Icon name="edit" />}
                 onClick={() => openEditUserModal(row)}
             />
-            <Button
-                size="sm"
-                variant="danger"
-                icon={<Icon name="delete" />}
-                onClick={() => handleDeleteUser(row.user_id)}
-            />
         </div>
-    ), [handleDeleteUser]);
+    ), []);
 
     const machineActions = useCallback((row) => (
         <div style={{ display: "flex", gap: "4px" }}>
@@ -449,13 +409,6 @@ export default function Store() {
                 subtitle="Ringkasan data toko dan statistik." 
                 actions={
                     <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                        <Button 
-                            variant="primary" 
-                            icon={<Icon name="add" />}
-                            onClick={openAddUserModal}
-                        >
-                            Tambah User
-                        </Button>
                         <Button 
                             variant="success" 
                             icon={<Icon name="add" />} 
@@ -588,13 +541,11 @@ export default function Store() {
             <Modal 
                 size='sm'
                 open={isUserModalOpen}
-                title={isUserEditMode ? "Edit User" : "Tambah User Baru"} 
+                title="Edit User"
                 onClose={() => setIsUserModalOpen(false)}
             >
                 <form onSubmit={handleSubmitUser}>
-                    {isUserEditMode && (
-                        <input type="hidden" name="old_picture" value={userFormData.old_picture} />
-                    )}
+                    <input type="hidden" name="old_picture" value={userFormData.old_picture} />
 
                     <Input 
                         labelPosition="left"
@@ -619,8 +570,7 @@ export default function Store() {
                         name="password" 
                         value={userFormData.password} 
                         onChange={handleUserInputChange} 
-                        required={!isUserEditMode}
-                        placeholder={isUserEditMode ? "Kosongkan jika tidak diubah" : ""}
+                        placeholder="Kosongkan jika tidak diubah"
                     />
                     <Input 
                         labelPosition="left"
@@ -646,7 +596,7 @@ export default function Store() {
                         onChange={handleUserInputChange} 
                         style={{ display: "block", width: "100%", marginTop: "12px" }}
                     />
-                    {isUserEditMode && userFormData.old_picture && (
+                    {userFormData.old_picture && (
                         <small style={{ color: "var(--text-muted)", display: "block", marginTop: "4px" }}>
                             Foto saat ini: {userFormData.old_picture}
                         </small>
@@ -658,7 +608,7 @@ export default function Store() {
                         variant="primary"
                         disabled={loadingUserForm}
                         icon={<Icon name="save" />} >
-                        {loadingUserForm ? "Menyimpan..." : (isUserEditMode ? "Simpan Perubahan" : "Simpan User")}
+                        {loadingUserForm ? "Menyimpan..." : "Simpan Perubahan"}
                     </Button>
                 </form>
             </Modal>
