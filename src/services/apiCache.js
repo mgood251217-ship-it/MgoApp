@@ -1045,7 +1045,9 @@ export const getCachedActivity = async (startDate, endDate, onUpdate) => {
         const dataset = await getServerDataset();
         const orderTime = dataset.orders_updated_at || 0;
         const paymentTime = dataset.payments_updated_at || 0;
-        const serverTime = Math.max(orderTime, paymentTime);
+        const activityTime = dataset.activities_updated_at || 0;
+        const financeTime = dataset.finance_updated_at || 0;
+        const serverTime = Math.max(orderTime, paymentTime, activityTime, financeTime);
 
         if (!cachedItem || cachedItem.updatedAt < serverTime) {
             try {
