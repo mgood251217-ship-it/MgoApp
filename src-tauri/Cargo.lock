@@ -1915,7 +1915,7 @@ dependencies = [
 
 [[package]]
 name = "mgo-desktop"
-version = "2.1.0"
+version = "2.1.1"
 dependencies = [
  "base64 0.22.1",
  "chrono",
