@@ -122,7 +122,9 @@ const CATEGORY_PATH_MAP = {
     DTF: ["dtf"],
     "DTF UV": ["dtf_uv"],
     SUBLIM: ["sublim"],
+    TEKSTIL: ["sublim"],
     PAKAIAN: ["sublim"],
+    JERSEY: ["sublim"],
 };
 
 const STANDARD_WIDTHS = {

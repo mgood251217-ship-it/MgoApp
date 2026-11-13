@@ -96,7 +96,7 @@ export default function Meteran() {
     const categoryOptions = useMemo(() => [
         { value: "meter_outdoor", label: "Outdoor" },
         { value: "meter_indoor", label: "Indoor" },
-        { value: "meter_pakaian_finishing_pakaian", label: "Pakaian + Finishing Pakaian" },
+        { value: "meter_pakaian_finishing_pakaian", label: "Tekstil + Finishing Tekstil" },
         { value: "meter_akrilik_merchandise_akrilik", label: "Akrilik + Merchandise Akrilik" },
         { value: "meter_laser", label: "Laser A3" },
         { value: "meter_sublim_bahan_sublim", label: "Sublim + Bahan Sublim" },
@@ -126,8 +126,8 @@ export default function Meteran() {
                 );
 
                 const groupedSections = [
-                    { title: "Pakaian", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} },
-                    { title: "Finishing Pakaian", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} }
+                    { title: "Tekstil", source: responses[0]?.data?.data ?? responses[0]?.data ?? {} },
+                    { title: "Finishing Tekstil", source: responses[1]?.data?.data ?? responses[1]?.data ?? {} }
                 ];
 
                 if (category === "meter_akrilik_merchandise_akrilik") {

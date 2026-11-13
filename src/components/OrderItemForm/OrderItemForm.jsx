@@ -19,6 +19,7 @@ const EMPTY_ITEM = {
     paketSize: "", size: "", laser_product_id: "", product_variant_id: "", variant_options: {}, variant: null
 };
 
+const isTextileCategory = name => ["TEKSTIL", "PAKAIAN", "JERSEY"].includes(String(name || '').trim().toUpperCase());
 const normalizeId = value => value?.toString() ?? value;
 const finishingKey = value => [...new Set((Array.isArray(value) ? value : String(value || '').split(',')).filter(id => Number(id) > 0).map(Number))].sort((a, b) => a - b).join(',');
 const sizeKey = value => String(value || '').trim() === '-' ? '' : String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
@@ -281,7 +282,7 @@ export default function OrderItemForm({
         if (selectedCategoryName === "DTF" && pName.includes("KAOS") && pUnit === "PCS") {
             return "ukuranJersey";
         }
-        if (["PAKAIAN", "JERSEY"].includes(selectedCategoryName)) {
+        if (isTextileCategory(selectedCategoryName)) {
             return "ukuranJersey";
         }
         if (noSizeCheck) {
@@ -381,7 +382,7 @@ export default function OrderItemForm({
     const isDTFUV = selectedCategoryName === "DTF UV";
     const isAkrilik = selectedCategoryName === "AKRILIK";
     const usesCentimeters = isAkrilik || selectedProduct?.unit_type?.toUpperCase() === "CM2";
-    const isPakaian = ["PAKAIAN", "JERSEY"].includes(selectedCategoryName);
+    const isTekstil = isTextileCategory(selectedCategoryName);
     const isDtfKaosPcs = isDTF && selectedProductName.includes("KAOS") && selectedProduct?.unit_type?.toUpperCase() === "PCS";
     const isSublim = selectedCategoryName === "SUBLIM";
     const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
@@ -445,7 +446,7 @@ export default function OrderItemForm({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleSubmit, showCancel, onCancel]);
 
-    const categoryOptions = useMemo(() => categories.map(c => ({ value: c.category_id, label: c.name })), [categories]);
+    const categoryOptions = useMemo(() => categories.map(c => ({ value: c.category_id, label: isTextileCategory(c.name) ? "TEKSTIL" : c.name })), [categories]);
     const productOptions = useMemo(() => products.map(p => ({ value: p.product_id, label: p.display_name })), [products]);
     const jerseySizeOptions = [
         { value: 'XS', label: 'XS' }, { value: 'S', label: 'S' }, { value: 'M', label: 'M' },
@@ -575,7 +576,7 @@ export default function OrderItemForm({
                         value={formItem.kiloan}
                         onChange={handleFormChange}
                     />
-                ) : (isPakaian || isDtfKaosPcs) ? (
+                ) : (isTekstil || isDtfKaosPcs) ? (
                     <Select
                         labelPosition="left"
                         labelWidth={110}
