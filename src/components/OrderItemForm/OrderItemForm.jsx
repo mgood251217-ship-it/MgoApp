@@ -20,6 +20,10 @@ const EMPTY_ITEM = {
 };
 
 const isTextileCategory = name => ["TEKSTIL", "PAKAIAN", "JERSEY"].includes(String(name || '').trim().toUpperCase());
+const materialWeightFromSize = size => String(size || '').trim().match(/^(\d+(?:\.\d+)?)\s*KG$/i)?.[1] || '';
+const isSublimMaterialByWeight = (category, product) => String(category || '').trim().toUpperCase() === 'SUBLIM'
+    && String(product?.name || product?.display_name || '').toUpperCase().includes('BAHAN')
+    && String(product?.unit_type || '').toUpperCase() === 'PCS';
 const normalizeId = value => value?.toString() ?? value;
 const finishingKey = value => [...new Set((Array.isArray(value) ? value : String(value || '').split(',')).filter(id => Number(id) > 0).map(Number))].sort((a, b) => a - b).join(',');
 const sizeKey = value => String(value || '').trim() === '-' ? '' : String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
@@ -67,11 +71,11 @@ export default function OrderItemForm({
     const finishingRefs = useRef([]);
     const isFirstRenderRef = useRef(true);
 
-    const [formItem, setFormItem] = useState({ ...EMPTY_ITEM, ...initialData, variant_options: initialData?.variant?.options || initialData?.variant_options || {} });
+    const [formItem, setFormItem] = useState({ ...EMPTY_ITEM, ...initialData, kiloan: initialData?.kiloan || materialWeightFromSize(initialData?.size), variant_options: initialData?.variant?.options || initialData?.variant_options || {} });
 
     useEffect(() => {
         if (initialData) {
-            setFormItem(prev => ({ ...prev, ...initialData, variant_options: initialData.variant?.options || initialData.variant_options || {} }));
+            setFormItem(prev => ({ ...prev, ...initialData, kiloan: initialData.kiloan || materialWeightFromSize(initialData.size), variant_options: initialData.variant?.options || initialData.variant_options || {} }));
         }
     }, [initialData]);
 
@@ -276,7 +280,7 @@ export default function OrderItemForm({
         if (pName === "SETTING" || pName === "POTONG AKRILIK") {
             return "waktu";
         }
-        if (selectedCategoryName === "SUBLIM" && pName.includes("BAHAN") && pUnit !== "M2") {
+        if (isSublimMaterialByWeight(selectedCategoryName, prod)) {
             return "kiloan";
         }
         if (selectedCategoryName === "DTF" && pName.includes("KAOS") && pUnit === "PCS") {
@@ -388,8 +392,7 @@ export default function OrderItemForm({
     const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
     
     const isWaktu = selectedProductName === "SETTING" || selectedProductName === "POTONG AKRILIK";
-    const isBahan = selectedProductName.includes("BAHAN");
-    const isBahanM2 = isBahan && selectedProduct?.unit_type?.toUpperCase() === "M2";
+    const isBahanKiloan = isSublimMaterialByWeight(selectedCategoryName, selectedProduct);
     const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
 
     const hideFinishing = ["PAKET INDOOR OUTDOOR", "STAMP", "MERCENDISE", "MERCENDISE AKRILIK"].includes(selectedCategoryName);
@@ -564,15 +567,17 @@ export default function OrderItemForm({
                         value={formItem.waktu}
                         onChange={handleFormChange}
                     />
-                ) : (isSublim && isBahan && !isBahanM2) ? (
+                ) : isBahanKiloan ? (
                     <Input
                         labelPosition="left"
                         labelWidth={110}
                         name="kiloan"
                         type="number"
                         step="any"
-                        label="Kiloan"
-                        placeholder="Berat (kg)..."
+                        label="Berat (kg)"
+                        min="0.0001"
+                        required
+                        placeholder="Berat per quantity..."
                         value={formItem.kiloan}
                         onChange={handleFormChange}
                     />
