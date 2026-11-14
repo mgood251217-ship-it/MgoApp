@@ -340,6 +340,7 @@ export default function Order() {
             laser_product_id: row.laser_product_id?.toString() || "",
             product_variant_id: row.product_variant_id?.toString() || "",
             variant: row.variant || null,
+            bundle: row.bundle || null,
             panjang: p,
             lebar: w,
             qty: row.quantity || "",

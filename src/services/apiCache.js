@@ -481,6 +481,23 @@ export const getCachedProductLaserConversions = async (categoryId, onUpdate) => 
     return fetchLatest().catch(() => []);
 };
 
+export const getCachedProductBundles = async (onUpdate) => {
+    const key = 'productBundles';
+    const cached = getStorage(key, null);
+    const fetchLatest = async () => {
+        const dataset = await getServerDataset();
+        const serverTime = Math.max(dataset.product_bundles_updated_at || 0, dataset.products_updated_at || 0,
+            dataset.product_variants_updated_at || 0, dataset.product_laser_conversion_updated_at || 0);
+        if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
+        const res = await api.get('', { params: { action: 'product_bundles' } });
+        if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('Gagal memuat paket gabungan.');
+        setStorage(key, { data: res.data.data, updatedAt: serverTime });
+        onUpdate?.(res.data.data); return res.data.data;
+    };
+    if (cached) { fetchLatest().catch(() => {}); return cached.data; }
+    return fetchLatest().catch(() => []);
+};
+
 export const getCachedProductVariants = async (productId, onUpdate) => {
     if (!productId) return [];
     const key = 'productVariantsByProduct';

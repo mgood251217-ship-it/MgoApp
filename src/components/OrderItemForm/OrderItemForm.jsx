@@ -9,7 +9,8 @@ import {
     getCachedFinishingsByCategory,
     getCachedProductFinishingPrices,
     getCachedProductLaserConversions,
-    getCachedProductVariants
+    getCachedProductVariants,
+    getCachedProductBundles
 } from "../../services/apiCache";
 import { variantGroups, variantChoices, matchProductVariant } from '../../services/productVariants';
 
@@ -67,6 +68,7 @@ export default function OrderItemForm({
     const [packageRules, setPackageRules] = useState([]);
     const [laserConversions, setLaserConversions] = useState([]);
     const [productVariants, setProductVariants] = useState([]);
+    const [productBundles, setProductBundles] = useState([]);
     const [variantsLoading, setVariantsLoading] = useState(false);
     const finishingRefs = useRef([]);
     const isFirstRenderRef = useRef(true);
@@ -93,6 +95,26 @@ export default function OrderItemForm({
     useEffect(() => {
         loadCategories();
     }, [loadCategories]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const apply = rows => { if (!cancelled) setProductBundles(rows); };
+        getCachedProductBundles(apply).then(apply);
+        return () => { cancelled = true; };
+    }, []);
+    const savedBundle = formItem.order_item_id && String(formItem.product_id) === String(initialData?.product_id) ? initialData?.bundle : null;
+    const selectedBundle = savedBundle ? {
+        valid: true,
+        contents: savedBundle.items.map(item => ({ quantity: item.quantity,
+            label: item.product.name + (item.variant ? ' - ' + item.variant.label : '')
+                + (item.laser ? ' - ' + [item.laser.laser_name, item.laser.size, item.laser.finishing_names].filter(Boolean).join(' / ') : '') }))
+    } : productBundles.find(bundle => String(bundle.product_id) === String(formItem.product_id));
+    const invalidBundle = selectedBundle?.valid === false;
+    const hasBundle = Boolean(selectedBundle);
+    useEffect(() => {
+        if (hasBundle) setFormItem(prev => prev.finishings.length ? { ...prev, finishings: [] } : prev);
+    }, [hasBundle]);
+
 
     const selectedCategory = categories.find(c => normalizeId(c.category_id) === normalizeId(formItem.category_id));
     const selectedCategoryName = selectedCategory?.name?.toUpperCase() || "";
@@ -396,7 +418,7 @@ export default function OrderItemForm({
     const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
 
     const hideFinishing = ["PAKET INDOOR OUTDOOR", "STAMP", "MERCENDISE", "MERCENDISE AKRILIK"].includes(selectedCategoryName);
-    const showFinishing = !hideFinishing && finishings.length > 0;
+    const showFinishing = !selectedBundle && !hideFinishing && finishings.length > 0;
 
     useEffect(() => {
         if ((isDTF || isDTFUV) && formItem.lebar !== "0.58") {
@@ -406,7 +428,7 @@ export default function OrderItemForm({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (variantsLoading || variantIncomplete || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)) return;
+        if (invalidBundle || variantsLoading || variantIncomplete || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)) return;
         if (onSubmit) {
             onSubmit({ ...formItem, selectedProductName }); 
         }
@@ -487,6 +509,14 @@ export default function OrderItemForm({
                 placeholder="Pilih Produk"
                 required
             />
+            {selectedBundle && (
+                <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                    <strong>Isi per 1 paket</strong>
+                    {(selectedBundle.contents || []).map((item, index) => <div key={index}>{item.quantity} x {item.label}</div>)}
+                    <small>Harga paket ditagih sekali. Produksi dan stok mengikuti isi paket.</small>
+                    {invalidBundle && <div style={{ color: 'var(--danger)' }}>{selectedBundle.error}</div>}
+                </div>
+            )}
             {optionGroups.map((group, index) => (
                 <Select key={group} name={`variant_option_${index}`} label={group} labelPosition="left" labelWidth={110}
                     value={formItem.variant_options?.[group] || ''} onChange={event => handleVariantChange(index, event.target.value)}
@@ -721,7 +751,7 @@ export default function OrderItemForm({
             {children}
 
             <div style={{ display: "flex", gap: "8px" }}>
-                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting || variantsLoading || variantIncomplete || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
+                <Button type="submit" size="full-lg" variant={submitVariant} disabled={isSubmitting || invalidBundle || variantsLoading || variantIncomplete || (hasPackageFinishing && !selectedPackage) || (hasLaserRules && !selectedLaserVariant)} icon={<Icon name={isSubmitting ? "hourglass_empty" : submitIcon} />}>
                     {isSubmitting ? "Loading..." : submitText}
                 </Button>
                 {showCancel && onCancel && (
