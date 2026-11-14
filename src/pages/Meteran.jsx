@@ -101,7 +101,8 @@ export default function Meteran() {
         { value: "meter_laser", label: "Laser A3" },
         { value: "meter_sublim_bahan_sublim", label: "Sublim + Bahan Sublim" },
         { value: "meter_dtf", label: "DTF" },
-        { value: "meter_cetakan", label: "Cetakan" }
+        { value: "meter_cetakan", label: "Cetakan" },
+        { value: "meter_pelengkap", label: "Pelengkap" }
     ], []);
 
     const loadData = async () => {
