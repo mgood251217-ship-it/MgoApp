@@ -498,7 +498,7 @@ export const getCachedProductBundles = async (onUpdate) => {
     return fetchLatest().catch(() => []);
 };
 
-export const getCachedProductVariants = async (productId, onUpdate) => {
+export const getCachedProductVariants = async (productId, onUpdate, { throwOnError = false } = {}) => {
     if (!productId) return [];
     const key = 'productVariantsByProduct';
     const cached = getStorage(key, {})[productId];
@@ -514,7 +514,10 @@ export const getCachedProductVariants = async (productId, onUpdate) => {
         return res.data.data;
     };
     if (cached) { fetchLatest().catch(() => {}); return cached.data; }
-    return fetchLatest().catch(() => []);
+    return fetchLatest().catch(error => {
+        if (throwOnError) throw error;
+        return [];
+    });
 };
 
 export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) => {
@@ -524,9 +527,10 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) 
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = dataset.products_updated_at || 0;
+        const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0);
+        const hasVariantCounts = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count"));
 
-        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
+        if (!cachedItem || !hasVariantCounts || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "pagination_products", page, limit, search } });
                 const result = {

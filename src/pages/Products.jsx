@@ -6,18 +6,22 @@ import Icon from "../components/Icon/Icon";
 import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
 import Pagination from "../components/Pagination/Pagination";
+import { formatRupiah } from "../services/helpers";
 import { 
     getCachedCategories, 
     getCachedPaginatedProducts, 
     getCachedFinishings, 
     clearProductCache, 
-    clearFinishingCache
+    clearFinishingCache,
+    getCachedProductVariants
 } from "../services/apiCache";
 
 export default function Products() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [finishings, setFinishings] = useState([]);
+    const [variantsByProduct, setVariantsByProduct] = useState({});
+    const [expandedProducts, setExpandedProducts] = useState({});
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -57,6 +61,34 @@ export default function Products() {
         loadData();
     }, [loadData]);
 
+    useEffect(() => {
+        let cancelled = false;
+        const productIds = [...new Set(products
+            .filter(product => Number(product.variant_count) > 0 && expandedProducts[product.product_id])
+            .map(product => product.product_id))];
+        let next = 0;
+        const loadVariants = async () => {
+            while (!cancelled && next < productIds.length) {
+                const productId = productIds[next++];
+                const apply = rows => {
+                    if (!cancelled) setVariantsByProduct(current => ({ ...current, [productId]: { rows } }));
+                };
+                try {
+                    const rows = await getCachedProductVariants(productId, apply, { throwOnError: true });
+                    apply(rows);
+                } catch {
+                    if (!cancelled) setVariantsByProduct(current => ({ ...current, [productId]: { error: true } }));
+                }
+            }
+        };
+        for (let i = 0; i < Math.min(4, productIds.length); i++) loadVariants();
+        return () => { cancelled = true; };
+    }, [products, expandedProducts]);
+
+    const toggleVariants = useCallback(productId => {
+        setExpandedProducts(current => ({ ...current, [productId]: !current[productId] }));
+    }, []);
+
     const handleStockUpdate = useCallback(async (type, id, newStock) => {
         try {
             const payload = new FormData();
@@ -91,6 +123,41 @@ export default function Products() {
         { key: "category_id", title: "ID Kategori" },
         { key: "name", title: "Nama Kategori" }
     ], []);
+
+    const productVariantColumns = useMemo(() => productColumns.map(column => column.key !== "name" ? column : {
+        ...column,
+        render: row => {
+            const data = variantsByProduct[row.product_id];
+            const hasVariants = Number(row.variant_count) > 0;
+            const expanded = hasVariants && Boolean(expandedProducts[row.product_id]);
+            return (
+                <div>
+                    <div>{row.name}</div>
+                    {hasVariants && <button
+                        type="button"
+                        aria-expanded={expanded}
+                        onClick={() => toggleVariants(row.product_id)}
+                        style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
+                    >
+                        {expanded ? "Sembunyikan Varian" : "Tampilkan Varian"}
+                    </button>}
+                    {expanded && data?.rows?.length > 0 && (
+                        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
+                            {data.rows.map(variant => (
+                                <div key={variant.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                    <span>{variant.label || Object.values(variant.options || {}).join(" / ")}</span>
+                                    <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(variant.price)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {expanded && !data && <div style={{ fontSize: 10 }}>Memuat varian...</div>}
+                    {expanded && data?.rows?.length === 0 && <div style={{ fontSize: 10 }}>Belum ada varian.</div>}
+                    {expanded && data?.error && <small style={{ color: "var(--danger)" }}>Varian belum dapat dimuat.</small>}
+                </div>
+            );
+        }
+    }), [productColumns, variantsByProduct, expandedProducts, toggleVariants]);
 
     const mappedProducts = useMemo(() => {
         return products.map(p => ({
@@ -181,7 +248,7 @@ export default function Products() {
                         size="sm"
                         rowKey="product_id"
                         rowDataKey="product_id"
-                        columns={productColumns}
+                        columns={productVariantColumns}
                         rows={mappedProducts}
                     />
                     <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
