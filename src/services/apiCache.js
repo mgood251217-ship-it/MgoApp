@@ -532,8 +532,9 @@ export const getCachedProductVariants = async (productId, onUpdate, { throwOnErr
     });
 };
 
-export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) => {
-    const cacheKey = `${page}_${limit}_${search}`;
+export const getCachedPaginatedProducts = async (page, limit, search, onUpdate, categoryId = 0) => {
+    const category = Number(categoryId) || 0;
+    const cacheKey = `${category}_${page}_${limit}_${search}`;
     const paginatedMap = getStorage("paginatedProducts", {});
     const cachedItem = paginatedMap[cacheKey];
 
@@ -544,7 +545,7 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) 
 
         if (!cachedItem || !hasProductDetails || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "pagination_products", page, limit, search } });
+                const res = await api.get("", { params: { action: "pagination_products", page, limit, search, category_id: category } });
                 const result = {
                     data: res.data?.data?.data ?? [],
                     total_pages: res.data?.data?.total_pages ?? 1

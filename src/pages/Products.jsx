@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import api from "../api/axios";
 import Table from "../components/Table/Table";
 import Button from "../components/Button/Button";
@@ -7,6 +7,7 @@ import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
 import Pagination from "../components/Pagination/Pagination";
 import Modal from "../components/Modal/Modal";
+import Select from "../components/Select/Select";
 import { formatRupiah } from "../services/helpers";
 import { 
     getCachedCategories, 
@@ -149,29 +150,36 @@ export default function Products() {
     const [detail, setDetail] = useState(null);
 
     const [search, setSearch] = useState("");
+    const [categoryId, setCategoryId] = useState("");
+    const loadRequest = useRef(0);
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [page, setPage] = useState(1);
     const [limit] = useState(25);
     const [totalPages, setTotalPages] = useState(1);
 
     const loadData = useCallback(async () => {
+        const requestId = ++loadRequest.current;
         try {
-            const prodData = await getCachedPaginatedProducts(page, limit, debouncedSearch, (fresh) => {
+            const applyProducts = fresh => {
+                if (requestId !== loadRequest.current) return;
                 setProducts(fresh.data);
                 setTotalPages(fresh.total_pages);
-            });
-            setProducts(prodData.data);
-            setTotalPages(prodData.total_pages);
+            };
+            const prodData = await getCachedPaginatedProducts(page, limit, debouncedSearch, applyProducts, categoryId);
+            applyProducts(prodData);
+            if (requestId !== loadRequest.current) return;
 
-            const catData = await getCachedCategories((fresh) => setCategories(fresh));
-            setCategories(catData);
+            const applyCategories = fresh => { if (requestId === loadRequest.current) setCategories(fresh); };
+            const catData = await getCachedCategories(applyCategories);
+            applyCategories(catData);
 
-            const finData = await getCachedFinishings((fresh) => setFinishings(fresh));
-            setFinishings(finData);
+            const applyFinishings = fresh => { if (requestId === loadRequest.current) setFinishings(fresh); };
+            const finData = await getCachedFinishings(applyFinishings);
+            applyFinishings(finData);
         } catch (err) {
             console.error(err);
         }
-    }, [page, limit, debouncedSearch]);
+    }, [page, limit, debouncedSearch, categoryId]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -184,6 +192,7 @@ export default function Products() {
 
     useEffect(() => {
         loadData();
+        return () => { loadRequest.current++; };
     }, [loadData]);
 
     useEffect(() => {
@@ -355,7 +364,7 @@ export default function Products() {
     }, [products, handleStockUpdate]);
 
     const mappedFinishings = useMemo(() => {
-        return finishings.map(f => ({
+        return finishings.filter(finishing => !categoryId || String(finishing.category_id) === categoryId).map(f => ({
             ...f,
             stock: (
                 <Input
@@ -372,7 +381,7 @@ export default function Products() {
                 />
             )
         }));
-    }, [finishings, handleStockUpdate]);
+    }, [finishings, handleStockUpdate, categoryId]);
 
     const executeSearch = () => {
         setDebouncedSearch(search);
@@ -386,6 +395,25 @@ export default function Products() {
                 subtitle="Kelola data produk, finishing, dan kategori."
                 actions={
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <Select
+                            name="category_id"
+                            value={categoryId}
+                            onChange={event => {
+                                loadRequest.current++;
+                                setCategoryId(event.target.value);
+                                setDebouncedSearch(search);
+                                setPage(1);
+                                setProducts([]);
+                                setTotalPages(1);
+                            }}
+                            options={[
+                                { value: "", label: "Semua Kategori" },
+                                ...categories.map(category => ({ value: String(category.category_id), label: category.name }))
+                            ]}
+                            placeholder="Semua Kategori"
+                            margin="0"
+                            style={{ width: 220 }}
+                        />
                         <Input
                             name="search"
                             value={search}
