@@ -1,24 +1,114 @@
 import api from "../api/axios";
 
-const getStorage = (key, defaultVal) => {
+const pendingRequests = new Map();
+const requestVersions = new Map();
+let cacheGeneration = 0;
+
+const getRequestScope = () => {
     try {
-        const val = localStorage.getItem(`mgo_cache_${key}`);
-        return val ? JSON.parse(val) : defaultVal;
-    } catch (e) {
+        const session = JSON.parse(localStorage.getItem("mgo_session") || "null");
+        return JSON.stringify([session?.token, session?.user?.user_id, session?.store?.store_id]);
+    } catch {
+        return "";
+    }
+};
+
+const getSharedResponse = (url, config = {}) => {
+    const scope = getRequestScope();
+    const generation = cacheGeneration;
+    const action = config.params?.action || url;
+    const version = requestVersions.get(action) || 0;
+    const params = Object.entries(config.params || {}).sort(([first], [second]) => first.localeCompare(second));
+    const key = JSON.stringify([generation, version, scope, url, params]);
+    if (pendingRequests.has(key)) return pendingRequests.get(key);
+
+    const request = api.get(url, config).then(response => {
+        if (generation !== cacheGeneration || scope !== getRequestScope()) {
+            const error = new Error("Sesi cache berubah.");
+            error.name = "AbortError";
+            throw error;
+        }
+        if (version !== (requestVersions.get(action) || 0)) return getSharedResponse(url, config);
+        return response;
+    }).finally(() => pendingRequests.delete(key));
+    pendingRequests.set(key, request);
+    return request;
+};
+
+const memoryFallback = new Map();
+const cacheEntryLimits = { paginatedProducts: 100, orders: 50, transactionsDetail: 50 };
+let storageScope = getRequestScope();
+
+const syncStorageScope = () => {
+    const scope = getRequestScope();
+    if (scope === storageScope) return;
+    storageScope = scope;
+    resetRuntimeCache();
+};
+
+const getStorage = (key, defaultVal) => {
+    syncStorageScope();
+    try {
+        const value = memoryFallback.get(key) ?? localStorage.getItem(`mgo_cache_${key}`);
+        return value ? JSON.parse(value) : defaultVal;
+    } catch {
         return defaultVal;
     }
 };
 
-const setStorage = (key, val) => {
+const setStorage = (key, value) => {
+    syncStorageScope();
+    const limit = cacheEntryLimits[key];
+    if (limit && value && typeof value === "object" && !Array.isArray(value)) {
+        const entries = Object.entries(value).filter(([entryKey]) => !entryKey.startsWith("_"));
+        if (entries.length > limit) {
+            const metadata = Object.entries(value).filter(([entryKey]) => entryKey.startsWith("_"));
+            const recent = entries.slice(-limit);
+            value = Object.fromEntries([...metadata, ...recent]);
+        }
+    }
+    const serialized = JSON.stringify(value);
     try {
-        localStorage.setItem(`mgo_cache_${key}`, JSON.stringify(val));
-    } catch (e) {}
+        localStorage.setItem(`mgo_cache_${key}`, serialized);
+        memoryFallback.delete(key);
+    } catch {
+        memoryFallback.set(key, serialized);
+        // Jangan biarkan timestamp baru dipasangkan dengan data lama setelah restart.
+        try { localStorage.removeItem(`mgo_cache_${key}`); } catch { /* Penyimpanan dapat dinonaktifkan. */ }
+    }
+};
+
+const removeStorage = key => {
+    memoryFallback.delete(key);
+    try { localStorage.removeItem(`mgo_cache_${key}`); } catch { /* Cache memori sudah dibersihkan. */ }
+};
+
+const resetRuntimeCache = () => {
+    memoryFallback.clear();
+    cacheGeneration++;
+    pendingRequests.clear();
+    requestVersions.clear();
+    datasetCache = null;
+    datasetPromise = null;
+    lastFetchTime = 0;
+};
+
+const invalidateRequests = actions => {
+    for (const action of new Set([...actions, "check_update_dataset"])) {
+        requestVersions.set(action, (requestVersions.get(action) || 0) + 1);
+    }
+    datasetCache = null;
+    datasetPromise = null;
+    lastFetchTime = 0;
 };
 
 // Cache lama memakai milidetik ketika penanda server belum tersedia.
 // Ambil ulang sekali saat server sudah memiliki penanda dalam detik.
-const isCacheOutdated = (cachedTime, serverTime) => cachedTime < serverTime
-    || (serverTime > 0 && serverTime < 1e12 && cachedTime > 1e12);
+const isCacheOutdated = (cachedTime, serverTime) => {
+    const cached = Number(cachedTime) || 0;
+    const server = Number(serverTime) || 0;
+    return cached < server || (server > 0 && server < 1e12 && cached > 1e12);
+};
 
 const getCleanedDailyMap = (key) => {
     const map = getStorage(key, {});
@@ -37,25 +127,30 @@ let lastFetchTime = 0;
 const getServerDataset = async () => {
     const now = Date.now();
 
-    if (datasetCache && (now - lastFetchTime < 3000)) {
-        return datasetCache;
+    syncStorageScope();
+    if (lastFetchTime > 0 && now - lastFetchTime < 3000) {
+        return datasetCache || {};
     }
 
     if (datasetPromise) {
         return datasetPromise;
     }
 
-    datasetPromise = api.get("", { params: { action: "check_update_dataset" } })
+    const request = getSharedResponse("", { params: { action: "check_update_dataset" } })
         .then(res => {
+            if (datasetPromise !== request) return datasetCache || {};
             datasetCache = res.data?.data || {};
             lastFetchTime = Date.now();
-            datasetPromise = null;
             return datasetCache;
         })
-        .catch(err => {
-            datasetPromise = null;
+        .catch(() => {
+            if (datasetPromise === request) lastFetchTime = Date.now();
             return datasetCache || {};
+        })
+        .finally(() => {
+            if (datasetPromise === request) datasetPromise = null;
         });
+    datasetPromise = request;
 
     return datasetPromise;
 };
@@ -66,6 +161,7 @@ export const validateStoreCache = (newStoreName) => {
     if (oldStoreName && oldStoreName !== newStoreName) {
         const recaptchaBackup = localStorage.getItem("_grecaptcha");
 
+        resetRuntimeCache();
         localStorage.clear();
 
         if (recaptchaBackup !== null) {
@@ -90,7 +186,7 @@ export const getCachedStoreData = async (onUpdate) => {
 
         if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "store" } });
+                const res = await getSharedResponse("", { params: { action: "store" } });
                 const result = res.data?.data || [];
                 setStorage("storeData", result);
                 setStorage("storeData_time", serverTime > 0 ? serverTime : Date.now());
@@ -119,9 +215,9 @@ export const getCachedUsers = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.users_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "users" } });
+                const res = await getSharedResponse("", { params: { action: "users" } });
                 const result = res.data?.data || [];
                 setStorage("users", result);
                 setStorage("users_time", serverTime > 0 ? serverTime : Date.now());
@@ -150,9 +246,9 @@ export const getCachedInitials = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.initials_updated_at || dataset.users_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "get_initial" } });
+                const res = await getSharedResponse("", { params: { action: "get_initial" } });
                 const result = res.data?.data || [];
                 setStorage("initials", result);
                 setStorage("initials_time", serverTime > 0 ? serverTime : Date.now());
@@ -181,9 +277,9 @@ export const getCachedMachines = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.machines_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "machines" } });
+                const res = await getSharedResponse("", { params: { action: "machines" } });
                 const result = res.data?.data || [];
                 setStorage("machines", result);
                 setStorage("machines_time", serverTime > 0 ? serverTime : Date.now());
@@ -212,9 +308,9 @@ export const getCachedLocations = async (onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.locations_updated_at || 0;
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "locations" } });
+                const res = await getSharedResponse("", { params: { action: "locations" } });
                 const result = res.data?.data || [];
                 setStorage("locations", result);
                 setStorage("locations_time", serverTime > 0 ? serverTime : Date.now());
@@ -245,7 +341,7 @@ export const getCachedStoreNames = async (onUpdate) => {
 
         if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "store_names" } });
+                const res = await getSharedResponse("", { params: { action: "store_names" } });
                 const result = res.data?.data || [];
                 setStorage("storeNames", result);
                 setStorage("storeNames_time", serverTime > 0 ? serverTime : Date.now());
@@ -275,9 +371,9 @@ export const getCachedFailures = async (startDate, endDate, onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.failures_updated_at || 0;
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "failure", start_date: startDate, end_date: endDate } });
+                const res = await getSharedResponse("", { params: { action: "failure", start_date: startDate, end_date: endDate } });
                 const result = res.data?.data || [];
                 const currentMap = getCleanedDailyMap("failures");
                 currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
@@ -309,7 +405,7 @@ export const getCachedCategories = async (onUpdate) => {
 
         if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "categories" } });
+                const res = await getSharedResponse("", { params: { action: "categories" } });
                 const result = res.data?.data || [];
                 setStorage("categories", result);
                 setStorage("categories_time", serverTime > 0 ? serverTime : Date.now());
@@ -338,11 +434,11 @@ export const getCachedProductsByCategory = async (categoryId, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = dataset.products_updated_at || dataset.categories_updated_at || 0;
+        const serverTime = Math.max(dataset.products_updated_at || 0, dataset.categories_updated_at || 0);
 
         if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "products_by_category", category_id: categoryId } });
+                const res = await getSharedResponse("", { params: { action: "products_by_category", category_id: categoryId } });
                 const result = res.data?.data || [];
                 const currentMap = getStorage("productsByCategory", {});
                 currentMap[categoryId] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
@@ -374,9 +470,9 @@ export const getCachedGlobalStocks = async (month, onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.global_stocks_updated_at || 0;
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "grouped_stock_global_stock", month: month } });
+                const res = await getSharedResponse("", { params: { action: "grouped_stock_global_stock", month: month } });
                 const result = res.data?.success ? (res.data.data.grouped_stocks || {}) : {};
                 const currentMap = getStorage("globalStocksByMonth", {});
                 currentMap[month] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
@@ -410,7 +506,7 @@ export const getCachedFinishingsByCategory = async (categoryId, onUpdate) => {
 
         if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "finishing_by_category", category_id: categoryId } });
+                const res = await getSharedResponse("", { params: { action: "finishing_by_category", category_id: categoryId } });
                 const result = res.data?.data || [];
                 const currentMap = getStorage("finishingsByCategory", {});
                 currentMap[categoryId] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
@@ -442,7 +538,7 @@ export const getCachedProductFinishingPrices = async (categoryId, onUpdate, { th
         const serverTime = Math.max(dataset.product_finishing_prices_updated_at || 0, dataset.products_updated_at || 0,
             dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0);
         if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
-        const res = await api.get("", { params: { action: "product_finishing_prices", category_id: categoryId } });
+        const res = await getSharedResponse("", { params: { action: "product_finishing_prices", category_id: categoryId } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error("Gagal memuat harga paket.");
         const rows = res.data.data;
         const map = getStorage(cacheKey, {});
@@ -470,7 +566,7 @@ export const getCachedProductLaserConversions = async (categoryId, onUpdate, { t
         const dataset = await getServerDataset();
         const serverTime = Math.max(dataset.product_laser_conversion_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0);
         if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
-        const res = await api.get("", { params: { action: "product_laser_conversions", category_id: categoryId } });
+        const res = await getSharedResponse("", { params: { action: "product_laser_conversions", category_id: categoryId } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error("Gagal memuat varian print laser.");
         const map = getStorage(key, {});
         map[categoryId] = { data: res.data.data, updatedAt: serverTime };
@@ -497,7 +593,7 @@ export const getCachedProductBundles = async (onUpdate, { throwOnError = false }
             dataset.product_variants_updated_at || 0, dataset.product_laser_conversion_updated_at || 0,
             dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0);
         if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
-        const res = await api.get('', { params: { action: 'product_bundles' } });
+        const res = await getSharedResponse('', { params: { action: 'product_bundles' } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('Gagal memuat paket gabungan.');
         setStorage(key, { data: res.data.data, updatedAt: serverTime });
         onUpdate?.(res.data.data); return res.data.data;
@@ -518,7 +614,7 @@ export const getCachedProductVariants = async (productId, onUpdate, { throwOnErr
         const serverTime = Math.max(dataset.product_variants_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0);
         const hasPriceTiers = cached?.data?.every(variant => Array.isArray(variant.price_tiers));
         if (cached && hasPriceTiers && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
-        const res = await api.get('', { params: { action: 'product_variants', product_id: productId } });
+        const res = await getSharedResponse('', { params: { action: 'product_variants', product_id: productId } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('Gagal memuat varian produk.');
         const map = getStorage(key, {});
         map[productId] = { data: res.data.data, updatedAt: serverTime };
@@ -541,11 +637,11 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate, 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0, dataset.product_promotions_updated_at || 0);
-        const hasProductDetails = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count") && Array.isArray(product.price_tiers) && Object.hasOwn(product, "promotion"));
+        const hasProductDetails = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count") && Array.isArray(product.price_tiers) && Object.hasOwn(product, "promotion") && Object.hasOwn(product, "package_count") && Object.hasOwn(product, "laser_conversion_count") && Object.hasOwn(product, "has_bundle"));
 
         if (!cachedItem || !hasProductDetails || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "pagination_products", page, limit, search, category_id: category } });
+                const res = await getSharedResponse("", { params: { action: "pagination_products", page, limit, search, category_id: category } });
                 const result = {
                     data: res.data?.data?.data ?? [],
                     total_pages: res.data?.data?.total_pages ?? 1
@@ -580,7 +676,7 @@ export const getCachedFinishings = async (onUpdate) => {
 
         if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "finishings" } });
+                const res = await getSharedResponse("", { params: { action: "finishings" } });
                 const result = res.data?.data || [];
                 setStorage("finishings", result);
                 setStorage("finishings_time", serverTime > 0 ? serverTime : Date.now());
@@ -611,9 +707,9 @@ export const getCachedOrdersAnalysis = async (onUpdate) => {
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "order_analysis" } });
+                const res = await getSharedResponse("", { params: { action: "order_analysis" } });
                 const result = res.data?.data || { chart_30: {}, chart_365: {}, summary: {} };
                 setStorage("ordersAnalysis", result);
                 setStorage("ordersAnalysis_time", serverTime > 0 ? serverTime : Date.now());
@@ -645,9 +741,9 @@ export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "get_orders", search: search, start_date: startDate, end_date: endDate }
                 });
                 const result = res.data?.data || {};
@@ -687,9 +783,9 @@ export const getCachedOrderDetail = async (orderId, onUpdate) => {
 
         const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
 
-        if (!cachedItem || !Array.isArray(cachedItem.data?.discounts) || cachedItem.data?.items?.some(item => !Object.prototype.hasOwnProperty.call(item, 'laser_product_id') || !Object.prototype.hasOwnProperty.call(item, 'tier_pricing') || !Object.prototype.hasOwnProperty.call(item, 'promotion') || !Object.prototype.hasOwnProperty.call(item, 'variant')) || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || !Array.isArray(cachedItem.data?.discounts) || cachedItem.data?.items?.some(item => !Object.prototype.hasOwnProperty.call(item, 'laser_product_id') || !Object.prototype.hasOwnProperty.call(item, 'tier_pricing') || !Object.prototype.hasOwnProperty.call(item, 'promotion') || !Object.prototype.hasOwnProperty.call(item, 'variant')) || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "order_detail", order_id: orderId } });
+                const res = await getSharedResponse("", { params: { action: "order_detail", order_id: orderId } });
                 const result = res.data?.data || null;
 
                 if (result) {
@@ -725,9 +821,9 @@ export const getCachedTransactionsCapture = async (startDate, endDate, onUpdate)
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "transactions_capture", start_date: startDate, end_date: endDate }
                 });
                 const result = res.data?.data || {};
@@ -762,9 +858,9 @@ export const getCachedTransactionsDetail = async (startDate, endDate, search, on
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "transactions_detail", start_date: startDate, end_date: endDate, search: search }
                 });
                 const result = res.data?.data || {};
@@ -799,9 +895,9 @@ export const getCachedAllOrderDetail = async (startDate, endDate, onUpdate) => {
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "all_detail_order", start_date: startDate, end_date: endDate }
                 });
                 const result = res.data?.data || {};
@@ -835,9 +931,9 @@ export const getCachedPiutang = async (onUpdate) => {
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "piutang" } });
+                const res = await getSharedResponse("", { params: { action: "piutang" } });
                 const result = res.data?.data || { data: [], total: 0 };
                 setStorage("piutang", result);
                 setStorage("piutang_time", serverTime > 0 ? serverTime : Date.now());
@@ -868,9 +964,9 @@ export const getCachedReport = async (onUpdate) => {
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedData || cachedTime < serverTime) {
+        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
             try {
-                const res = await api.get("", { params: { action: "report" } });
+                const res = await getSharedResponse("", { params: { action: "report" } });
                 const result = res.data?.data || { data: [], total: 0 };
                 setStorage("report", result);
                 setStorage("report_time", serverTime > 0 ? serverTime : Date.now());
@@ -900,9 +996,9 @@ export const getCachedProductUsed = async (startDate, endDate, onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.orders_updated_at || 0;
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "product_used", start_date: startDate, end_date: endDate }
                 });
                 const result = res.data?.data || [];
@@ -935,9 +1031,9 @@ export const getCachedOmsetItem = async (startDate, endDate, onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.orders_updated_at || 0;
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "omset_item", start_date: startDate, end_date: endDate }
                 });
                 const result = res.data?.data || [];
@@ -972,9 +1068,9 @@ export const getCachedStatistics = async (startDate, endDate, onUpdate) => {
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "statistics", start_date: startDate, end_date: endDate }
                 });
                 const result = res.data?.data || {};
@@ -1007,9 +1103,9 @@ export const getCachedExpenditureCategories = async (onUpdate) => {
         const serverTime = dataset.finance_updated_at || 0;
         const expired = Date.now() - (cachedItem?.fetchedAt || 0) >= 5 * 60 * 1000;
 
-        if (!hasCache || cachedItem.updatedAt < serverTime || expired) {
+        if (!hasCache || isCacheOutdated(cachedItem.updatedAt, serverTime) || expired) {
             try {
-                const res = await api.get("", { params: { action: "expenditure_categories" } });
+                const res = await getSharedResponse("", { params: { action: "expenditure_categories" } });
                 const payload = res.data?.data ?? res.data;
                 const result = Array.isArray(payload) ? payload : payload?.expenditure_categories;
                 if (res.data?.success === false || !Array.isArray(result)) {
@@ -1044,9 +1140,9 @@ export const getCachedFinance = async (startDate, endDate, onUpdate) => {
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, financeTime, paymentTime);
 
-        if (!cachedItem || cachedItem.updatedAt < serverTime) {
+        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await api.get("", {
+                const res = await getSharedResponse("", {
                     params: { action: "finance", start_date: startDate, end_date: endDate }
                 });
                 const result = res.data?.data || {};
@@ -1071,68 +1167,79 @@ export const getCachedFinance = async (startDate, endDate, onUpdate) => {
 };
 
 export const clearAllOrderCaches = () => {
+    invalidateRequests(["order_detail"]);
     setStorage("orderDetail", {});
 };
 
 export const clearUsersCache = () => {
-    localStorage.removeItem("mgo_cache_users");
-    localStorage.removeItem("mgo_cache_users_time");
-    localStorage.removeItem("mgo_cache_initials");
-    localStorage.removeItem("mgo_cache_initials_time");
+    invalidateRequests(["users", "initials"]);
+    removeStorage("users");
+    removeStorage("users_time");
+    removeStorage("initials");
+    removeStorage("initials_time");
 };
 
 export const clearMachinesCache = () => {
-    localStorage.removeItem("mgo_cache_machines");
-    localStorage.removeItem("mgo_cache_machines_time");
+    invalidateRequests(["machines"]);
+    removeStorage("machines");
+    removeStorage("machines_time");
 };
 
 export const clearLocationsCache = () => {
-    localStorage.removeItem("mgo_cache_locations");
-    localStorage.removeItem("mgo_cache_locations_time");
+    invalidateRequests(["locations"]);
+    removeStorage("locations");
+    removeStorage("locations_time");
 };
 
 export const clearFailuresCache = () => {
+    invalidateRequests(["failures"]);
     setStorage("failures", {});
 };
 
 export const clearProductCache = () => {
+    invalidateRequests(["pagination_products", "products_by_category", "product_variants", "product_finishing_prices", "product_laser_conversions", "product_bundles"]);
     setStorage("paginatedProducts", {});
     setStorage("productsByCategory", {});
 };
 
 export const clearFinishingCache = () => {
-    localStorage.removeItem("mgo_cache_finishings");
-    localStorage.removeItem("mgo_cache_finishings_time");
+    invalidateRequests(["finishings", "finishings_by_category", "product_finishing_prices", "product_laser_conversions", "product_bundles"]);
+    removeStorage("finishings");
+    removeStorage("finishings_time");
     setStorage("finishingsByCategory", {});
     setStorage("productFinishingPricesByCategory", {});
 };
 
 export const clearCategoryCache = () => {
-    localStorage.removeItem("mgo_cache_categories");
-    localStorage.removeItem("mgo_cache_categories_time");
+    invalidateRequests(["categories"]);
+    removeStorage("categories");
+    removeStorage("categories_time");
     clearProductCache();
     clearFinishingCache();
 };
 
 export const clearCacheOrderDetail = (orderId) => {
+    invalidateRequests(["order_detail"]);
     const orderMap = getStorage("orderDetail", {});
     orderMap[orderId] = null;
     setStorage("orderDetail", orderMap);
 };
 
 export const clearOrdersCache = () => {
-    localStorage.removeItem("mgo_cache_orders");
+    invalidateRequests(["get_orders"]);
+    removeStorage("orders");
 };
 
 export const clearCache = () => {
-    localStorage.removeItem("mgo_cache_categories");
-    localStorage.removeItem("mgo_cache_categories_time");
+    invalidateRequests(["categories", "products_by_category", "pagination_products", "finishings", "finishings_by_category", "product_finishing_prices", "product_laser_conversions", "product_bundles", "product_variants"]);
+    removeStorage("categories");
+    removeStorage("categories_time");
     setStorage("productsByCategory", {});
     setStorage("finishingsByCategory", {});
     setStorage("productFinishingPricesByCategory", {});
     setStorage("paginatedProducts", {});
-    localStorage.removeItem("mgo_cache_finishings");
-    localStorage.removeItem("mgo_cache_finishings_time");
+    removeStorage("finishings");
+    removeStorage("finishings_time");
 };
 
 export const clearAllCache = () => {
@@ -1146,12 +1253,10 @@ export const clearAllCache = () => {
         }
         keysToRemove.forEach((key) => localStorage.removeItem(key));
 
-        datasetCache = null;
-        datasetPromise = null;
-        lastFetchTime = 0;
-
         return { success: true, cleared: keysToRemove.length };
     } catch (e) {
         return { success: false, cleared: 0 };
+    } finally {
+        resetRuntimeCache();
     }
 };

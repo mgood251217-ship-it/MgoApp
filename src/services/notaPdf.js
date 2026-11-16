@@ -1,7 +1,5 @@
 import { createRoot } from "react-dom/client";
 import React from "react";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import api from "../api/axios";
 import { getCachedStoreData } from "./apiCache";
 import ReceiptContent from "../components/Receipt/ReceiptContent";
@@ -54,6 +52,7 @@ export async function generateNotaBase64(orderId, format = "pdf") {
 
         const element = container.querySelector("#pdf-content-nota");
         if (!element) throw new Error("Tampilan nota belum tersedia.");
+        const { default: html2canvas } = await import("html2canvas");
         const canvas = await html2canvas(element, {
             scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff"
         });
@@ -65,6 +64,7 @@ export async function generateNotaBase64(orderId, format = "pdf") {
             return { base64Data: imgData.split(",")[1], fileName };
         }
 
+        const { jsPDF } = await import("jspdf");
         const pdfWidth = 80;
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         const pdf = new jsPDF("p", "mm", [pdfWidth, Math.max(200, pdfHeight)]);

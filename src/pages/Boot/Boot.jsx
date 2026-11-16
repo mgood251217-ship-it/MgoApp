@@ -1,7 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Splash from "../../components/Splash/Splash";
 import UpdatePrompt from "../../components/UpdatePrompt/UpdatePrompt";
-import { delay } from "../../services/helpers";
 import { isMobile } from "../../services/platform";
 import { bootSteps } from "./steps";
 
@@ -15,13 +14,15 @@ export default function Boot({ onComplete }) {
     const [installing, setInstalling] = useState(false);
     const [updateError, setUpdateError] = useState("");
 
+    const bootRun = useRef(0);
     const runSteps = useCallback(async (startIndex) => {
+        const runId = ++bootRun.current;
         try {
             for (let i = startIndex; i < bootSteps.length; i++) {
                 const step = bootSteps[i];
                 setMessage(step.message);
                 const result = await step.action();
-                await delay(500);
+                if (runId !== bootRun.current) return;
 
                 if (step.key === "internet" && !result) {
                     setError("Tidak ada koneksi internet.");
@@ -42,6 +43,7 @@ export default function Boot({ onComplete }) {
             }
             onComplete(false);
         } catch (err) {
+            if (runId !== bootRun.current) return;
             console.error(err);
             const messages = {
                 HOSTING_CHALLENGE: "Akses MGO diblokir verifikasi keamanan hosting. Hubungi administrator hosting, lalu klik Coba Lagi.",
@@ -59,6 +61,7 @@ export default function Boot({ onComplete }) {
 
     useEffect(() => {
         initialize();
+        return () => { bootRun.current++; };
     }, [initialize]);
 
     const handleContinueOld = () => {

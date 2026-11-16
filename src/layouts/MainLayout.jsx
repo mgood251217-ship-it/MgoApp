@@ -1,33 +1,33 @@
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
 import { TabsProvider, useTabs } from "../context/TabsContext";
 
-import Store from "../pages/Store";
-import Orders from "../pages/Orders";
-import Order from "../pages/Order";
-import Products from "../pages/Products";
-import GlobalStocks from "../pages/GlobalStocks";
-import Meteran from "../pages/Meteran";
-import Failure from "../pages/Failure";
-import Maklun from "../pages/Maklun";
-import Report from "../pages/Report";
-import Settings from "../pages/Settings";
-import Guide from "../pages/Guide";
+const Store = lazy(() => import("../pages/Store"));
+const Orders = lazy(() => import("../pages/Orders"));
+const Order = lazy(() => import("../pages/Order"));
+const Products = lazy(() => import("../pages/Products"));
+const GlobalStocks = lazy(() => import("../pages/GlobalStocks"));
+const Meteran = lazy(() => import("../pages/Meteran"));
+const Failure = lazy(() => import("../pages/Failure"));
+const Maklun = lazy(() => import("../pages/Maklun"));
+const Report = lazy(() => import("../pages/Report"));
+const Settings = lazy(() => import("../pages/Settings"));
+const Guide = lazy(() => import("../pages/Guide"));
 
-import TransaksiDetail from "../pages/Reports/TransaksiDetail";
-import TransaksiHarian from "../pages/Reports/TransaksiHarian";
-import TransaksiBulanan from "../pages/Reports/TransaksiBulanan";
-import TransaksiPerItem from "../pages/Reports/TransaksiPerItem";
-import TransaksiPerKonsumen from "../pages/Reports/TransaksiPerKonsumen";
-import OmsetPerItem from "../pages/Reports/OmsetPerItem";
-import PemakaianBahan from "../pages/Reports/PemakaianBahan";
-import Piutang from "../pages/Reports/Piutang";
-import Pelunasan from "../pages/Reports/Pelunasan";
-import Keuangan from "../pages/Reports/Keuangan";
-import StatistikKaryawan from "../pages/Reports/StatistikKaryawan";
+const TransaksiDetail = lazy(() => import("../pages/Reports/TransaksiDetail"));
+const TransaksiHarian = lazy(() => import("../pages/Reports/TransaksiHarian"));
+const TransaksiBulanan = lazy(() => import("../pages/Reports/TransaksiBulanan"));
+const TransaksiPerItem = lazy(() => import("../pages/Reports/TransaksiPerItem"));
+const TransaksiPerKonsumen = lazy(() => import("../pages/Reports/TransaksiPerKonsumen"));
+const OmsetPerItem = lazy(() => import("../pages/Reports/OmsetPerItem"));
+const PemakaianBahan = lazy(() => import("../pages/Reports/PemakaianBahan"));
+const Piutang = lazy(() => import("../pages/Reports/Piutang"));
+const Pelunasan = lazy(() => import("../pages/Reports/Pelunasan"));
+const Keuangan = lazy(() => import("../pages/Reports/Keuangan"));
+const StatistikKaryawan = lazy(() => import("../pages/Reports/StatistikKaryawan"));
 
 const TITLE_BY_PATH = {
     "/store": "Store",
@@ -62,6 +62,7 @@ function TabRouteSync({ tabId }) {
 
 function TabMainRoutes() {
     return (
+        <Suspense fallback={<div role="status" style={{ padding: 16 }}>Memuat halaman...</div>}>
         <Routes>
             <Route path="/store" element={<Store />} />
             <Route path="/orders" element={<Orders />} />
@@ -88,6 +89,7 @@ function TabMainRoutes() {
 
             <Route path="/settings" element={<Settings />} />
         </Routes>
+        </Suspense>
     );
 }
 

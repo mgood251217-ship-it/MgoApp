@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import { tauriApi } from "../../lib/tauriApi";
 import api from "../../api/axios";
 import ReceiptContent from "../Receipt/ReceiptContent";
@@ -40,6 +38,7 @@ export default function PrintStruk({ orderId, onClose }) {
             if (window.electron && window.electron.savePdfData) {
                 const element = document.querySelector(".receipt");
                 if (element) {
+                    const [{ jsPDF }, { default: html2canvas }] = await Promise.all([import("jspdf"), import("html2canvas")]);
                     const canvas = await html2canvas(element, {
                         scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff"
                     });

@@ -1,4 +1,3 @@
-import ExcelJS from "exceljs";
 import { tauriApi } from "../lib/tauriApi";
 import { authStore } from "./session";
 import { formatTanggalId } from "./helpers";
@@ -57,6 +56,7 @@ export const exportMeteranExcel = async ({
     const categoryTitle = formattedCategory.replace("_", " ");
     const tanggal = (startDate && endDate) ? `Tanggal ${startDate} s.d. ${endDate}` : 'Tanggal -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(formattedCategory);
 
@@ -395,6 +395,7 @@ export const exportTransaksiDetailExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Tanggal ${startDate} s.d. ${endDate}` : 'Tanggal -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Detail Transaksi");
 
@@ -490,6 +491,7 @@ export const exportTransaksiHarianExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Tanggal ${startDate} s.d. ${endDate}` : 'Tanggal -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Transaksi Harian");
 
@@ -567,6 +569,7 @@ export const exportTransaksiBulananExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Transaksi Bulanan");
 
@@ -647,6 +650,7 @@ export const exportTransaksiPerItemExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Transaksi Per Item");
 
@@ -742,6 +746,7 @@ export const exportTransaksiPerKonsumenExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Transaksi Per Konsumen");
 
@@ -845,6 +850,7 @@ export const exportStatistikKaryawanExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Statistik Karyawan");
 
@@ -937,6 +943,7 @@ export const exportPiutangExcel = async ({
     const today = new Date().toISOString().split("T")[0];
     const tanggal = `Per Tanggal: ${today}`;
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Laporan Piutang");
 
@@ -1016,6 +1023,7 @@ export const exportPemakaianBahanExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Pemakaian Bahan");
 
@@ -1076,6 +1084,7 @@ export const exportPelunasanExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Laporan Pelunasan");
 
@@ -1183,6 +1192,7 @@ export const exportOmsetPerItemExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Omset Per Item");
 
@@ -1264,6 +1274,7 @@ export const exportKeuanganExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Laporan Keuangan");
 
@@ -1516,6 +1527,7 @@ export const exportMaklunExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
 
     const branches = new Set();
@@ -1857,6 +1869,7 @@ export const exportFailureExcel = async ({
 
     const tanggal = (startDate && endDate) ? `Periode ${startDate} s.d. ${endDate}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Laporan Kegagalan");
 
@@ -1978,6 +1991,7 @@ export const exportGlobalStocksToExcel = async ({
 
     const tanggal = month ? `Periode Bulan: ${month}` : 'Periode -';
     
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Laporan Global Stock");
 

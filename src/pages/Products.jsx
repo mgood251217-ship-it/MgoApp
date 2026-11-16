@@ -146,6 +146,7 @@ export default function Products() {
     const [packagesByCategory, setPackagesByCategory] = useState({});
     const [bundlesByProduct, setBundlesByProduct] = useState({});
     const [bundleError, setBundleError] = useState(false);
+    const [bundleLoading, setBundleLoading] = useState(false);
     const [laserConversionsByCategory, setLaserConversionsByCategory] = useState({});
     const [detail, setDetail] = useState(null);
 
@@ -165,17 +166,13 @@ export default function Products() {
                 setProducts(fresh.data);
                 setTotalPages(fresh.total_pages);
             };
-            const prodData = await getCachedPaginatedProducts(page, limit, debouncedSearch, applyProducts, categoryId);
-            applyProducts(prodData);
-            if (requestId !== loadRequest.current) return;
-
             const applyCategories = fresh => { if (requestId === loadRequest.current) setCategories(fresh); };
-            const catData = await getCachedCategories(applyCategories);
-            applyCategories(catData);
-
             const applyFinishings = fresh => { if (requestId === loadRequest.current) setFinishings(fresh); };
-            const finData = await getCachedFinishings(applyFinishings);
-            applyFinishings(finData);
+            await Promise.all([
+                getCachedPaginatedProducts(page, limit, debouncedSearch, applyProducts, categoryId).then(applyProducts),
+                getCachedCategories(applyCategories).then(applyCategories),
+                getCachedFinishings(applyFinishings).then(applyFinishings)
+            ]);
         } catch (err) {
             console.error(err);
         }
@@ -210,50 +207,48 @@ export default function Products() {
     }, [detail]);
 
     useEffect(() => {
+        if (!detail || !["packages", "laser"].includes(detail.type)) return;
         let cancelled = false;
-        const categoryIds = [...new Set(products
-            .filter(product => ["INDOOR", "OUTDOOR", "LASER", "LASER A3"].includes(product.category?.trim().toUpperCase()))
-            .map(product => product.category_id))];
-        categoryIds.forEach(async categoryId => {
+        const product = detail.product;
+        const categoryId = product.category_id;
+        if (detail.type === "packages" && Number(product.package_count) > 0) {
+            setPackagesByCategory(current => ({ ...current, [categoryId]: { ...current[categoryId], loading: true, error: false } }));
             const apply = rows => {
                 if (!cancelled) setPackagesByCategory(current => ({ ...current, [categoryId]: { rows } }));
             };
-            try {
-                const rows = await getCachedProductFinishingPrices(categoryId, apply, { throwOnError: true });
-                apply(rows);
-            } catch {
+            getCachedProductFinishingPrices(categoryId, apply, { throwOnError: true }).then(apply).catch(() => {
                 if (!cancelled) setPackagesByCategory(current => ({ ...current, [categoryId]: { error: true } }));
-            }
-        });
-        const laserCategoryIds = [...new Set(products
-            .filter(product => product.category?.trim().toUpperCase() === "ANEKA CETAK")
-            .map(product => product.category_id))];
-        laserCategoryIds.forEach(async categoryId => {
-            const apply = rows => {
-                if (!cancelled) setLaserConversionsByCategory(current => ({ ...current, [categoryId]: { rows } }));
-            };
-            try {
-                const rows = await getCachedProductLaserConversions(categoryId, apply, { throwOnError: true });
-                apply(rows);
-            } catch {
-                if (!cancelled) setLaserConversionsByCategory(current => ({ ...current, [categoryId]: { error: true } }));
-            }
-        });
-        if (products.some(product => product.category?.trim().toUpperCase() === "PELENGKAP")) {
+            });
+        }
+        if (detail.type === "packages" && product.has_bundle) {
+            setBundleLoading(true);
+            setBundleError(false);
             const apply = rows => {
                 if (!cancelled) {
                     setBundlesByProduct(Object.fromEntries(rows.map(bundle => [bundle.product_id, bundle])));
-                    setBundleError(false);
+                    setBundleLoading(false);
                 }
             };
             getCachedProductBundles(apply, { throwOnError: true }).then(apply).catch(() => {
-                if (!cancelled) setBundleError(true);
+                if (!cancelled) { setBundleError(true); setBundleLoading(false); }
+            });
+        }
+        if (detail.type === "laser") {
+            setLaserConversionsByCategory(current => ({ ...current, [categoryId]: { ...current[categoryId], loading: true, error: false } }));
+            const apply = rows => {
+                if (!cancelled) setLaserConversionsByCategory(current => ({ ...current, [categoryId]: { rows } }));
+            };
+            getCachedProductLaserConversions(categoryId, apply, { throwOnError: true }).then(apply).catch(() => {
+                if (!cancelled) setLaserConversionsByCategory(current => ({ ...current, [categoryId]: { error: true } }));
             });
         }
         return () => { cancelled = true; };
-    }, [products]);
+    }, [detail]);
 
-    const openDetails = useCallback((type, product) => setDetail({ type, product }), []);
+    const openDetails = useCallback((type, product) => {
+        if (type === "packages" && product.has_bundle) setBundleLoading(true);
+        setDetail({ type, product });
+    }, []);
     const closeDetails = useCallback(() => setDetail(null), []);
     const detailProduct = products.find(product => String(product.product_id) === String(detail?.product.product_id)) || detail?.product;
     const selectedVariants = variantsByProduct[detailProduct?.product_id];
@@ -316,10 +311,8 @@ export default function Products() {
         return {
             ...column,
             render: row => {
-                const packageData = packagesByCategory[row.category_id];
-                const hasPackages = packageData?.rows?.some(rule => String(rule.product_id) === String(row.product_id)) || Boolean(bundlesByProduct[row.product_id]);
-                const conversionData = laserConversionsByCategory[row.category_id];
-                const hasConversions = conversionData?.rows?.some(rule => String(rule.product_id) === String(row.product_id));
+                const hasPackages = Number(row.package_count) > 0 || row.has_bundle;
+                const hasConversions = Number(row.laser_conversion_count) > 0;
                 return (
                     <div>
                         <div>{row.name}</div>
@@ -333,15 +326,11 @@ export default function Products() {
                             {hasPackages && <Button size="sm" onClick={() => openDetails("packages", row)}>Harga Paket</Button>}
                             {hasConversions && <Button size="sm" onClick={() => openDetails("laser", row)}>Konversi Laser</Button>}
                         </div>
-                        {(packageData?.error || (bundleError && row.category?.trim().toUpperCase() === "PELENGKAP")) && (
-                            <small style={{ color: "var(--danger)" }}>Harga paket belum dapat dimuat.</small>
-                        )}
-                        {conversionData?.error && <small style={{ color: "var(--danger)" }}>Konversi laser belum dapat dimuat.</small>}
                     </div>
                 );
             }
         };
-    }), [productColumns, packagesByCategory, bundlesByProduct, bundleError, laserConversionsByCategory, openDetails]);
+    }), [productColumns, openDetails]);
 
     const mappedProducts = useMemo(() => {
         return products.map(p => ({
@@ -510,14 +499,16 @@ export default function Products() {
                         : <p>Produk ini belum memiliki harga bertingkat.</p>
                 )}
                 {detail?.type === "packages" && (
-                    selectedPackageData?.error || (bundleError && detailProduct.category?.trim().toUpperCase() === "PELENGKAP")
+                    selectedPackageData?.error || (bundleError && detailProduct.has_bundle)
                         ? <p role="alert">Harga paket belum dapat dimuat.</p>
+                        : (Number(detailProduct.package_count) > 0 && (!selectedPackageData || selectedPackageData.loading)) || (detailProduct.has_bundle && bundleLoading)
+                            ? <p>Memuat harga paket...</p>
                         : selectedPackages.length || selectedBundle ? <PackagePrices packages={selectedPackages} bundle={selectedBundle} />
                         : <p>Produk ini belum memiliki harga paket.</p>
                 )}
                 {detail?.type === "laser" && (
                     selectedConversionData?.error ? <p role="alert">Konversi laser belum dapat dimuat.</p>
-                        : !selectedConversionData ? <p>Memuat konversi laser...</p>
+                        : !selectedConversionData || selectedConversionData.loading ? <p>Memuat konversi laser...</p>
                         : selectedConversions.length ? <LaserConversions rules={selectedConversions} />
                         : <p>Produk ini belum memiliki konversi print laser.</p>
                 )}
