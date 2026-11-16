@@ -13,7 +13,9 @@ import {
     getCachedFinishings, 
     clearProductCache, 
     clearFinishingCache,
-    getCachedProductVariants
+    getCachedProductVariants,
+    getCachedProductFinishingPrices,
+    getCachedProductBundles
 } from "../services/apiCache";
 
 function PriceTiers({ rules = [], unit }) {
@@ -30,12 +32,47 @@ function PriceTiers({ rules = [], unit }) {
     );
 }
 
+function PackagePrices({ packages, bundle }) {
+    return (
+        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
+            {packages.map(rule => (
+                <div key={rule.id} style={{ marginBottom: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                        <span>
+                            {rule.finishing_name || "Finishing tidak tersedia"}
+                            {Number(rule.panjang) > 0 && Number(rule.lebar) > 0 && (
+                                <> · {Number(rule.panjang).toLocaleString("id-ID", { maximumFractionDigits: 8 })} × {Number(rule.lebar).toLocaleString("id-ID", { maximumFractionDigits: 8 })} m</>
+                            )}
+                        </span>
+                        <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(rule.price)}/set</span>
+                    </div>
+                    {Number(rule.valid) !== 1 && <span style={{ color: "var(--danger)" }}>Produk atau finishing perlu diperiksa.</span>}
+                </div>
+            ))}
+            {bundle && (
+                <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                        <span>Harga paket</span>
+                        <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(bundle.price)}/set</span>
+                    </div>
+                    {bundle.contents?.map((item, index) => <div key={index}>{item.quantity} × {item.label}</div>)}
+                    {bundle.valid === false && <span style={{ color: "var(--danger)" }}>{bundle.error}</span>}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function Products() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [finishings, setFinishings] = useState([]);
     const [variantsByProduct, setVariantsByProduct] = useState({});
     const [expandedProducts, setExpandedProducts] = useState({});
+    const [packagesByCategory, setPackagesByCategory] = useState({});
+    const [bundlesByProduct, setBundlesByProduct] = useState({});
+    const [expandedPackages, setExpandedPackages] = useState({});
+    const [bundleError, setBundleError] = useState(false);
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -103,6 +140,40 @@ export default function Products() {
         setExpandedProducts(current => ({ ...current, [productId]: !current[productId] }));
     }, []);
 
+    useEffect(() => {
+        let cancelled = false;
+        const categoryIds = [...new Set(products
+            .filter(product => ["INDOOR", "OUTDOOR", "LASER", "LASER A3"].includes(product.category?.trim().toUpperCase()))
+            .map(product => product.category_id))];
+        categoryIds.forEach(async categoryId => {
+            const apply = rows => {
+                if (!cancelled) setPackagesByCategory(current => ({ ...current, [categoryId]: { rows } }));
+            };
+            try {
+                const rows = await getCachedProductFinishingPrices(categoryId, apply, { throwOnError: true });
+                apply(rows);
+            } catch {
+                if (!cancelled) setPackagesByCategory(current => ({ ...current, [categoryId]: { error: true } }));
+            }
+        });
+        if (products.some(product => product.category?.trim().toUpperCase() === "PELENGKAP")) {
+            const apply = rows => {
+                if (!cancelled) {
+                    setBundlesByProduct(Object.fromEntries(rows.map(bundle => [bundle.product_id, bundle])));
+                    setBundleError(false);
+                }
+            };
+            getCachedProductBundles(apply, { throwOnError: true }).then(apply).catch(() => {
+                if (!cancelled) setBundleError(true);
+            });
+        }
+        return () => { cancelled = true; };
+    }, [products]);
+
+    const togglePackages = useCallback(productId => {
+        setExpandedPackages(current => ({ ...current, [productId]: !current[productId] }));
+    }, []);
+
     const handleStockUpdate = useCallback(async (type, id, newStock) => {
         try {
             const payload = new FormData();
@@ -155,6 +226,11 @@ export default function Products() {
                 const data = variantsByProduct[row.product_id];
                 const hasVariants = Number(row.variant_count) > 0;
                 const expanded = hasVariants && Boolean(expandedProducts[row.product_id]);
+                const packageData = packagesByCategory[row.category_id];
+                const packages = packageData?.rows?.filter(rule => String(rule.product_id) === String(row.product_id)) || [];
+                const bundle = bundlesByProduct[row.product_id];
+                const hasPackages = packages.length > 0 || Boolean(bundle);
+                const packageExpanded = hasPackages && Boolean(expandedPackages[row.product_id]);
                 return (
                     <div>
                         <div>{row.name}</div>
@@ -187,11 +263,27 @@ export default function Products() {
                         {expanded && !data && <div style={{ fontSize: 10 }}>Memuat varian...</div>}
                         {expanded && data?.rows?.length === 0 && <div style={{ fontSize: 10 }}>Belum ada varian.</div>}
                         {expanded && data?.error && <small style={{ color: "var(--danger)" }}>Varian belum dapat dimuat.</small>}
+                        {hasPackages && (
+                            <div>
+                                <button
+                                    type="button"
+                                    aria-expanded={packageExpanded}
+                                    onClick={() => togglePackages(row.product_id)}
+                                    style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
+                                >
+                                    {packageExpanded ? "Sembunyikan Paket" : "Tampilkan Paket"}
+                                </button>
+                                {packageExpanded && <PackagePrices packages={packages} bundle={bundle} />}
+                            </div>
+                        )}
+                        {(packageData?.error || (bundleError && row.category?.trim().toUpperCase() === "PELENGKAP")) && (
+                            <small style={{ color: "var(--danger)" }}>Harga paket belum dapat dimuat.</small>
+                        )}
                     </div>
                 );
             }
         };
-    }), [productColumns, variantsByProduct, expandedProducts, toggleVariants]);
+    }), [productColumns, variantsByProduct, expandedProducts, toggleVariants, packagesByCategory, bundlesByProduct, expandedPackages, togglePackages, bundleError]);
 
     const mappedProducts = useMemo(() => {
         return products.map(p => ({

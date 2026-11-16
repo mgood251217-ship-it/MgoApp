@@ -432,14 +432,15 @@ export const getCachedFinishingsByCategory = async (categoryId, onUpdate) => {
     return (await fetchLatest()) || [];
 };
 
-export const getCachedProductFinishingPrices = async (categoryId, onUpdate) => {
+export const getCachedProductFinishingPrices = async (categoryId, onUpdate, { throwOnError = false } = {}) => {
     if (!categoryId) return [];
     const cacheKey = "productFinishingPricesByCategory";
     const stored = getStorage(cacheKey, {})[categoryId];
     const cached = stored?.version === 2 ? stored : null;
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = dataset.product_finishing_prices_updated_at || 0;
+        const serverTime = Math.max(dataset.product_finishing_prices_updated_at || 0, dataset.products_updated_at || 0,
+            dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0);
         if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
         const res = await api.get("", { params: { action: "product_finishing_prices", category_id: categoryId } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error("Gagal memuat harga paket.");
@@ -455,7 +456,10 @@ export const getCachedProductFinishingPrices = async (categoryId, onUpdate) => {
         return cached.data;
     }
     // Server lama belum memiliki endpoint ini; form biasa tetap dapat digunakan.
-    return fetchLatest().catch(() => []);
+    return fetchLatest().catch(error => {
+        if (throwOnError) throw error;
+        return [];
+    });
 };
 
 export const getCachedProductLaserConversions = async (categoryId, onUpdate) => {
@@ -481,13 +485,14 @@ export const getCachedProductLaserConversions = async (categoryId, onUpdate) => 
     return fetchLatest().catch(() => []);
 };
 
-export const getCachedProductBundles = async (onUpdate) => {
+export const getCachedProductBundles = async (onUpdate, { throwOnError = false } = {}) => {
     const key = 'productBundles';
     const cached = getStorage(key, null);
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = Math.max(dataset.product_bundles_updated_at || 0, dataset.products_updated_at || 0,
-            dataset.product_variants_updated_at || 0, dataset.product_laser_conversion_updated_at || 0);
+            dataset.product_variants_updated_at || 0, dataset.product_laser_conversion_updated_at || 0,
+            dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0);
         if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
         const res = await api.get('', { params: { action: 'product_bundles' } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('Gagal memuat paket gabungan.');
@@ -495,7 +500,10 @@ export const getCachedProductBundles = async (onUpdate) => {
         onUpdate?.(res.data.data); return res.data.data;
     };
     if (cached) { fetchLatest().catch(() => {}); return cached.data; }
-    return fetchLatest().catch(() => []);
+    return fetchLatest().catch(error => {
+        if (throwOnError) throw error;
+        return [];
+    });
 };
 
 export const getCachedProductVariants = async (productId, onUpdate, { throwOnError = false } = {}) => {
