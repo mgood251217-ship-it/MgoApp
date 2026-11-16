@@ -15,7 +15,8 @@ import {
     clearFinishingCache,
     getCachedProductVariants,
     getCachedProductFinishingPrices,
-    getCachedProductBundles
+    getCachedProductBundles,
+    getCachedProductLaserConversions
 } from "../services/apiCache";
 
 function PriceTiers({ rules = [], unit }) {
@@ -63,6 +64,26 @@ function PackagePrices({ packages, bundle }) {
     );
 }
 
+function LaserConversions({ rules }) {
+    return (
+        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
+            {rules.map(rule => (
+                <div key={rule.id} style={{ marginBottom: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                        <span>{[rule.laser_name || "Bahan print tidak tersedia", rule.size, rule.finishing_names].filter(Boolean).join(" · ")}</span>
+                        <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(rule.price ?? rule.product_price)}/pcs</span>
+                    </div>
+                    <div>
+                        {Number(rule.product_quantity).toLocaleString("id-ID", { maximumFractionDigits: 8 })} pcs produk
+                        {" = "}{Number(rule.print_quantity).toLocaleString("id-ID", { maximumFractionDigits: 8 })} pcs print
+                    </div>
+                    {Number(rule.valid) !== 1 && <span style={{ color: "var(--danger)" }}>Konversi perlu diperiksa.</span>}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export default function Products() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -73,6 +94,8 @@ export default function Products() {
     const [bundlesByProduct, setBundlesByProduct] = useState({});
     const [expandedPackages, setExpandedPackages] = useState({});
     const [bundleError, setBundleError] = useState(false);
+    const [laserConversionsByCategory, setLaserConversionsByCategory] = useState({});
+    const [expandedConversions, setExpandedConversions] = useState({});
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -156,6 +179,20 @@ export default function Products() {
                 if (!cancelled) setPackagesByCategory(current => ({ ...current, [categoryId]: { error: true } }));
             }
         });
+        const laserCategoryIds = [...new Set(products
+            .filter(product => product.category?.trim().toUpperCase() === "ANEKA CETAK")
+            .map(product => product.category_id))];
+        laserCategoryIds.forEach(async categoryId => {
+            const apply = rows => {
+                if (!cancelled) setLaserConversionsByCategory(current => ({ ...current, [categoryId]: { rows } }));
+            };
+            try {
+                const rows = await getCachedProductLaserConversions(categoryId, apply, { throwOnError: true });
+                apply(rows);
+            } catch {
+                if (!cancelled) setLaserConversionsByCategory(current => ({ ...current, [categoryId]: { error: true } }));
+            }
+        });
         if (products.some(product => product.category?.trim().toUpperCase() === "PELENGKAP")) {
             const apply = rows => {
                 if (!cancelled) {
@@ -172,6 +209,10 @@ export default function Products() {
 
     const togglePackages = useCallback(productId => {
         setExpandedPackages(current => ({ ...current, [productId]: !current[productId] }));
+    }, []);
+
+    const toggleConversions = useCallback(productId => {
+        setExpandedConversions(current => ({ ...current, [productId]: !current[productId] }));
     }, []);
 
     const handleStockUpdate = useCallback(async (type, id, newStock) => {
@@ -231,6 +272,9 @@ export default function Products() {
                 const bundle = bundlesByProduct[row.product_id];
                 const hasPackages = packages.length > 0 || Boolean(bundle);
                 const packageExpanded = hasPackages && Boolean(expandedPackages[row.product_id]);
+                const conversionData = laserConversionsByCategory[row.category_id];
+                const conversions = conversionData?.rows?.filter(rule => String(rule.product_id) === String(row.product_id)) || [];
+                const conversionExpanded = conversions.length > 0 && Boolean(expandedConversions[row.product_id]);
                 return (
                     <div>
                         <div>{row.name}</div>
@@ -279,11 +323,25 @@ export default function Products() {
                         {(packageData?.error || (bundleError && row.category?.trim().toUpperCase() === "PELENGKAP")) && (
                             <small style={{ color: "var(--danger)" }}>Harga paket belum dapat dimuat.</small>
                         )}
+                        {conversions.length > 0 && (
+                            <div>
+                                <button
+                                    type="button"
+                                    aria-expanded={conversionExpanded}
+                                    onClick={() => toggleConversions(row.product_id)}
+                                    style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
+                                >
+                                    {conversionExpanded ? "Sembunyikan Konversi Laser" : "Tampilkan Konversi Laser"}
+                                </button>
+                                {conversionExpanded && <LaserConversions rules={conversions} />}
+                            </div>
+                        )}
+                        {conversionData?.error && <small style={{ color: "var(--danger)" }}>Konversi laser belum dapat dimuat.</small>}
                     </div>
                 );
             }
         };
-    }), [productColumns, variantsByProduct, expandedProducts, toggleVariants, packagesByCategory, bundlesByProduct, expandedPackages, togglePackages, bundleError]);
+    }), [productColumns, variantsByProduct, expandedProducts, toggleVariants, packagesByCategory, bundlesByProduct, expandedPackages, togglePackages, bundleError, laserConversionsByCategory, expandedConversions, toggleConversions]);
 
     const mappedProducts = useMemo(() => {
         return products.map(p => ({

@@ -462,7 +462,7 @@ export const getCachedProductFinishingPrices = async (categoryId, onUpdate, { th
     });
 };
 
-export const getCachedProductLaserConversions = async (categoryId, onUpdate) => {
+export const getCachedProductLaserConversions = async (categoryId, onUpdate, { throwOnError = false } = {}) => {
     if (!categoryId) return [];
     const key = "productLaserConversionsByCategory";
     const cached = getStorage(key, {})[categoryId];
@@ -482,7 +482,10 @@ export const getCachedProductLaserConversions = async (categoryId, onUpdate) => 
         fetchLatest().catch(() => {});
         return cached.data;
     }
-    return fetchLatest().catch(() => []);
+    return fetchLatest().catch(error => {
+        if (throwOnError) throw error;
+        return [];
+    });
 };
 
 export const getCachedProductBundles = async (onUpdate, { throwOnError = false } = {}) => {
