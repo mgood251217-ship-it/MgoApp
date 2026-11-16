@@ -158,6 +158,11 @@ export default function Products() {
                 return (
                     <div>
                         <div>{row.name}</div>
+                        {row.promotion && (
+                            <div style={{ marginTop: 3, fontSize: 10, color: "var(--success)", fontWeight: 500 }}>
+                                Beli {Number(row.promotion.buy_quantity).toLocaleString("id-ID")} gratis {Number(row.promotion.free_quantity).toLocaleString("id-ID")}
+                            </div>
+                        )}
                         {hasVariants && <button
                             type="button"
                             aria-expanded={expanded}

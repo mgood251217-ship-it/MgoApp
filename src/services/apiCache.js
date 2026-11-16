@@ -528,10 +528,10 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) 
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0);
-        const hasVariantCounts = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count") && Array.isArray(product.price_tiers));
+        const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0, dataset.product_promotions_updated_at || 0);
+        const hasProductDetails = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count") && Array.isArray(product.price_tiers) && Object.hasOwn(product, "promotion"));
 
-        if (!cachedItem || !hasVariantCounts || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
+        if (!cachedItem || !hasProductDetails || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await api.get("", { params: { action: "pagination_products", page, limit, search } });
                 const result = {
