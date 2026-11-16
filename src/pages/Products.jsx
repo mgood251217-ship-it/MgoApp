@@ -6,6 +6,7 @@ import Icon from "../components/Icon/Icon";
 import Header from "../components/Header/Header";
 import Input from "../components/Input/Input";
 import Pagination from "../components/Pagination/Pagination";
+import Modal from "../components/Modal/Modal";
 import { formatRupiah } from "../services/helpers";
 import { 
     getCachedCategories, 
@@ -19,69 +20,121 @@ import {
     getCachedProductLaserConversions
 } from "../services/apiCache";
 
+const numberFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 8 });
+const unitLabels = { PCS: "pcs", "~": "pcs", M2: "m\u00b2", CM2: "cm\u00b2" };
+const detailTitles = { variants: "Varian Produk", tiers: "Harga Bertingkat", packages: "Harga Paket", laser: "Konversi Print Laser" };
+
 function PriceTiers({ rules = [], unit }) {
-    const unitLabel = { PCS: "pcs", "~": "pcs", M2: "m²", CM2: "cm²" }[unit] || unit;
-    return rules.length > 0 && (
-        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
-            {rules.map(rule => (
-                <div key={rule.quantity_above} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <span>&gt; {Number(rule.quantity_above).toLocaleString("id-ID", { maximumFractionDigits: 8 })} {unitLabel}</span>
+    const unitLabel = unitLabels[unit] || unit;
+    const columns = [
+        { key: "quantity_above", title: "Jumlah", render: rule => `Lebih dari ${numberFormat.format(Number(rule.quantity_above))} ${unitLabel}` },
+        { key: "price", title: `Harga / ${unitLabel}`, render: rule => formatRupiah(rule.price) }
+    ];
+    return <Table id="tableProductPriceTiers" columns={columns} rows={rules} rowKey="quantity_above" rowDataKey="quantity_above" showNumber size="lg" />;
+}
+
+function VariantPrices({ variants, unit }) {
+    const unitLabel = unitLabels[unit] || unit;
+    const columns = [
+        {
+            key: "label",
+            title: "Varian",
+            render: variant => Object.entries(variant.options || {}).length
+                ? Object.entries(variant.options).map(([name, value]) => <div key={name}>{name}: <strong>{value}</strong></div>)
+                : variant.label
+        },
+        { key: "price", title: `Harga / ${unitLabel}`, render: variant => formatRupiah(variant.price) },
+        {
+            key: "price_tiers",
+            title: "Harga Bertingkat",
+            render: variant => variant.price_tiers?.length ? variant.price_tiers.map(rule => (
+                <div key={rule.quantity_above} style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                    <span>&gt; {numberFormat.format(Number(rule.quantity_above))} {unitLabel}</span>
                     <span style={{ whiteSpace: "nowrap" }}>{formatRupiah(rule.price)}</span>
                 </div>
-            ))}
-        </div>
-    );
+            )) : "-"
+        }
+    ];
+    return <Table id="tableProductVariants" columns={columns} rows={variants} rowKey="id" rowDataKey="id" showNumber size="lg" />;
 }
 
 function PackagePrices({ packages, bundle }) {
-    return (
-        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
-            {packages.map(rule => (
-                <div key={rule.id} style={{ marginBottom: 4 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                        <span>
-                            {rule.finishing_name || "Finishing tidak tersedia"}
-                            {Number(rule.panjang) > 0 && Number(rule.lebar) > 0 && (
-                                <> · {Number(rule.panjang).toLocaleString("id-ID", { maximumFractionDigits: 8 })} × {Number(rule.lebar).toLocaleString("id-ID", { maximumFractionDigits: 8 })} m</>
-                            )}
-                        </span>
-                        <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(rule.price)}/set</span>
-                    </div>
-                    {Number(rule.valid) !== 1 && <span style={{ color: "var(--danger)" }}>Produk atau finishing perlu diperiksa.</span>}
+    const columns = [
+        {
+            key: "finishing_name",
+            title: "Finishing",
+            render: rule => (
+                <div>
+                    <div>{rule.finishing_name || "Finishing tidak tersedia"}</div>
+                    {Number(rule.valid) !== 1 && <small style={{ color: "var(--danger)" }}>Produk atau finishing perlu diperiksa.</small>}
                 </div>
-            ))}
+            )
+        },
+        {
+            key: "panjang",
+            title: "Ukuran",
+            render: rule => Number(rule.panjang) > 0 && Number(rule.lebar) > 0
+                ? `${numberFormat.format(Number(rule.panjang))} \u00d7 ${numberFormat.format(Number(rule.lebar))} m` : "-"
+        },
+        { key: "price", title: "Harga / set", render: rule => formatRupiah(rule.price) }
+    ];
+    return (
+        <>
+            {packages.length > 0 && <Table id="tableProductPackages" columns={columns} rows={packages} rowKey="id" rowDataKey="id" showNumber size="lg" />}
             {bundle && (
                 <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                        <span>Harga paket</span>
-                        <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(bundle.price)}/set</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 16, fontSize: 16 }}>
+                        <span>Harga per set</span>
+                        <strong>{formatRupiah(bundle.price)}</strong>
                     </div>
-                    {bundle.contents?.map((item, index) => <div key={index}>{item.quantity} × {item.label}</div>)}
-                    {bundle.valid === false && <span style={{ color: "var(--danger)" }}>{bundle.error}</span>}
+                    <Table
+                        id="tableBundleContents"
+                        columns={[{ key: "label", title: "Isi Paket" }, { key: "quantity", title: "Jumlah", render: item => numberFormat.format(Number(item.quantity)) }]}
+                        rows={(bundle.contents || []).map((item, index) => ({ ...item, id: index }))}
+                        rowKey="id"
+                        rowDataKey="id"
+                        showNumber
+                        size="lg"
+                    />
+                    {bundle.valid === false && <p role="alert" style={{ color: "var(--danger)" }}>{bundle.error}</p>}
                 </div>
             )}
-        </div>
+        </>
     );
 }
 
 function LaserConversions({ rules }) {
-    return (
-        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
-            {rules.map(rule => (
-                <div key={rule.id} style={{ marginBottom: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                        <span>{[rule.laser_name || "Bahan print tidak tersedia", rule.size, rule.finishing_names].filter(Boolean).join(" · ")}</span>
-                        <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(rule.price ?? rule.product_price)}/pcs</span>
-                    </div>
-                    <div>
-                        {Number(rule.product_quantity).toLocaleString("id-ID", { maximumFractionDigits: 8 })} pcs produk
-                        {" = "}{Number(rule.print_quantity).toLocaleString("id-ID", { maximumFractionDigits: 8 })} pcs print
-                    </div>
-                    {Number(rule.valid) !== 1 && <span style={{ color: "var(--danger)" }}>Konversi perlu diperiksa.</span>}
+    const columns = useMemo(() => [
+        {
+            key: "laser_name",
+            title: "Bahan Print",
+            render: rule => (
+                <div>
+                    <div>{rule.laser_name || "Bahan print tidak tersedia"}</div>
+                    {Number(rule.valid) !== 1 && <small style={{ color: "var(--danger)" }}>Konversi perlu diperiksa.</small>}
                 </div>
-            ))}
-        </div>
-    );
+            )
+        },
+        { key: "size", title: "Ukuran", render: rule => rule.size || "-" },
+        { key: "finishing_names", title: "Finishing", render: rule => rule.finishing_names || "-" },
+        {
+            key: "product_quantity",
+            title: "Konversi",
+            render: rule => (
+                <div style={{ whiteSpace: "nowrap" }}>
+                    <div>{Number(rule.product_quantity).toLocaleString("id-ID", { maximumFractionDigits: 8 })} pcs produk</div>
+                    <div style={{ color: "var(--text-secondary)" }}>= {Number(rule.print_quantity).toLocaleString("id-ID", { maximumFractionDigits: 8 })} pcs print</div>
+                </div>
+            )
+        },
+        {
+            key: "price",
+            title: "Harga / pcs",
+            render: rule => <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(rule.price ?? rule.product_price)}</span>
+        }
+    ], []);
+
+    return <Table id="tableProductLaserConversions" columns={columns} rows={rules} rowKey="id" rowDataKey="id" showNumber size="lg" />;
 }
 
 export default function Products() {
@@ -89,13 +142,11 @@ export default function Products() {
     const [categories, setCategories] = useState([]);
     const [finishings, setFinishings] = useState([]);
     const [variantsByProduct, setVariantsByProduct] = useState({});
-    const [expandedProducts, setExpandedProducts] = useState({});
     const [packagesByCategory, setPackagesByCategory] = useState({});
     const [bundlesByProduct, setBundlesByProduct] = useState({});
-    const [expandedPackages, setExpandedPackages] = useState({});
     const [bundleError, setBundleError] = useState(false);
     const [laserConversionsByCategory, setLaserConversionsByCategory] = useState({});
-    const [expandedConversions, setExpandedConversions] = useState({});
+    const [detail, setDetail] = useState(null);
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -136,32 +187,18 @@ export default function Products() {
     }, [loadData]);
 
     useEffect(() => {
+        if (detail?.type !== "variants") return;
         let cancelled = false;
-        const productIds = [...new Set(products
-            .filter(product => Number(product.variant_count) > 0 && expandedProducts[product.product_id])
-            .map(product => product.product_id))];
-        let next = 0;
-        const loadVariants = async () => {
-            while (!cancelled && next < productIds.length) {
-                const productId = productIds[next++];
-                const apply = rows => {
-                    if (!cancelled) setVariantsByProduct(current => ({ ...current, [productId]: { rows } }));
-                };
-                try {
-                    const rows = await getCachedProductVariants(productId, apply, { throwOnError: true });
-                    apply(rows);
-                } catch {
-                    if (!cancelled) setVariantsByProduct(current => ({ ...current, [productId]: { error: true } }));
-                }
-            }
+        const productId = detail.product.product_id;
+        setVariantsByProduct(current => ({ ...current, [productId]: { ...current[productId], loading: true, error: false } }));
+        const apply = rows => {
+            if (!cancelled) setVariantsByProduct(current => ({ ...current, [productId]: { rows } }));
         };
-        for (let i = 0; i < Math.min(4, productIds.length); i++) loadVariants();
+        getCachedProductVariants(productId, apply, { throwOnError: true }).then(apply).catch(() => {
+            if (!cancelled) setVariantsByProduct(current => ({ ...current, [productId]: { error: true } }));
+        });
         return () => { cancelled = true; };
-    }, [products, expandedProducts]);
-
-    const toggleVariants = useCallback(productId => {
-        setExpandedProducts(current => ({ ...current, [productId]: !current[productId] }));
-    }, []);
+    }, [detail]);
 
     useEffect(() => {
         let cancelled = false;
@@ -207,13 +244,15 @@ export default function Products() {
         return () => { cancelled = true; };
     }, [products]);
 
-    const togglePackages = useCallback(productId => {
-        setExpandedPackages(current => ({ ...current, [productId]: !current[productId] }));
-    }, []);
-
-    const toggleConversions = useCallback(productId => {
-        setExpandedConversions(current => ({ ...current, [productId]: !current[productId] }));
-    }, []);
+    const openDetails = useCallback((type, product) => setDetail({ type, product }), []);
+    const closeDetails = useCallback(() => setDetail(null), []);
+    const detailProduct = products.find(product => String(product.product_id) === String(detail?.product.product_id)) || detail?.product;
+    const selectedVariants = variantsByProduct[detailProduct?.product_id];
+    const selectedPackageData = packagesByCategory[detailProduct?.category_id];
+    const selectedPackages = selectedPackageData?.rows?.filter(rule => String(rule.product_id) === String(detailProduct?.product_id)) || [];
+    const selectedBundle = bundlesByProduct[detailProduct?.product_id];
+    const selectedConversionData = laserConversionsByCategory[detailProduct?.category_id];
+    const selectedConversions = selectedConversionData?.rows?.filter(rule => String(rule.product_id) === String(detailProduct?.product_id)) || [];
 
     const handleStockUpdate = useCallback(async (type, id, newStock) => {
         try {
@@ -250,13 +289,17 @@ export default function Products() {
         { key: "name", title: "Nama Kategori" }
     ], []);
 
-    const productVariantColumns = useMemo(() => productColumns.map(column => {
+    const productDetailColumns = useMemo(() => productColumns.map(column => {
         if (column.key === "price") return {
             ...column,
             render: row => (
                 <div>
                     <div>{formatRupiah(row.price)}</div>
-                    <PriceTiers rules={row.price_tiers} unit={row.unit_type} />
+                    {row.price_tiers?.length > 0 && (
+                        <div style={{ marginTop: 4 }}>
+                            <Button size="sm" onClick={() => openDetails("tiers", row)}>Harga Bertingkat</Button>
+                        </div>
+                    )}
                 </div>
             )
         };
@@ -264,84 +307,32 @@ export default function Products() {
         return {
             ...column,
             render: row => {
-                const data = variantsByProduct[row.product_id];
-                const hasVariants = Number(row.variant_count) > 0;
-                const expanded = hasVariants && Boolean(expandedProducts[row.product_id]);
                 const packageData = packagesByCategory[row.category_id];
-                const packages = packageData?.rows?.filter(rule => String(rule.product_id) === String(row.product_id)) || [];
-                const bundle = bundlesByProduct[row.product_id];
-                const hasPackages = packages.length > 0 || Boolean(bundle);
-                const packageExpanded = hasPackages && Boolean(expandedPackages[row.product_id]);
+                const hasPackages = packageData?.rows?.some(rule => String(rule.product_id) === String(row.product_id)) || Boolean(bundlesByProduct[row.product_id]);
                 const conversionData = laserConversionsByCategory[row.category_id];
-                const conversions = conversionData?.rows?.filter(rule => String(rule.product_id) === String(row.product_id)) || [];
-                const conversionExpanded = conversions.length > 0 && Boolean(expandedConversions[row.product_id]);
+                const hasConversions = conversionData?.rows?.some(rule => String(rule.product_id) === String(row.product_id));
                 return (
                     <div>
                         <div>{row.name}</div>
                         {row.promotion && (
-                            <div style={{ marginTop: 3, fontSize: 10, color: "var(--success)", fontWeight: 500 }}>
+                            <div style={{ marginTop: 3, fontSize: 12, color: "var(--success)", fontWeight: 500 }}>
                                 Beli {Number(row.promotion.buy_quantity).toLocaleString("id-ID")} gratis {Number(row.promotion.free_quantity).toLocaleString("id-ID")}
                             </div>
                         )}
-                        {hasVariants && <button
-                            type="button"
-                            aria-expanded={expanded}
-                            onClick={() => toggleVariants(row.product_id)}
-                            style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
-                        >
-                            {expanded ? "Sembunyikan Varian" : "Tampilkan Varian"}
-                        </button>}
-                        {expanded && data?.rows?.length > 0 && (
-                            <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
-                                {data.rows.map(variant => (
-                                    <div key={variant.id} style={{ marginBottom: 4 }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                                            <span>{variant.label || Object.values(variant.options || {}).join(" / ")}</span>
-                                            <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(variant.price)}</span>
-                                        </div>
-                                        <PriceTiers rules={variant.price_tiers} unit={row.unit_type} />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {expanded && !data && <div style={{ fontSize: 10 }}>Memuat varian...</div>}
-                        {expanded && data?.rows?.length === 0 && <div style={{ fontSize: 10 }}>Belum ada varian.</div>}
-                        {expanded && data?.error && <small style={{ color: "var(--danger)" }}>Varian belum dapat dimuat.</small>}
-                        {hasPackages && (
-                            <div>
-                                <button
-                                    type="button"
-                                    aria-expanded={packageExpanded}
-                                    onClick={() => togglePackages(row.product_id)}
-                                    style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
-                                >
-                                    {packageExpanded ? "Sembunyikan Paket" : "Tampilkan Paket"}
-                                </button>
-                                {packageExpanded && <PackagePrices packages={packages} bundle={bundle} />}
-                            </div>
-                        )}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                            {Number(row.variant_count) > 0 && <Button size="sm" onClick={() => openDetails("variants", row)}>Varian</Button>}
+                            {hasPackages && <Button size="sm" onClick={() => openDetails("packages", row)}>Harga Paket</Button>}
+                            {hasConversions && <Button size="sm" onClick={() => openDetails("laser", row)}>Konversi Laser</Button>}
+                        </div>
                         {(packageData?.error || (bundleError && row.category?.trim().toUpperCase() === "PELENGKAP")) && (
                             <small style={{ color: "var(--danger)" }}>Harga paket belum dapat dimuat.</small>
-                        )}
-                        {conversions.length > 0 && (
-                            <div>
-                                <button
-                                    type="button"
-                                    aria-expanded={conversionExpanded}
-                                    onClick={() => toggleConversions(row.product_id)}
-                                    style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
-                                >
-                                    {conversionExpanded ? "Sembunyikan Konversi Laser" : "Tampilkan Konversi Laser"}
-                                </button>
-                                {conversionExpanded && <LaserConversions rules={conversions} />}
-                            </div>
                         )}
                         {conversionData?.error && <small style={{ color: "var(--danger)" }}>Konversi laser belum dapat dimuat.</small>}
                     </div>
                 );
             }
         };
-    }), [productColumns, variantsByProduct, expandedProducts, toggleVariants, packagesByCategory, bundlesByProduct, expandedPackages, togglePackages, bundleError, laserConversionsByCategory, expandedConversions, toggleConversions]);
+    }), [productColumns, packagesByCategory, bundlesByProduct, bundleError, laserConversionsByCategory, openDetails]);
 
     const mappedProducts = useMemo(() => {
         return products.map(p => ({
@@ -432,7 +423,7 @@ export default function Products() {
                         size="sm"
                         rowKey="product_id"
                         rowDataKey="product_id"
-                        columns={productVariantColumns}
+                        columns={productDetailColumns}
                         rows={mappedProducts}
                     />
                     <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
@@ -474,6 +465,35 @@ export default function Products() {
                     />
                 </div>
             </>
+            <Modal
+                open={Boolean(detail)}
+                title={`${detailTitles[detail?.type] || ""} - ${detailProduct?.name || ""}`}
+                size="xl"
+                onClose={closeDetails}
+            >
+                {detail?.type === "variants" && (
+                    selectedVariants?.error ? <p role="alert">Varian belum dapat dimuat. Coba buka kembali.</p>
+                        : !selectedVariants || selectedVariants.loading ? <p>Memuat varian...</p>
+                        : selectedVariants.rows?.length ? <VariantPrices variants={selectedVariants.rows} unit={detailProduct.unit_type} />
+                        : <p>Produk ini belum memiliki varian.</p>
+                )}
+                {detail?.type === "tiers" && (
+                    detailProduct.price_tiers?.length ? <PriceTiers rules={detailProduct.price_tiers} unit={detailProduct.unit_type} />
+                        : <p>Produk ini belum memiliki harga bertingkat.</p>
+                )}
+                {detail?.type === "packages" && (
+                    selectedPackageData?.error || (bundleError && detailProduct.category?.trim().toUpperCase() === "PELENGKAP")
+                        ? <p role="alert">Harga paket belum dapat dimuat.</p>
+                        : selectedPackages.length || selectedBundle ? <PackagePrices packages={selectedPackages} bundle={selectedBundle} />
+                        : <p>Produk ini belum memiliki harga paket.</p>
+                )}
+                {detail?.type === "laser" && (
+                    selectedConversionData?.error ? <p role="alert">Konversi laser belum dapat dimuat.</p>
+                        : !selectedConversionData ? <p>Memuat konversi laser...</p>
+                        : selectedConversions.length ? <LaserConversions rules={selectedConversions} />
+                        : <p>Produk ini belum memiliki konversi print laser.</p>
+                )}
+            </Modal>
         </>
     );
 }
