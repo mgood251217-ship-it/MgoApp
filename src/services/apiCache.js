@@ -504,8 +504,9 @@ export const getCachedProductVariants = async (productId, onUpdate, { throwOnErr
     const cached = getStorage(key, {})[productId];
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = Math.max(dataset.product_variants_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0);
-        if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
+        const serverTime = Math.max(dataset.product_variants_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0);
+        const hasPriceTiers = cached?.data?.every(variant => Array.isArray(variant.price_tiers));
+        if (cached && hasPriceTiers && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
         const res = await api.get('', { params: { action: 'product_variants', product_id: productId } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('Gagal memuat varian produk.');
         const map = getStorage(key, {});
@@ -527,8 +528,8 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate) 
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0);
-        const hasVariantCounts = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count"));
+        const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0);
+        const hasVariantCounts = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count") && Array.isArray(product.price_tiers));
 
         if (!cachedItem || !hasVariantCounts || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {

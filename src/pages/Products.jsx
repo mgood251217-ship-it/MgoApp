@@ -16,6 +16,20 @@ import {
     getCachedProductVariants
 } from "../services/apiCache";
 
+function PriceTiers({ rules = [], unit }) {
+    const unitLabel = { PCS: "pcs", "~": "pcs", M2: "m²", CM2: "cm²" }[unit] || unit;
+    return rules.length > 0 && (
+        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
+            {rules.map(rule => (
+                <div key={rule.quantity_above} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                    <span>&gt; {Number(rule.quantity_above).toLocaleString("id-ID", { maximumFractionDigits: 8 })} {unitLabel}</span>
+                    <span style={{ whiteSpace: "nowrap" }}>{formatRupiah(rule.price)}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export default function Products() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -124,39 +138,54 @@ export default function Products() {
         { key: "name", title: "Nama Kategori" }
     ], []);
 
-    const productVariantColumns = useMemo(() => productColumns.map(column => column.key !== "name" ? column : {
-        ...column,
-        render: row => {
-            const data = variantsByProduct[row.product_id];
-            const hasVariants = Number(row.variant_count) > 0;
-            const expanded = hasVariants && Boolean(expandedProducts[row.product_id]);
-            return (
+    const productVariantColumns = useMemo(() => productColumns.map(column => {
+        if (column.key === "price") return {
+            ...column,
+            render: row => (
                 <div>
-                    <div>{row.name}</div>
-                    {hasVariants && <button
-                        type="button"
-                        aria-expanded={expanded}
-                        onClick={() => toggleVariants(row.product_id)}
-                        style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
-                    >
-                        {expanded ? "Sembunyikan Varian" : "Tampilkan Varian"}
-                    </button>}
-                    {expanded && data?.rows?.length > 0 && (
-                        <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
-                            {data.rows.map(variant => (
-                                <div key={variant.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                                    <span>{variant.label || Object.values(variant.options || {}).join(" / ")}</span>
-                                    <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(variant.price)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {expanded && !data && <div style={{ fontSize: 10 }}>Memuat varian...</div>}
-                    {expanded && data?.rows?.length === 0 && <div style={{ fontSize: 10 }}>Belum ada varian.</div>}
-                    {expanded && data?.error && <small style={{ color: "var(--danger)" }}>Varian belum dapat dimuat.</small>}
+                    <div>{formatRupiah(row.price)}</div>
+                    <PriceTiers rules={row.price_tiers} unit={row.unit_type} />
                 </div>
-            );
-        }
+            )
+        };
+        if (column.key !== "name") return column;
+        return {
+            ...column,
+            render: row => {
+                const data = variantsByProduct[row.product_id];
+                const hasVariants = Number(row.variant_count) > 0;
+                const expanded = hasVariants && Boolean(expandedProducts[row.product_id]);
+                return (
+                    <div>
+                        <div>{row.name}</div>
+                        {hasVariants && <button
+                            type="button"
+                            aria-expanded={expanded}
+                            onClick={() => toggleVariants(row.product_id)}
+                            style={{ padding: 0, marginTop: 3, border: 0, background: "none", color: "var(--primary)", fontSize: 10, cursor: "pointer" }}
+                        >
+                            {expanded ? "Sembunyikan Varian" : "Tampilkan Varian"}
+                        </button>}
+                        {expanded && data?.rows?.length > 0 && (
+                            <div style={{ marginTop: 3, fontSize: 10, lineHeight: 1.4, color: "var(--text-secondary)" }}>
+                                {data.rows.map(variant => (
+                                    <div key={variant.id} style={{ marginBottom: 4 }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                            <span>{variant.label || Object.values(variant.options || {}).join(" / ")}</span>
+                                            <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{formatRupiah(variant.price)}</span>
+                                        </div>
+                                        <PriceTiers rules={variant.price_tiers} unit={row.unit_type} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {expanded && !data && <div style={{ fontSize: 10 }}>Memuat varian...</div>}
+                        {expanded && data?.rows?.length === 0 && <div style={{ fontSize: 10 }}>Belum ada varian.</div>}
+                        {expanded && data?.error && <small style={{ color: "var(--danger)" }}>Varian belum dapat dimuat.</small>}
+                    </div>
+                );
+            }
+        };
     }), [productColumns, variantsByProduct, expandedProducts, toggleVariants]);
 
     const mappedProducts = useMemo(() => {
