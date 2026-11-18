@@ -36,6 +36,7 @@ export const tauriApi = {
     restartApp: () => invoke("restart_app"),
 
     savePdfData: (args) => invoke("save_pdf_data", { args }),
+    saveOrderBackup: (args) => invoke("save_order_backup", { args }),
     simpanTempFile: (args) => invoke("simpan_temp_file", { args }),
 
     simpanFile: async (blob, defaultFileName, filters = null) => {

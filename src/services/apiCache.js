@@ -36,6 +36,7 @@ const getSharedResponse = (url, config = {}) => {
 };
 
 const memoryFallback = new Map();
+const localOrderListeners = new Set();
 const cacheEntryLimits = { paginatedProducts: 100, orders: 50, transactionsDetail: 50 };
 let storageScope = getRequestScope();
 
@@ -76,6 +77,7 @@ const setStorage = (key, value) => {
         // Jangan biarkan timestamp baru dipasangkan dengan data lama setelah restart.
         try { localStorage.removeItem(`mgo_cache_${key}`); } catch { /* Penyimpanan dapat dinonaktifkan. */ }
     }
+    if (key === "orders") localOrderListeners.forEach(listener => listener());
 };
 
 const removeStorage = key => {
@@ -729,6 +731,36 @@ export const getCachedOrdersAnalysis = async (onUpdate) => {
 
     return (await fetchLatest()) || { chart_30: {}, chart_365: {}, summary: {} };
 }
+
+export const subscribeLocalOrdersCache = listener => {
+    localOrderListeners.add(listener);
+    return () => localOrderListeners.delete(listener);
+};
+
+export const getLocalOrdersForBackup = () => {
+    const map = getStorage("orders", {}) || {};
+    const latest = new Map();
+    for (const entry of Object.values(map)) {
+        if (!Array.isArray(entry?.data?.offline) || !Array.isArray(entry?.data?.online)) continue;
+        const time = Number(entry.updatedAt) || 0;
+        const updatedAt = time > 0 && time < 1e12 ? time * 1000 : time;
+        for (const order of [...entry.data.offline, ...entry.data.online]) {
+            if (!order || !order.order_id) continue;
+            const key = String(order.order_id);
+            if (latest.has(key) && latest.get(key).updatedAt > updatedAt) continue;
+            latest.set(key, { updatedAt, order: {
+                order_id: order.order_id,
+                nomorator: order.nomorator,
+                date: order.date,
+                customer_name: order.customer_name,
+                operator: order.op_initial || order.operator_initial || "-",
+                total: order.total,
+                total_paid: order.total_paid
+            } });
+        }
+    }
+    return [...latest.values()].map(entry => entry.order).sort((a, b) => Number(a.order_id) - Number(b.order_id));
+};
 
 export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {
     const cacheKey = `${startDate}_${endDate}_${search}`;

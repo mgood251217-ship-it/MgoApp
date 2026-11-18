@@ -385,6 +385,46 @@ export const exportMeteranExcel = async ({
     await tauriApi.simpanFile(new Blob([buffer]), fileName, [["Excel", ["xlsx"]]]);
 };
 
+export const createOrderBackupExcel = async ({ orders, store, date }) => {
+    const { default: ExcelJS } = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Order");
+
+    sheet.mergeCells("A1:H1");
+    sheet.getCell("A1").value = `BACKUP CACHE ORDER - ${store.name}`;
+    sheet.getCell("A1").font = { bold: true, size: 14 };
+    sheet.mergeCells("A2:H2");
+    sheet.getCell("A2").value = `Backup ${date} - hanya order yang tersedia di cache lokal`;
+    sheet.addRow([]);
+    const header = sheet.addRow(["ID Order", "Nomor Nota", "Tanggal", "Pelanggan", "Operator", "Total", "Dibayar", "Sisa"]);
+    header.font = { bold: true };
+    header.eachCell(cell => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6F1" } };
+    });
+
+    for (const order of orders) {
+        const paid = Number(order.total_paid) || 0;
+        const total = Number(order.total) || 0;
+        sheet.addRow([
+            order.order_id,
+            String(order.nomorator ?? ""),
+            order.date,
+            order.customer_name,
+            order.operator || "-",
+            total,
+            paid,
+            Math.max(0, Math.round((total - paid) * 100) / 100)
+        ]);
+    }
+
+    sheet.columns.forEach((column, index) => {
+        column.width = [12, 16, 22, 32, 22, 18, 18, 18][index];
+        if (index >= 5) column.numFmt = '#,##0.00';
+    });
+    sheet.autoFilter = { from: "A4", to: `H${sheet.rowCount}` };
+    return workbook.xlsx.writeBuffer();
+};
+
 export const exportTransaksiDetailExcel = async ({
     orders,
     itemsByOrder,

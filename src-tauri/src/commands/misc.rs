@@ -146,6 +146,76 @@ pub fn save_pdf_data(args: SavePdfArgs) -> Value {
     }
 }
 
+fn order_backup_path(date: &str) -> Result<PathBuf, String> {
+    let parsed = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .map_err(|_| "Tanggal backup tidak valid.".to_string())?;
+    if parsed.format("%Y-%m-%d").to_string() != date {
+        return Err("Tanggal backup tidak valid.".into());
+    }
+    let program_data = std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());
+    let mut directory = PathBuf::from(program_data).join("MgoDesktop").join("DataBackup");
+    if cfg!(debug_assertions) {
+        directory = directory.join("development");
+    }
+    Ok(directory
+        .join(parsed.year().to_string())
+        .join(format!("{:02}", parsed.month()))
+        .join(format!("{:02}", parsed.day()))
+        .join(format!("Order_{}.xlsx", date)))
+}
+
+// Selesaikan file sementara sebelum mengganti backup sebelumnya.
+fn write_order_backup_file(path: &std::path::Path, buffer: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let directory = path.parent().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "Lokasi backup tidak valid.")
+    })?;
+    fs::create_dir_all(directory)?;
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temporary = directory.join(format!(".order-{}-{}.tmp", std::process::id(), nonce));
+    let result = (|| {
+        let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&temporary)?;
+        file.write_all(buffer)?;
+        file.sync_all()?;
+        drop(file);
+        fs::rename(&temporary, path)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
+    }
+    result
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderBackupArgs {
+    pub date: String,
+    pub base64_data: String,
+}
+
+#[tauri::command]
+pub fn save_order_backup(args: OrderBackupArgs) -> Value {
+    let path = match order_backup_path(&args.date) {
+        Ok(path) => path,
+        Err(message) => return serde_json::json!({ "success": false, "message": message }),
+    };
+    let buffer = match base64::engine::general_purpose::STANDARD.decode(&args.base64_data) {
+        Ok(buffer) if buffer.starts_with(b"PK\x03\x04") => buffer,
+        _ => return serde_json::json!({ "success": false, "message": "File Excel backup tidak valid." }),
+    };
+    match write_order_backup_file(&path, &buffer) {
+        Ok(()) => serde_json::json!({
+            "success": true,
+            "filePath": path.to_string_lossy(),
+            "directory": path.parent().map(|directory| directory.to_string_lossy())
+        }),
+        Err(error) => serde_json::json!({ "success": false, "message": error.to_string() }),
+    }
+}
+
 #[derive(Deserialize)]
 pub struct SimpanTempFileArgs {
     #[serde(rename = "fileName")]

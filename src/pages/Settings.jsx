@@ -10,6 +10,8 @@ import Alert from "../components/Alert/Alert";
 import { applyTheme } from "../services/theme";
 import { clearAllCache } from "../services/apiCache";
 import { useSession } from "../services/session";
+import { canBackupOrders, getOrderBackupState, subscribeOrderBackup } from "../services/orderBackup";
+import { tauriApi } from "../lib/tauriApi";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
@@ -502,6 +504,13 @@ const toHex = (str) => {
 export default function Settings() {
     const session = useSession();
     const storeName = session?.store?.name || "NAMA TOKO";
+    const [orderBackup, setOrderBackup] = useState(() => getOrderBackupState());
+    useEffect(() => {
+        const update = () => setOrderBackup(getOrderBackupState());
+        update();
+        return subscribeOrderBackup(update);
+    }, [session]);
+
     const [settings, setSettings] = useState({});
     const [defaultColors, setDefaultColors] = useState({});
     const [loading, setLoading] = useState(true);
@@ -896,6 +905,26 @@ export default function Settings() {
                 title="Pengaturan"
                 subtitle="Konfigurasi sistem, path folder, dan personalisasi tampilan aplikasi."
             />
+
+
+            {canBackupOrders(session) && (
+                <div style={{ padding: "16px", marginBottom: "24px", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+                    <strong>Backup Order</strong>
+                    <p>Otomatis setiap cache order diperbarui, tanpa mengambil data dari server. File pada hari yang sama ditimpa.</p>
+                    <p style={{ color: orderBackup?.success === false ? "var(--danger)" : "var(--text-muted)" }}>
+                        {orderBackup?.message || "Menunggu cache order tersedia. Hanya order yang sudah tersimpan di komputer ini yang dicadangkan."}
+                    </p>
+                    {orderBackup?.directory && (
+                        <>
+                            <p style={{ overflowWrap: "anywhere" }}>{orderBackup.directory}</p>
+                            <Button variant="secondary" icon={<Icon name="folder" />} onClick={async () => {
+                                const result = await tauriApi.openFolder(orderBackup.directory);
+                                if (!result?.success) setAlertConfig({ show: true, type: "error", message: result?.message || "Folder backup tidak dapat dibuka." });
+                            }}>Buka Folder Backup</Button>
+                        </>
+                    )}
+                </div>
+            )}
 
             {loading ? (
                 <div style={{ color: "var(--secondary)", textAlign: "center", padding: "40px" }}>
