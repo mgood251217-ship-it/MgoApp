@@ -71,6 +71,7 @@ pub fn run() {
             misc::buka_link_eksternal,
             misc::save_pdf_data,
             misc::save_order_backup,
+            misc::save_payment_backup,
             misc::simpan_file_dialog,
             misc::print_window,
             misc::simpan_temp_file,

@@ -38,6 +38,7 @@ const getSharedResponse = (url, config = {}) => {
 
 const memoryFallback = new Map();
 const localOrderListeners = new Set();
+const localPaymentListeners = new Set();
 const cacheEntryLimits = { paginatedProducts: 100, orders: 50, transactionsDetail: 50 };
 let storageScope = getRequestScope();
 
@@ -79,6 +80,7 @@ const setStorage = (key, value) => {
         try { localStorage.removeItem(`mgo_cache_${key}`); } catch { /* Penyimpanan dapat dinonaktifkan. */ }
     }
     if (["orders", "orderDetail", "transactionsDetail"].includes(key)) localOrderListeners.forEach(listener => listener());
+    if (["paymentHistory", "transactionsDetail"].includes(key)) localPaymentListeners.forEach(listener => listener());
 };
 
 const removeStorage = key => {
@@ -798,6 +800,92 @@ export const getLocalOrdersForBackup = (date = getTodayDate()) => {
         }
     }
     return [...latest.values()].sort((a, b) => Number(a.order_id) - Number(b.order_id));
+};
+
+export const subscribeLocalPaymentsCache = listener => {
+    localPaymentListeners.add(listener);
+    return () => localPaymentListeners.delete(listener);
+};
+
+export const cacheOrderPayments = (orderId, payments, order = {}, replace = true) => {
+    if (!orderId || !Array.isArray(payments)) return;
+    const today = getTodayDate();
+    const map = getCleanedDailyMap("paymentHistory");
+    const previous = map[String(orderId)]?.data;
+    const validPayments = payments.filter(payment => payment?.payment_id && String(payment.order_id) === String(orderId)
+        && typeof payment.date === "string" && payment.date.slice(0, 10) === today);
+    if (!replace && !validPayments.length) return;
+    const rows = new Map();
+    if (!replace) {
+        for (const payment of previous?.payments || []) rows.set(String(payment.payment_id), payment);
+    }
+    for (const payment of validPayments) {
+        rows.set(String(payment.payment_id), {
+            payment_id: payment.payment_id,
+            order_id: payment.order_id,
+            nominal: payment.nominal,
+            payment_method: payment.payment_method,
+            status: payment.status,
+            date: payment.date
+        });
+    }
+    map[String(orderId)] = {
+        updatedAt: Date.now(),
+        data: {
+            order: { order_id: orderId, nomorator: order.nomorator ?? previous?.order?.nomorator, customer_name: order.customer_name ?? previous?.order?.customer_name },
+            payments: [...rows.values()],
+            complete: replace || previous?.complete === true
+        }
+    };
+    setStorage("paymentHistory", map);
+};
+
+export const getLocalPaymentsForBackup = (date = getTodayDate()) => {
+    const entries = [];
+    for (const source of ["transactionsDetail", "paymentHistory"]) {
+        for (const entry of Object.values(getCleanedDailyMap(source))) {
+            if (!entry?.data || typeof entry.data !== "object") continue;
+            const time = Number(entry.updatedAt) || 0;
+            entries.push({ source, data: entry.data, updatedAt: time > 0 && time < 1e12 ? time * 1000 : time });
+        }
+    }
+    entries.sort((a, b) => a.updatedAt - b.updatedAt);
+    const byOrder = new Map();
+    const addPayments = (orderId, payments, order = {}, replace = true) => {
+        const key = String(orderId);
+        const previous = byOrder.get(key);
+        const metadata = {
+            nomorator: order.nomorator ?? previous?.metadata.nomorator,
+            customer_name: order.customer_name ?? previous?.metadata.customer_name
+        };
+        const rows = replace ? new Map() : previous?.payments || new Map();
+        for (const payment of payments) {
+            if (!payment?.payment_id || String(payment.order_id) !== key || typeof payment.date !== "string" || payment.date.slice(0, 10) !== date) continue;
+            rows.set(String(payment.payment_id), {
+                payment_id: payment.payment_id,
+                order_id: payment.order_id,
+                date: payment.date,
+                nominal: payment.nominal,
+                payment_method: payment.payment_method,
+                status: payment.status
+            });
+        }
+        byOrder.set(key, { metadata, payments: rows });
+    };
+    for (const { source, data } of entries) {
+        if (source === "paymentHistory") {
+            if (data.order?.order_id && Array.isArray(data.payments)) addPayments(data.order.order_id, data.payments, data.order, data.complete === true);
+        } else {
+            const orders = new Map((Array.isArray(data.orders) ? data.orders : []).filter(Boolean).map(order => [String(order.order_id), order]));
+            const orderIds = new Set([...orders.keys(), ...Object.keys(data.paymentsByOrder || {})]);
+            for (const orderId of orderIds) {
+                const payments = data.paymentsByOrder?.[orderId] || [];
+                if (Array.isArray(payments)) addPayments(orderId, payments, orders.get(orderId));
+            }
+        }
+    }
+    const payments = [...byOrder.values()].flatMap(group => [...group.payments.values()].map(payment => ({ ...payment, ...group.metadata })));
+    return payments.sort((a, b) => a.date.localeCompare(b.date) || Number(a.payment_id) - Number(b.payment_id));
 };
 
 export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {

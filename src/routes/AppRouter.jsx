@@ -5,7 +5,7 @@ import Boot from "../pages/Boot/Boot";
 import MainLayout from "../layouts/MainLayout";
 import { useSession } from "../services/session";
 import { isDesktop } from "../services/platform";
-import { getLocalOrdersForBackup, subscribeLocalOrdersCache } from "../services/apiCache";
+import { getLocalOrdersForBackup, subscribeLocalOrdersCache, getLocalPaymentsForBackup, subscribeLocalPaymentsCache } from "../services/apiCache";
 
 export default function AppRouter() {
     const session = useSession();
@@ -15,19 +15,31 @@ export default function AppRouter() {
 
     useEffect(() => {
         if (!isDesktop || !session) return;
-        let timer;
-        const schedule = (delay = 150) => {
-            clearTimeout(timer);
+        let orderTimer;
+        let paymentTimer;
+        const scheduleOrder = (delay = 150) => {
+            clearTimeout(orderTimer);
             const orders = getLocalOrdersForBackup();
-            timer = setTimeout(() => {
+            orderTimer = setTimeout(() => {
                 import("../services/orderBackup").then(({ runOrderBackup }) => runOrderBackup(session, orders));
             }, delay);
         };
-        schedule(0);
-        const unsubscribe = subscribeLocalOrdersCache(() => schedule());
+        const schedulePayment = (delay = 150) => {
+            clearTimeout(paymentTimer);
+            const payments = getLocalPaymentsForBackup();
+            paymentTimer = setTimeout(() => {
+                import("../services/orderBackup").then(({ runPaymentBackup }) => runPaymentBackup(session, payments));
+            }, delay);
+        };
+        scheduleOrder(0);
+        schedulePayment(0);
+        const unsubscribeOrder = subscribeLocalOrdersCache(() => scheduleOrder());
+        const unsubscribePayment = subscribeLocalPaymentsCache(() => schedulePayment());
         return () => {
-            clearTimeout(timer);
-            unsubscribe();
+            clearTimeout(orderTimer);
+            clearTimeout(paymentTimer);
+            unsubscribeOrder();
+            unsubscribePayment();
         };
     }, [session]);
 

@@ -10,7 +10,7 @@ import Alert from "../components/Alert/Alert";
 import { applyTheme } from "../services/theme";
 import { clearAllCache } from "../services/apiCache";
 import { useSession } from "../services/session";
-import { canBackupOrders, getOrderBackupState, subscribeOrderBackup } from "../services/orderBackup";
+import { canBackupOrders, getOrderBackupState, getPaymentBackupState, subscribeOrderBackup } from "../services/orderBackup";
 import { tauriApi } from "../lib/tauriApi";
 
 const PATH_FIELDS = [
@@ -504,9 +504,10 @@ const toHex = (str) => {
 export default function Settings() {
     const session = useSession();
     const storeName = session?.store?.name || "NAMA TOKO";
-    const [orderBackup, setOrderBackup] = useState(() => getOrderBackupState());
+    const [backups, setBackups] = useState(() => ({ order: getOrderBackupState(), payment: getPaymentBackupState() }));
+    const backupDirectory = backups.payment?.directory || backups.order?.directory;
     useEffect(() => {
-        const update = () => setOrderBackup(getOrderBackupState());
+        const update = () => setBackups({ order: getOrderBackupState(), payment: getPaymentBackupState() });
         update();
         return subscribeOrderBackup(update);
     }, [session]);
@@ -909,16 +910,19 @@ export default function Settings() {
 
             {canBackupOrders(session) && (
                 <div style={{ padding: "16px", marginBottom: "24px", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
-                    <strong>Backup Order</strong>
-                    <p>Otomatis setiap cache diperbarui, hanya untuk order hari ini. File hari ini ditimpa tanpa mengambil data dari server.</p>
-                    <p style={{ color: orderBackup?.success === false ? "var(--danger)" : "var(--text-muted)" }}>
-                        {orderBackup?.message || "Menunggu cache order tersedia. Hanya order yang sudah tersimpan di komputer ini yang dicadangkan."}
-                    </p>
-                    {orderBackup?.directory && (
+                    <strong>Backup Data</strong>
+                    <p>Otomatis dari cache lokal setiap data diperbarui. File pada hari yang sama ditimpa.</p>
+                    <p>Order mengikuti tanggal order hari ini. Pembayaran mengikuti tanggal bayar hari ini, termasuk nota lama.</p>
+                    {[{ label: "Order", state: backups.order }, { label: "Pembayaran", state: backups.payment }].map(({ label, state }) => (
+                        <p key={label} style={{ color: state?.success === false ? "var(--danger)" : "var(--text-muted)" }}>
+                            <strong>{label}: </strong>{state?.message || "Menunggu cache tersedia."}
+                        </p>
+                    ))}
+                    {backupDirectory && (
                         <>
-                            <p style={{ overflowWrap: "anywhere" }}>{orderBackup.directory}</p>
+                            <p style={{ overflowWrap: "anywhere" }}>{backupDirectory}</p>
                             <Button variant="secondary" icon={<Icon name="folder" />} onClick={async () => {
-                                const result = await tauriApi.openFolder(orderBackup.directory);
+                                const result = await tauriApi.openFolder(backupDirectory);
                                 if (!result?.success) setAlertConfig({ show: true, type: "error", message: result?.message || "Folder backup tidak dapat dibuka." });
                             }}>Buka Folder Backup</Button>
                         </>

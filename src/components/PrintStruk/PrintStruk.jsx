@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { tauriApi } from "../../lib/tauriApi";
 import api from "../../api/axios";
 import ReceiptContent from "../Receipt/ReceiptContent";
-import { getCachedStoreData } from "../../services/apiCache";
+import { getCachedStoreData, cacheOrderPayments } from "../../services/apiCache";
 import "./PrintStruk.css";
 
 export default function PrintStruk({ orderId, onClose }) {
@@ -21,6 +21,7 @@ export default function PrintStruk({ orderId, onClose }) {
                     api.get("", { params: { action: "order_payment", order_id: orderId } })
                 ]);
 
+                if (resPayment.data?.success) cacheOrderPayments(orderId, resPayment.data.data?.payments, resOrder.data?.data?.order);
                 if (resOrder.data?.data) setData(resOrder.data.data);
                 if (resStore) setStore(resStore);
                 else if (resStore.data) setStore(resStore.data);

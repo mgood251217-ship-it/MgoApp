@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
+import { cacheOrderPayments } from "../../services/apiCache";
 import Modal from "../Modal/Modal";
 import Input from "../Input/Input";
 import Button from "../Button/Button";
@@ -10,10 +11,12 @@ import "./PaymentModal.css";
 export default function PaymentModal({ open, onClose, order, onSuccess }) {
     const [nominal, setNominal] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     useEffect(() => {
         if (open) {
             setNominal("");
+            setError("");
             setLoading(false);
         }
     }, [open]);
@@ -24,15 +27,19 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
     const handlePartialPay = async (payMethod) => {
         if (!isNominalFilled) return;
         setLoading(true);
+        setError("");
         try {
             const payload = new FormData();
             payload.append("order_id", order.order_id);
             payload.append("nominal", nominal);
             payload.append("payment_method", payMethod);
 
-            await api.post("", payload, { params: { action: "create_payment" } });
+            const response = await api.post("", payload, { params: { action: "create_payment" } });
+            if (!response.data?.success) throw new Error(response.data?.message || "Pembayaran gagal.");
+            cacheOrderPayments(order.order_id, [response.data.data?.payment], order, false);
             onSuccess();
         } catch (err) {
+            setError(err.response?.data?.message || err.message || "Pembayaran gagal.");
             console.error(err);
         } finally {
             setLoading(false);
@@ -41,14 +48,18 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
 
     const handleLunas = async (lunasMethod) => {
         setLoading(true);
+        setError("");
         try {
             const payload = new FormData();
             payload.append("order_id", order.order_id);
             payload.append("lunas_method", lunasMethod);
 
-            await api.post("", payload, { params: { action: "create_payment" } });
+            const response = await api.post("", payload, { params: { action: "create_payment" } });
+            if (!response.data?.success) throw new Error(response.data?.message || "Pembayaran gagal.");
+            cacheOrderPayments(order.order_id, [response.data.data?.payment], order, false);
             onSuccess();
         } catch (err) {
+            setError(err.response?.data?.message || err.message || "Pembayaran gagal.");
             console.error(err);
         } finally {
             setLoading(false);
@@ -63,6 +74,7 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
             size="sm"
             headerColor="success"
         >
+            {error && <p role="alert" style={{ color: "var(--danger)" }}>{error}</p>}
             <div className="payment-modal-summary">
                 <div className="payment-modal-row">
                     <span className="payment-modal-label">Total Tagihan:</span>

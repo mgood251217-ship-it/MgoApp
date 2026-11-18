@@ -468,6 +468,36 @@ export const createOrderBackupExcel = async ({ orders, store, date }) => {
     return workbook.xlsx.writeBuffer();
 };
 
+export const createPaymentBackupExcel = async ({ payments, store, date }) => {
+    const { default: ExcelJS } = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Pembayaran");
+    const headerRow = generateExcelHeader(sheet, "H", "BACKUP PEMBAYARAN", `Tanggal pembayaran ${date} - data dari cache lokal`, store);
+    const header = sheet.addRow(["ID Pembayaran", "ID Order", "Nomor Nota", "Pelanggan", "Tanggal Bayar", "Nominal", "Metode", "Status"]);
+    header.font = { bold: true };
+    header.eachCell(cell => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCCE5FF" } };
+        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    });
+    let total = 0;
+    for (const payment of payments) {
+        const nominal = Number(payment.nominal) || 0;
+        total += nominal;
+        sheet.addRow([payment.payment_id, payment.order_id, String(payment.nomorator ?? ""), payment.customer_name || "-", payment.date, nominal, payment.payment_method || "-", payment.status || "-"]);
+    }
+    sheet.autoFilter = { from: `A${headerRow}`, to: `H${sheet.rowCount}` };
+    sheet.addRow([]);
+    const totalRow = sheet.addRow(["Total Pembayaran", null, null, null, null, Math.round(total * 100) / 100]);
+    sheet.mergeCells(totalRow.number, 1, totalRow.number, 5);
+    totalRow.font = { bold: true };
+    totalRow.getCell(1).alignment = { horizontal: "right" };
+    sheet.columns.forEach((column, index) => {
+        column.width = [18, 14, 18, 32, 23, 20, 16, 16][index];
+        if (index === 5) column.numFmt = '#,##0.00';
+    });
+    return workbook.xlsx.writeBuffer();
+};
+
 export const exportTransaksiDetailExcel = async ({
     orders,
     itemsByOrder,

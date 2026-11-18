@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import React from "react";
 import api from "../api/axios";
-import { getCachedStoreData } from "./apiCache";
+import { getCachedStoreData, cacheOrderPayments } from "./apiCache";
 import ReceiptContent from "../components/Receipt/ReceiptContent";
 
 function waitForImages(container) {
@@ -30,6 +30,7 @@ export async function generateNotaBase64(orderId, format = "pdf") {
     const data = resOrder.data?.data;
     const store = resStore?.data ?? resStore;
     const paymentData = resPayment.data?.data ?? resPayment.data;
+    if (resPayment.data?.success) cacheOrderPayments(orderId, paymentData?.payments, data?.order);
 
     if (!data || !store || !paymentData) {
         throw new Error("Data order/store/payment tidak lengkap.");

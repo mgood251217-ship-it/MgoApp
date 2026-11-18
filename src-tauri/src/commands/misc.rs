@@ -146,7 +146,7 @@ pub fn save_pdf_data(args: SavePdfArgs) -> Value {
     }
 }
 
-fn order_backup_path(date: &str) -> Result<PathBuf, String> {
+fn backup_path(date: &str, prefix: &str) -> Result<PathBuf, String> {
     let parsed = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
         .map_err(|_| "Tanggal backup tidak valid.".to_string())?;
     if parsed.format("%Y-%m-%d").to_string() != date {
@@ -161,11 +161,11 @@ fn order_backup_path(date: &str) -> Result<PathBuf, String> {
         .join(parsed.year().to_string())
         .join(format!("{:02}", parsed.month()))
         .join(format!("{:02}", parsed.day()))
-        .join(format!("Order_{}.xlsx", date)))
+        .join(format!("{}_{}.xlsx", prefix, date)))
 }
 
 // Selesaikan file sementara sebelum mengganti backup sebelumnya.
-fn write_order_backup_file(path: &std::path::Path, buffer: &[u8]) -> std::io::Result<()> {
+fn write_backup_file(path: &std::path::Path, buffer: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
     let directory = path.parent().ok_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, "Lokasi backup tidak valid.")
@@ -175,7 +175,7 @@ fn write_order_backup_file(path: &std::path::Path, buffer: &[u8]) -> std::io::Re
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos();
-    let temporary = directory.join(format!(".order-{}-{}.tmp", std::process::id(), nonce));
+    let temporary = directory.join(format!(".backup-{}-{}.tmp", std::process::id(), nonce));
     let result = (|| {
         let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&temporary)?;
         file.write_all(buffer)?;
@@ -191,14 +191,13 @@ fn write_order_backup_file(path: &std::path::Path, buffer: &[u8]) -> std::io::Re
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OrderBackupArgs {
+pub struct ExcelBackupArgs {
     pub date: String,
     pub base64_data: String,
 }
 
-#[tauri::command]
-pub fn save_order_backup(args: OrderBackupArgs) -> Value {
-    let path = match order_backup_path(&args.date) {
+fn save_excel_backup(args: ExcelBackupArgs, prefix: &str) -> Value {
+    let path = match backup_path(&args.date, prefix) {
         Ok(path) => path,
         Err(message) => return serde_json::json!({ "success": false, "message": message }),
     };
@@ -206,7 +205,7 @@ pub fn save_order_backup(args: OrderBackupArgs) -> Value {
         Ok(buffer) if buffer.starts_with(b"PK\x03\x04") => buffer,
         _ => return serde_json::json!({ "success": false, "message": "File Excel backup tidak valid." }),
     };
-    match write_order_backup_file(&path, &buffer) {
+    match write_backup_file(&path, &buffer) {
         Ok(()) => serde_json::json!({
             "success": true,
             "filePath": path.to_string_lossy(),
@@ -214,6 +213,16 @@ pub fn save_order_backup(args: OrderBackupArgs) -> Value {
         }),
         Err(error) => serde_json::json!({ "success": false, "message": error.to_string() }),
     }
+}
+
+#[tauri::command]
+pub fn save_order_backup(args: ExcelBackupArgs) -> Value {
+    save_excel_backup(args, "Order")
+}
+
+#[tauri::command]
+pub fn save_payment_backup(args: ExcelBackupArgs) -> Value {
+    save_excel_backup(args, "Payment")
 }
 
 #[derive(Deserialize)]

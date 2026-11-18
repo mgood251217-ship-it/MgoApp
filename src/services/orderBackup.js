@@ -1,9 +1,13 @@
-import { getLocalOrdersForBackup } from "./apiCache";
+import { getLocalOrdersForBackup, getLocalPaymentsForBackup } from "./apiCache";
 import { tauriApi } from "../lib/tauriApi";
 import { authStore } from "./session";
 
 const pending = new Map();
-let backupState;
+const states = new Map();
+const backupTypes = {
+    order: { label: "order", key: "orders", load: getLocalOrdersForBackup, create: "createOrderBackupExcel", save: args => tauriApi.saveOrderBackup(args) },
+    payment: { label: "pembayaran", key: "payments", load: getLocalPaymentsForBackup, create: "createPaymentBackupExcel", save: args => tauriApi.savePaymentBackup(args) }
+};
 const listeners = new Set();
 
 export const canBackupOrders = session => Boolean(session?.user && session?.store?.name);
@@ -13,18 +17,20 @@ export const getOrderBackupDate = (now = new Date()) => {
     return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
 };
 
-export const getOrderBackupState = () => backupState;
+export const getOrderBackupState = () => states.get("order");
+export const getPaymentBackupState = () => states.get("payment");
 export const subscribeOrderBackup = listener => {
     listeners.add(listener);
     return () => listeners.delete(listener);
 };
 
-const setState = state => {
-    backupState = state;
+const setState = (type, state) => {
+    states.set(type, state);
     listeners.forEach(listener => listener());
 };
 
-const writeOrderBackup = async (session, date, orders) => {
+const writeBackup = async (session, date, records, type) => {
+    const backup = backupTypes[type];
     const isCurrentSession = () => {
         const current = authStore.getUser();
         return current?.token === session.token && current?.user?.user_id === session.user?.user_id
@@ -32,15 +38,15 @@ const writeOrderBackup = async (session, date, orders) => {
             && current?.store?.name === session.store.name;
     };
     if (!isCurrentSession()) return;
-    if (!orders.length) {
-        setState({ date, message: "Cache order kosong. Backup sebelumnya tetap disimpan." });
+    if (!records.length) {
+        setState(type, { date, message: `Cache ${backup.label} kosong. Backup sebelumnya tetap disimpan.` });
         return;
     }
 
-    setState({ date, message: "Memperbarui backup order..." });
+    setState(type, { date, message: `Memperbarui backup ${backup.label}...` });
     try {
-        const { createOrderBackupExcel } = await import("./excelService");
-        const buffer = await createOrderBackupExcel({ orders, store: session.store, date });
+        const excel = await import("./excelService");
+        const buffer = await excel[backup.create]({ [backup.key]: records, store: session.store, date });
         const base64Data = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result.split(",")[1]);
@@ -48,29 +54,29 @@ const writeOrderBackup = async (session, date, orders) => {
             reader.readAsDataURL(new Blob([buffer]));
         });
         if (!isCurrentSession()) return;
-        const saved = await tauriApi.saveOrderBackup({ date, base64Data });
-        if (!saved?.success) throw new Error(saved?.message || "Backup order gagal disimpan.");
+        const saved = await backup.save({ date, base64Data });
+        if (!saved?.success) throw new Error(saved?.message || `Backup ${backup.label} gagal disimpan.`);
         if (isCurrentSession()) {
-            setState({
+            setState(type, {
                 date,
                 directory: saved.directory,
                 success: true,
-                message: `Backup cache order diperbarui ${new Date().toLocaleTimeString("id-ID")}.`
+                message: `Backup ${backup.label} diperbarui ${new Date().toLocaleTimeString("id-ID")}.`
             });
         }
     } catch (error) {
-        if (isCurrentSession()) setState({ date, success: false, message: `Backup order gagal: ${error.message}` });
-        console.error("Backup order:", error);
+        if (isCurrentSession()) setState(type, { date, success: false, message: `Backup ${backup.label} gagal: ${error.message}` });
+        console.error(`Backup ${backup.label}:`, error);
     }
 };
 
-export const runOrderBackup = (session, cachedOrders) => {
+const runBackup = (session, cachedRecords, type) => {
     if (!canBackupOrders(session)) return Promise.resolve();
     const date = getOrderBackupDate();
-    const key = date;
-    const orders = cachedOrders ?? getLocalOrdersForBackup(date);
+    const key = `${type}_${date}`;
+    const records = cachedRecords ?? backupTypes[type].load(date);
     // Snapshot yang menunggu penulisan dapat melewati pergantian hari.
-    const snapshot = { session, orders: orders.filter(order => typeof order?.date === "string" && order.date.slice(0, 10) === date) };
+    const snapshot = { session, records: records.filter(order => typeof order?.date === "string" && order.date.slice(0, 10) === date) };
     const existing = pending.get(key);
     if (existing) {
         existing.next = snapshot;
@@ -84,8 +90,11 @@ export const runOrderBackup = (session, cachedOrders) => {
         while (job.next) {
             const next = job.next;
             job.next = null;
-            await writeOrderBackup(next.session, date, next.orders);
+            await writeBackup(next.session, date, next.records, type);
         }
     }).finally(() => pending.delete(key));
     return job.promise;
 };
+
+export const runOrderBackup = (session, orders) => runBackup(session, orders, "order");
+export const runPaymentBackup = (session, payments) => runBackup(session, payments, "payment");

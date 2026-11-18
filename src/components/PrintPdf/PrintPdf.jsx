@@ -4,7 +4,7 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import api from "../../api/axios";
 import ReceiptContent from "../Receipt/ReceiptContent";
-import { getCachedStoreData } from "../../services/apiCache";
+import { getCachedStoreData, cacheOrderPayments } from "../../services/apiCache";
 import "./PrintPdf.css";
 
 export default function PrintPdf({ orderId, onClose }) {
@@ -21,6 +21,7 @@ export default function PrintPdf({ orderId, onClose }) {
                     getCachedStoreData(),
                     api.get("", { params: { action: "order_payment", order_id: orderId } })
                 ]);
+                if (resPayment.data?.success) cacheOrderPayments(orderId, resPayment.data.data?.payments, resOrder.data?.data?.order);
                 if (resOrder.data?.data) setData(resOrder.data.data);
                 if (resStore) setStore(resStore);
                 else if (resStore.data) setStore(resStore.data);
