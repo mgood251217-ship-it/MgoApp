@@ -1,4 +1,5 @@
 import api from "../api/axios";
+import { getTodayDate } from "./helpers";
 
 const pendingRequests = new Map();
 const requestVersions = new Map();
@@ -77,7 +78,7 @@ const setStorage = (key, value) => {
         // Jangan biarkan timestamp baru dipasangkan dengan data lama setelah restart.
         try { localStorage.removeItem(`mgo_cache_${key}`); } catch { /* Penyimpanan dapat dinonaktifkan. */ }
     }
-    if (key === "orders") localOrderListeners.forEach(listener => listener());
+    if (["orders", "orderDetail", "transactionsDetail"].includes(key)) localOrderListeners.forEach(listener => listener());
 };
 
 const removeStorage = key => {
@@ -113,7 +114,7 @@ const isCacheOutdated = (cachedTime, serverTime) => {
 };
 
 const getCleanedDailyMap = (key) => {
-    const map = getStorage(key, {});
+    const map = getStorage(key, {}) || {};
     const today = new Date().toDateString();
 
     if (map._lastCleared !== today) {
@@ -737,29 +738,66 @@ export const subscribeLocalOrdersCache = listener => {
     return () => localOrderListeners.delete(listener);
 };
 
-export const getLocalOrdersForBackup = () => {
-    const map = getStorage("orders", {}) || {};
-    const latest = new Map();
-    for (const entry of Object.values(map)) {
-        if (!Array.isArray(entry?.data?.offline) || !Array.isArray(entry?.data?.online)) continue;
-        const time = Number(entry.updatedAt) || 0;
-        const updatedAt = time > 0 && time < 1e12 ? time * 1000 : time;
-        for (const order of [...entry.data.offline, ...entry.data.online]) {
-            if (!order || !order.order_id) continue;
-            const key = String(order.order_id);
-            if (latest.has(key) && latest.get(key).updatedAt > updatedAt) continue;
-            latest.set(key, { updatedAt, order: {
-                order_id: order.order_id,
-                nomorator: order.nomorator,
-                date: order.date,
-                customer_name: order.customer_name,
-                operator: order.op_initial || order.operator_initial || "-",
-                total: order.total,
-                total_paid: order.total_paid
-            } });
+export const getLocalOrdersForBackup = (date = getTodayDate()) => {
+    const entries = [];
+    for (const source of ["orders", "transactionsDetail", "orderDetail"]) {
+        for (const entry of Object.values(getCleanedDailyMap(source))) {
+            if (!entry?.data || typeof entry.data !== "object") continue;
+            const time = Number(entry.updatedAt) || 0;
+            entries.push({ source, data: entry.data, updatedAt: time > 0 && time < 1e12 ? time * 1000 : time });
         }
     }
-    return [...latest.values()].map(entry => entry.order).sort((a, b) => Number(a.order_id) - Number(b.order_id));
+    entries.sort((a, b) => a.updatedAt - b.updatedAt);
+
+    const latest = new Map();
+    const addOrder = (order, items, paid) => {
+        if (!order?.order_id || typeof order.date !== "string" || order.date.slice(0, 10) !== date) return;
+        const key = String(order.order_id);
+        const values = {
+            order_id: order.order_id,
+            nomorator: order.nomorator,
+            date: order.date,
+            customer_name: order.customer_name,
+            operator: order.operator || order.op_initial || order.operator_initial,
+            total: order.total,
+            total_paid: order.total_paid ?? paid
+        };
+        const snapshot = { ...latest.get(key), ...Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) };
+        if (Array.isArray(items)) {
+            snapshot.items = items.filter(item => item && typeof item === "object").map(item => ({
+                judul: item.judul || item.product_name || "-",
+                variant_label: item.variant?.label || item.variant_label,
+                laser_material_name: item.laser_material_name,
+                finishing_names: item.finishing_names,
+                size: item.size,
+                quantity: item.quantity,
+                unit: item.unit,
+                amount: item.amount
+            }));
+        }
+        latest.set(key, snapshot);
+    };
+
+    for (const { source, data } of entries) {
+        if (source === "orders") {
+            for (const orders of [data.offline, data.online]) {
+                if (Array.isArray(orders)) orders.forEach(order => addOrder(order));
+            }
+        } else if (source === "transactionsDetail") {
+            if (!Array.isArray(data.orders)) continue;
+            for (const order of data.orders) {
+                if (!order) continue;
+                const payments = data.paymentsByOrder?.[order.order_id];
+                const paid = Array.isArray(payments)
+                    ? payments.reduce((sum, payment) => sum + (Number(payment.nominal) || 0), 0) : undefined;
+                const items = data.itemsByOrder ? data.itemsByOrder[order.order_id] || [] : undefined;
+                addOrder(order, items, paid);
+            }
+        } else {
+            addOrder(data.order, data.items);
+        }
+    }
+    return [...latest.values()].sort((a, b) => Number(a.order_id) - Number(b.order_id));
 };
 
 export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {

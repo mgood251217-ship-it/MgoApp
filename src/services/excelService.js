@@ -2,10 +2,9 @@ import { tauriApi } from "../lib/tauriApi";
 import { authStore } from "./session";
 import { formatTanggalId } from "./helpers";
 
-export const generateExcelHeader = (sheet, endColLetter, reportTitle, dateString) => {
-    const session = authStore.getUser();
-    const storeName = session?.store?.name ?? 'Mgo Store';
-    const storeAddress = session?.store?.address ?? 'Cicaheum';
+export const generateExcelHeader = (sheet, endColLetter, reportTitle, dateString, store = authStore.getUser()?.store) => {
+    const storeName = store?.name ?? 'Mgo Store';
+    const storeAddress = store?.address ?? 'Cicaheum';
     sheet.mergeCells(`A1:${endColLetter}1`);
     sheet.getCell("A1").value = storeName || "NAMA TOKO";
     sheet.getCell("A1").alignment = { vertical: 'middle', horizontal: 'center' };
@@ -389,22 +388,25 @@ export const createOrderBackupExcel = async ({ orders, store, date }) => {
     const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Order");
+    const dateLabel = `Tanggal order ${date} - data dari cache lokal`;
+    const headerRow = generateExcelHeader(sheet, "H", "BACKUP ORDER", dateLabel, store);
+    const styleHeader = row => {
+        row.font = { bold: true };
+        row.eachCell(cell => {
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCCE5FF" } };
+            cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+        });
+    };
+    styleHeader(sheet.addRow(["ID Order", "Nomor Nota", "Tanggal", "Pelanggan", "Operator", "Total", "Dibayar", "Sisa"]));
 
-    sheet.mergeCells("A1:H1");
-    sheet.getCell("A1").value = `BACKUP CACHE ORDER - ${store.name}`;
-    sheet.getCell("A1").font = { bold: true, size: 14 };
-    sheet.mergeCells("A2:H2");
-    sheet.getCell("A2").value = `Backup ${date} - hanya order yang tersedia di cache lokal`;
-    sheet.addRow([]);
-    const header = sheet.addRow(["ID Order", "Nomor Nota", "Tanggal", "Pelanggan", "Operator", "Total", "Dibayar", "Sisa"]);
-    header.font = { bold: true };
-    header.eachCell(cell => {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6F1" } };
-    });
-
-    for (const order of orders) {
-        const paid = Number(order.total_paid) || 0;
+    const totalsFor = order => {
         const total = Number(order.total) || 0;
+        const paid = order.total_paid == null ? null : Number(order.total_paid) || 0;
+        const remaining = paid === null ? null : Math.max(0, Math.round((total - paid) * 100) / 100);
+        return { total, paid, remaining };
+    };
+    for (const order of orders) {
+        const { total, paid, remaining } = totalsFor(order);
         sheet.addRow([
             order.order_id,
             String(order.nomorator ?? ""),
@@ -413,15 +415,56 @@ export const createOrderBackupExcel = async ({ orders, store, date }) => {
             order.operator || "-",
             total,
             paid,
-            Math.max(0, Math.round((total - paid) * 100) / 100)
+            remaining
         ]);
     }
-
     sheet.columns.forEach((column, index) => {
         column.width = [12, 16, 22, 32, 22, 18, 18, 18][index];
         if (index >= 5) column.numFmt = '#,##0.00';
     });
-    sheet.autoFilter = { from: "A4", to: `H${sheet.rowCount}` };
+    sheet.autoFilter = { from: `A${headerRow}`, to: `H${sheet.rowCount}` };
+
+    const detail = workbook.addWorksheet("Detail Order");
+    generateExcelHeader(detail, "G", "BACKUP DETAIL ORDER", dateLabel, store);
+    detail.columns = [{ width: 6 }, { width: 45 }, { width: 25 }, { width: 14 }, { width: 10 }, { width: 18 }, { width: 18 }];
+    for (const order of orders) {
+        const titleRow = detail.addRow([`Order #${order.nomorator ?? ""} - ${order.customer_name || "-"} (${order.date || "-"})`]);
+        detail.mergeCells(titleRow.number, 1, titleRow.number, 7);
+        titleRow.font = { bold: true, size: 12 };
+        titleRow.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE599" } };
+        titleRow.getCell(1).alignment = { wrapText: true, vertical: "middle" };
+        if (Array.isArray(order.items) && order.items.length) {
+            styleHeader(detail.addRow(["No", "Nama Item", "Finishing", "Ukuran", "Qty", "Harga Satuan", "Jumlah"]));
+            order.items.forEach((item, index) => {
+                const name = [item.judul, item.variant_label ? `Varian: ${item.variant_label}` : "", item.laser_material_name ? `Bahan: ${item.laser_material_name}` : ""].filter(Boolean).join("\n");
+                const row = detail.addRow([index + 1, name, item.finishing_names || "-", item.size || "-", Number(item.quantity) || 0, Number(item.unit) || 0, Number(item.amount) || 0]);
+                row.eachCell(cell => {
+                    cell.alignment = { vertical: "middle", wrapText: true };
+                    cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+                });
+                row.getCell(6).numFmt = '#,##0.00';
+                row.getCell(7).numFmt = '#,##0.00';
+            });
+        } else {
+            const row = detail.addRow([Array.isArray(order.items) ? "Tidak ada item pada cache order ini." : "Rincian item belum tersedia di cache lokal."]);
+            detail.mergeCells(row.number, 1, row.number, 7);
+            row.font = { italic: true };
+        }
+        const { total, paid, remaining } = totalsFor(order);
+        for (const [label, value] of [["Total Tagihan", total], ["Dibayar", paid], ["Sisa", remaining]]) {
+            const row = detail.addRow([label, null, null, null, null, null, value]);
+            detail.mergeCells(row.number, 1, row.number, 6);
+            row.getCell(1).alignment = { horizontal: "right" };
+            row.getCell(7).numFmt = '#,##0.00';
+            row.font = { bold: true };
+        }
+        if (paid === null) {
+            const row = detail.addRow(["Pembayaran belum tersedia di cache lokal."]);
+            detail.mergeCells(row.number, 1, row.number, 7);
+            row.font = { italic: true };
+        }
+        detail.addRow([]);
+    }
     return workbook.xlsx.writeBuffer();
 };
 

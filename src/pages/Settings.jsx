@@ -910,7 +910,7 @@ export default function Settings() {
             {canBackupOrders(session) && (
                 <div style={{ padding: "16px", marginBottom: "24px", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                     <strong>Backup Order</strong>
-                    <p>Otomatis setiap cache order diperbarui, tanpa mengambil data dari server. File pada hari yang sama ditimpa.</p>
+                    <p>Otomatis setiap cache diperbarui, hanya untuk order hari ini. File hari ini ditimpa tanpa mengambil data dari server.</p>
                     <p style={{ color: orderBackup?.success === false ? "var(--danger)" : "var(--text-muted)" }}>
                         {orderBackup?.message || "Menunggu cache order tersedia. Hanya order yang sudah tersimpan di komputer ini yang dicadangkan."}
                     </p>

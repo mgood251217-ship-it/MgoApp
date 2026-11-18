@@ -68,7 +68,9 @@ export const runOrderBackup = (session, cachedOrders) => {
     if (!canBackupOrders(session)) return Promise.resolve();
     const date = getOrderBackupDate();
     const key = date;
-    const snapshot = { session, orders: cachedOrders ?? getLocalOrdersForBackup() };
+    const orders = cachedOrders ?? getLocalOrdersForBackup(date);
+    // Snapshot yang menunggu penulisan dapat melewati pergantian hari.
+    const snapshot = { session, orders: orders.filter(order => typeof order?.date === "string" && order.date.slice(0, 10) === date) };
     const existing = pending.get(key);
     if (existing) {
         existing.next = snapshot;
