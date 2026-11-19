@@ -742,6 +742,7 @@ export default function OrderItemForm({
                 labelPosition="left"
                 labelWidth={110}
                 name="diskon"
+                step="0.01"
                 type="number"
                 label="Diskon"
                 value={formItem.diskon}
