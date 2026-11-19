@@ -14,10 +14,6 @@ import { exportFailureExcel } from "../services/excelService";
 import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
 import { getCachedUsers, getCachedMachines, getCachedFailures, clearFailuresCache } from "../services/apiCache";
 
-const DESAIN_LIST = ['Resolusi pecah', 'Salah ukuran', 'Salah penulisan teks', 'Salah data customer', 'Font berubah', 'File corrupt'];
-const CETAK_LIST = ['Warna tidak sesuai', 'Hasil belang/banding', 'Hasil blur', 'Head strike', 'Tinta bocor', 'Kertas/media macet', 'Hasil miring', 'Hasil terpotong'];
-const FINISH_FAIL_LIST = ['Salah potong', 'Salah laminasi', 'Mata ayam tidak rapi', 'Sambungan spanduk kurang rapi', 'Bubble laminasi', 'Lipatan rusak'];
-
 export default function Failure() {
     const today = new Date().toISOString().split("T")[0];
     const [startDate, setStartDate] = useState(today);
@@ -28,6 +24,9 @@ export default function Failure() {
 
     const [operators, setOperators] = useState([]);
     const [machines, setMachines] = useState([]);
+    const [failureReasons, setFailureReasons] = useState([]);
+    const [reasonsLoading, setReasonsLoading] = useState(false);
+    const [reasonsError, setReasonsError] = useState("");
 
     const [modalOpen, setModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,10 +49,8 @@ export default function Failure() {
         loss_burden: "KANTOR",
         date: today,
         info: "",
-        failure_cause: "",
-        failure_design: [],
-        failure_print: [],
-        failure_finishing: []
+        failure_reason_ids: [],
+        failure_cause_other: ""
     });
 
     const fetchFailures = useCallback(async () => {
@@ -87,6 +84,27 @@ export default function Failure() {
         loadOperatorsAndMachines();
     }, [fetchFailures, loadOperatorsAndMachines]);
 
+    const loadFailureReasons = useCallback(async () => {
+        setReasonsLoading(true);
+        setReasonsError("");
+        try {
+            const res = await api.get("", { params: { action: "failure_reasons" } });
+            const data = res.data?.data ?? res.data;
+            if (res.data?.success === false || !Array.isArray(data) || data.length === 0) {
+                throw new Error("Master alasan kegagalan belum tersedia.");
+            }
+            const reasons = data.map(reason => ({ ...reason, failure_reason_id: Number(reason.failure_reason_id) }));
+            if (reasons.some(reason => !Number.isInteger(reason.failure_reason_id) || reason.failure_reason_id < 1 || !reason.name)) {
+                throw new Error("Master alasan kegagalan tidak valid.");
+            }
+            setFailureReasons(reasons);
+        } catch (error) {
+            setReasonsError(error.response?.data?.message || error.message || "Gagal memuat alasan kegagalan.");
+        } finally {
+            setReasonsLoading(false);
+        }
+    }, []);
+
     const handleExportExcel = async () => {
         if (failures.length === 0) {
             setAlertConfig({ show: true, type: "warning", message: "Tidak ada data kegagalan produksi untuk diexport." });
@@ -112,14 +130,15 @@ export default function Failure() {
         });
         setFailureData({
             failure_id: "", nomorator: "", customer_name: "", user_id: "", machine_id: "",
-            loss_burden: "KANTOR", date: today, info: "", failure_cause: "",
-            failure_design: [], failure_print: [], failure_finishing: []
+            loss_burden: "KANTOR", date: today, info: "",
+            failure_reason_ids: [], failure_cause_other: ""
         });
     };
 
     const handleOpenAddModal = () => {
         resetForm();
         setModalOpen(true);
+        if (failureReasons.length === 0) loadFailureReasons();
     };
 
     const handleEdit = (row) => {
@@ -171,6 +190,10 @@ export default function Failure() {
     };
 
     const handleSubmitFailure = async (submittedItemForm) => {
+        if (reasonsLoading || failureReasons.length === 0) {
+            setAlertConfig({ show: true, type: "error", message: "Muat daftar alasan kegagalan terlebih dahulu." });
+            return;
+        }
         setIsSubmitting(true);
         try {
             const payload = new FormData();
@@ -196,21 +219,10 @@ export default function Failure() {
             payload.append("loss_burden", failureData.loss_burden);
             payload.append("info", failureData.info);
             
-            failureData.failure_design.forEach(item => {
-                payload.append("failure_design[]", item);
+            failureData.failure_reason_ids.forEach(id => {
+                payload.append("failure_reason_ids[]", id);
             });
-            
-            failureData.failure_print.forEach(item => {
-                payload.append("failure_print[]", item);
-            });
-            
-            failureData.failure_finishing.forEach(item => {
-                payload.append("failure_finishing[]", item);
-            });
-            
-            payload.append("failure_cause", failureData.failure_cause || "");
-
-            payload.append("failure_cause_other", ""); 
+            payload.append("failure_cause_other", failureData.failure_cause_other);
 
             const endpointAction = failureData.failure_id ? "update_failure" : "create_failure";
 
@@ -237,13 +249,13 @@ export default function Failure() {
         setFailureData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleCheckboxToggle = (category, value) => {
+    const handleCheckboxToggle = (value) => {
         setFailureData(prev => {
-            const currentList = prev[category];
+            const currentList = prev.failure_reason_ids;
             const isChecked = currentList.includes(value);
             return {
                 ...prev,
-                [category]: isChecked 
+                failure_reason_ids: isChecked
                     ? currentList.filter(item => item !== value)
                     : [...currentList, value]
             };
@@ -328,20 +340,20 @@ export default function Failure() {
         }
     ], []);
 
-    const renderCheckboxGroup = (title, categoryKey, list) => (
+    const renderCheckboxGroup = (title, type) => (
         <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold", fontSize: "14px" }}>
                 {title}
             </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", backgroundColor: "var(--bg-body)" }}>
-                {list.map((item) => (
-                    <label key={item} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px", width: "calc(50% - 12px)" }}>
+                {failureReasons.filter(reason => reason.type === type).map((reason) => (
+                    <label key={reason.failure_reason_id} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px", width: "calc(50% - 12px)" }}>
                         <input
                             type="checkbox"
-                            checked={failureData[categoryKey].includes(item)}
-                            onChange={() => handleCheckboxToggle(categoryKey, item)}
+                            checked={failureData.failure_reason_ids.includes(reason.failure_reason_id)}
+                            onChange={() => handleCheckboxToggle(reason.failure_reason_id)}
                         />
-                        {item}
+                        {reason.name}
                     </label>
                 ))}
             </div>
@@ -420,7 +432,7 @@ export default function Failure() {
                 <div style={{ padding: "16px" }}>
                     <OrderItemForm 
                         initialData={initialFormItem}
-                        isSubmitting={isSubmitting}
+                        isSubmitting={isSubmitting || reasonsLoading || failureReasons.length === 0}
                         onSubmit={handleSubmitFailure}
                         submitText={failureData.failure_id ? "Update Kegagalan" : "Simpan Kegagalan"}
                         submitIcon={failureData.failure_id ? "edit" : "save"}
@@ -504,19 +516,29 @@ export default function Failure() {
                             />
 
                             <div style={{ marginTop: "24px" }}>
-                                {renderCheckboxGroup("1. Kesalahan Desain", "failure_design", DESAIN_LIST)}
-                                {renderCheckboxGroup("2. Kesalahan Cetak", "failure_print", CETAK_LIST)}
-                                {renderCheckboxGroup("3. Kesalahan Finishing", "failure_finishing", FINISH_FAIL_LIST)}
+                                {reasonsLoading && <p role="status">Memuat alasan kegagalan...</p>}
+                                {reasonsError && (
+                                    <div style={{ marginBottom: "16px" }}>
+                                        <Alert type="error" message={reasonsError} />
+                                        <Button onClick={loadFailureReasons} loading={reasonsLoading}>Coba Lagi</Button>
+                                    </div>
+                                )}
+                                {failureReasons.length > 0 && <>
+                                    {renderCheckboxGroup("1. Kesalahan Desain", "design")}
+                                    {renderCheckboxGroup("2. Kesalahan Cetak", "print")}
+                                    {renderCheckboxGroup("3. Kesalahan Finishing", "finishing")}
+                                    {renderCheckboxGroup("4. Penyebab", "cause")}
+                                </>}
                             </div>
 
                             <div style={{ marginBottom: "16px" }}>
                                 <Input
                                     labelPosition="top"
-                                    name="failure_cause"
+                                    name="failure_cause_other"
                                     type="text"
-                                    label="Penyebab Lainnya (Ketik Manual)"
-                                    placeholder="Contoh: Setting warna salah, Kurang QC..."
-                                    value={failureData.failure_cause}
+                                    label="Penyebab Lainnya (Opsional)"
+                                    placeholder="Penyebab yang belum ada dalam pilihan..."
+                                    value={failureData.failure_cause_other}
                                     onChange={handleFailureDataChange}
                                 />
                             </div>
