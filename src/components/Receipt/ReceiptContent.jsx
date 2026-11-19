@@ -28,17 +28,20 @@ export default function ReceiptContent({ data, store, paymentData, id = "pdf-con
     const note = data.note || "";
 
     const payments = paymentData.payments || [];
-    const totalNota = Number(orderData.total) || 0;
-    const totalBayar = Number(paymentData.paid) || 0;
-    const adaPembayaran = totalBayar > 0;
-    const adaLunas = totalNota > 0 && adaPembayaran && totalBayar >= totalNota;
-    const totalDp = payments.reduce((total, pay) =>
+    const totalNotaCents = Math.round((Number(orderData.total) || 0) * 100);
+    const totalBayarCents = Math.round((Number(paymentData.paid) || 0) * 100);
+    const totalNota = totalNotaCents / 100;
+    const totalBayar = totalBayarCents / 100;
+    const adaPembayaran = totalBayarCents > 0;
+    const adaLunas = totalNotaCents > 0 && adaPembayaran && totalBayarCents >= totalNotaCents;
+    const totalDpCents = payments.reduce((total, pay) =>
         (pay.status || "").toUpperCase() === "DP"
-            ? total + Math.max(Number(pay.nominal) || 0, 0)
+            ? total + Math.max(Math.round((Number(pay.nominal) || 0) * 100), 0)
             : total, 0
     );
-    const totalPelunasan = Math.max(totalBayar - totalDp, 0);
-    const sisaBayar = Math.max(totalNota - totalBayar, 0);
+    const totalDp = totalDpCents / 100;
+    const totalPelunasan = Math.max(totalBayarCents - totalDpCents, 0) / 100;
+    const sisaBayar = Math.max(totalNotaCents - totalBayarCents, 0) / 100;
     const paymentMethods = (isDp) => [...new Set(payments
         .filter((pay) => Number(pay.nominal) > 0 &&
             ((pay.status || "").toUpperCase() === "DP") === isDp)

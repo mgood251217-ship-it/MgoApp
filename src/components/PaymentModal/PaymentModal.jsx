@@ -26,6 +26,10 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
 
     const handlePartialPay = async (payMethod) => {
         if (!isNominalFilled) return;
+        if (!/^[0-9]{1,13}(?:\.[0-9]{1,2})?$/.test(nominal)) {
+            setError("Nominal harus berupa angka dengan maksimal 2 angka desimal.");
+            return;
+        }
         setLoading(true);
         setError("");
         try {
@@ -96,6 +100,9 @@ export default function PaymentModal({ open, onClose, order, onSuccess }) {
                     value={nominal}
                     onChange={(e) => setNominal(e.target.value)}
                     type="number"
+                    step="0.01"
+                    min="0.01"
+                    max="9999999999999.99"
                     placeholder="Masukkan nominal bayar sebagian..."
                     disabled={loading}
                 />

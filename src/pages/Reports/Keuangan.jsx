@@ -467,6 +467,9 @@ export default function Keuangan() {
                     <Input 
                         label="Nominal (Rp)" 
                         type="number"
+                        step="0.01"
+                        max="9999999999999.99"
+                        min="-9999999999999.99"
                         value={expForm.nominal} 
                         onChange={(e) => setExpForm({...expForm, nominal: e.target.value})} 
                         required
@@ -511,6 +514,9 @@ export default function Keuangan() {
                     <Input 
                         label="Nominal (Rp)" 
                         type="number"
+                        step="0.01"
+                        max="9999999999999.99"
+                        min="-9999999999999.99"
                         value={incForm.nominal} 
                         onChange={(e) => setIncForm({...incForm, nominal: e.target.value})} 
                         required

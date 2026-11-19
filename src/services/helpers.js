@@ -28,12 +28,13 @@ export const formatKeInternasional = (nomor) => {
 };
 
 export const formatRupiah = (angka) => {
-    const validNumber = Number(angka) || 0;
+    const value = Number(angka);
+    const validNumber = Number.isFinite(value) ? (Math.round((value + Number.EPSILON) * 100) / 100 || 0) : 0;
     return new Intl.NumberFormat("id-ID", {
         style: "currency",
         currency: "IDR",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        minimumFractionDigits: Number.isInteger(validNumber) ? 0 : 2,
+        maximumFractionDigits: 2
     }).format(validNumber);
 };
 
