@@ -2,6 +2,19 @@ import { tauriApi } from "../lib/tauriApi";
 import { authStore } from "./session";
 import { formatTanggalId } from "./helpers";
 
+const formatMoneyCell = (cell, withCurrency = false) => {
+    const value = cell.value?.result ?? cell.value;
+    if (typeof value !== "number" || !Number.isFinite(value)) return;
+    const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+    const format = Number.isInteger(rounded) ? '#,##0' : '#,##0.00';
+    cell.numFmt = (withCurrency ? '"Rp "' : '') + format;
+};
+
+const formatStockCell = (cell) => {
+    const value = Number(cell.value);
+    cell.numFmt = Number.isInteger(Math.round(value * 10000) / 10000) ? '#,##0' : '#,##0.####';
+};
+
 export const generateExcelHeader = (sheet, endColLetter, reportTitle, dateString, store = authStore.getUser()?.store) => {
     const storeName = store?.name ?? 'Mgo Store';
     const storeAddress = store?.address ?? 'Cicaheum';
@@ -420,7 +433,7 @@ export const createOrderBackupExcel = async ({ orders, store, date }) => {
     }
     sheet.columns.forEach((column, index) => {
         column.width = [12, 16, 22, 32, 22, 18, 18, 18][index];
-        if (index >= 5) column.numFmt = '#,##0.00';
+        if (index >= 5) column.eachCell({ includeEmpty: false }, cell => formatMoneyCell(cell));
     });
     sheet.autoFilter = { from: `A${headerRow}`, to: `H${sheet.rowCount}` };
 
@@ -442,8 +455,8 @@ export const createOrderBackupExcel = async ({ orders, store, date }) => {
                     cell.alignment = { vertical: "middle", wrapText: true };
                     cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
                 });
-                row.getCell(6).numFmt = '#,##0.00';
-                row.getCell(7).numFmt = '#,##0.00';
+                formatMoneyCell(row.getCell(6));
+                formatMoneyCell(row.getCell(7));
             });
         } else {
             const row = detail.addRow([Array.isArray(order.items) ? "Tidak ada item pada cache order ini." : "Rincian item belum tersedia di cache lokal."]);
@@ -455,7 +468,7 @@ export const createOrderBackupExcel = async ({ orders, store, date }) => {
             const row = detail.addRow([label, null, null, null, null, null, value]);
             detail.mergeCells(row.number, 1, row.number, 6);
             row.getCell(1).alignment = { horizontal: "right" };
-            row.getCell(7).numFmt = '#,##0.00';
+            formatMoneyCell(row.getCell(7));
             row.font = { bold: true };
         }
         if (paid === null) {
@@ -493,7 +506,7 @@ export const createPaymentBackupExcel = async ({ payments, store, date }) => {
     totalRow.getCell(1).alignment = { horizontal: "right" };
     sheet.columns.forEach((column, index) => {
         column.width = [18, 14, 18, 32, 23, 20, 16, 16][index];
-        if (index === 5) column.numFmt = '#,##0.00';
+        if (index === 5) column.eachCell({ includeEmpty: false }, cell => formatMoneyCell(cell));
     });
     return workbook.xlsx.writeBuffer();
 };
@@ -555,8 +568,8 @@ export const exportTransaksiDetailExcel = async ({
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
             });
             row.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
-            row.getCell(6).numFmt = '#,##0';
-            row.getCell(7).numFmt = '#,##0';
+            formatMoneyCell(row.getCell(6));
+            formatMoneyCell(row.getCell(7));
             currentRow++;
         });
 
@@ -572,7 +585,7 @@ export const exportTransaksiDetailExcel = async ({
         totalCell.font = { bold: true };
         totalCell.alignment = { horizontal: 'center', vertical: 'middle' };
         totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        totalCell.numFmt = '#,##0';
+        formatMoneyCell(totalCell);
         
         currentRow++;
         sheet.addRow([]);
@@ -638,25 +651,25 @@ export const exportTransaksiHarianExcel = async ({
             cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
-        excelRow.getCell(4).numFmt = '#,##0';
+        formatMoneyCell(excelRow.getCell(4));
         currentRow++;
     });
 
     currentRow += 2;
     sheet.getCell(`E${currentRow}`).value = "Total Cash:";
     sheet.getCell(`F${currentRow}`).value = Number(summary.total_cash);
-    sheet.getCell(`F${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`F${currentRow}`));
     currentRow++;
 
     sheet.getCell(`E${currentRow}`).value = "Total Transfer:";
     sheet.getCell(`F${currentRow}`).value = Number(summary.total_tf);
-    sheet.getCell(`F${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`F${currentRow}`));
     currentRow++;
 
     sheet.getCell(`E${currentRow}`).value = "Grand Total:";
     sheet.getCell(`F${currentRow}`).value = Number(summary.grand_total);
     sheet.getCell(`F${currentRow}`).font = { bold: true };
-    sheet.getCell(`F${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`F${currentRow}`));
 
     sheet.columns = [
         { key: 'col1', width: 6 },
@@ -717,27 +730,27 @@ export const exportTransaksiBulananExcel = async ({
             cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
-        excelRow.getCell(5).numFmt = '#,##0';
-        excelRow.getCell(6).numFmt = '#,##0';
-        excelRow.getCell(7).numFmt = '#,##0';
+        formatMoneyCell(excelRow.getCell(5));
+        formatMoneyCell(excelRow.getCell(6));
+        formatMoneyCell(excelRow.getCell(7));
         currentRow++;
     });
 
     currentRow += 2;
     sheet.getCell(`F${currentRow}`).value = "Total Cash:";
     sheet.getCell(`G${currentRow}`).value = Number(summary.total_cash);
-    sheet.getCell(`G${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`G${currentRow}`));
     currentRow++;
 
     sheet.getCell(`F${currentRow}`).value = "Total Transfer:";
     sheet.getCell(`G${currentRow}`).value = Number(summary.total_tf);
-    sheet.getCell(`G${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`G${currentRow}`));
     currentRow++;
 
     sheet.getCell(`F${currentRow}`).value = "Grand Total:";
     sheet.getCell(`G${currentRow}`).value = Number(summary.grand_total);
     sheet.getCell(`G${currentRow}`).font = { bold: true };
-    sheet.getCell(`G${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`G${currentRow}`));
 
     sheet.columns = [
         { key: 'col1', width: 6 },
@@ -811,8 +824,8 @@ export const exportTransaksiPerItemExcel = async ({
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
             });
             excelRow.getCell(3).alignment = { horizontal: 'left' }; 
-            excelRow.getCell(6).numFmt = '#,##0'; 
-            excelRow.getCell(8).numFmt = '#,##0'; 
+            formatMoneyCell(excelRow.getCell(6));
+            formatMoneyCell(excelRow.getCell(8));
             currentRow++;
         });
 
@@ -828,7 +841,7 @@ export const exportTransaksiPerItemExcel = async ({
         totalCell.font = { bold: true };
         totalCell.alignment = { horizontal: 'center', vertical: 'middle' };
         totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        totalCell.numFmt = '#,##0';
+        formatMoneyCell(totalCell);
         
         currentRow += 2;
     });
@@ -911,8 +924,8 @@ export const exportTransaksiPerKonsumenExcel = async ({
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
             });
             excelRow.getCell(3).alignment = { horizontal: 'left' };
-            excelRow.getCell(6).numFmt = '#,##0';
-            excelRow.getCell(8).numFmt = '#,##0'; 
+            formatMoneyCell(excelRow.getCell(6));
+            formatMoneyCell(excelRow.getCell(8));
             currentRow++;
         });
 
@@ -928,7 +941,7 @@ export const exportTransaksiPerKonsumenExcel = async ({
         totalCell.font = { bold: true };
         totalCell.alignment = { horizontal: 'center', vertical: 'middle' };
         totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        totalCell.numFmt = '#,##0';
+        formatMoneyCell(totalCell);
 
         const emptyCell = sheet.getCell(`I${currentRow}`);
         emptyCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -998,7 +1011,7 @@ export const exportStatistikKaryawanExcel = async ({
         sheet.mergeCells(`E${currentRow}:F${currentRow}`);
         sheet.getCell(`E${currentRow}`).value = item[2];
         if (item[0] === "Omset Tertinggi" && typeof item[2] === "number") {
-            sheet.getCell(`E${currentRow}`).numFmt = 'Rp #,##0';
+            formatMoneyCell(sheet.getCell(`E${currentRow}`), true);
         }
         currentRow++;
     });
@@ -1029,7 +1042,7 @@ export const exportStatistikKaryawanExcel = async ({
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
         excelRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' }; 
-        excelRow.getCell(6).numFmt = '#,##0'; 
+        formatMoneyCell(excelRow.getCell(6));
         currentRow++;
     });
 
@@ -1093,7 +1106,7 @@ export const exportPiutangExcel = async ({
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
         excelRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
-        excelRow.getCell(5).numFmt = '#,##0';
+        formatMoneyCell(excelRow.getCell(5));
         excelRow.getCell(5).font = { color: { argb: 'FFFF0000' }, bold: true }; 
         currentRow++;
     });
@@ -1110,7 +1123,7 @@ export const exportPiutangExcel = async ({
     totalCell.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } };
     totalCell.alignment = { horizontal: 'center', vertical: 'middle' };
     totalCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-    totalCell.numFmt = '#,##0';
+    formatMoneyCell(totalCell);
 
     sheet.columns = [
         { key: 'col1', width: 6 },
@@ -1243,8 +1256,8 @@ export const exportPelunasanExcel = async ({
 
         excelRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
         
-        if (row.dp_nominal) excelRow.getCell(4).numFmt = '#,##0';
-        excelRow.getCell(7).numFmt = '#,##0'; 
+        if (row.dp_nominal) formatMoneyCell(excelRow.getCell(4));
+        formatMoneyCell(excelRow.getCell(7));
         
         currentRow++;
     });
@@ -1256,7 +1269,7 @@ export const exportPelunasanExcel = async ({
     labelCash.value = "Total CASH (Pelunasan):";
     labelCash.alignment = { horizontal: 'right', vertical: 'middle' };
     sheet.getCell(`I${currentRow}`).value = Number(summary.total_cash);
-    sheet.getCell(`I${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`I${currentRow}`));
     currentRow++;
 
     sheet.mergeCells(`G${currentRow}:H${currentRow}`);
@@ -1264,7 +1277,7 @@ export const exportPelunasanExcel = async ({
     labelTf.value = "Total TF (Pelunasan):";
     labelTf.alignment = { horizontal: 'right', vertical: 'middle' };
     sheet.getCell(`I${currentRow}`).value = Number(summary.total_tf);
-    sheet.getCell(`I${currentRow}`).numFmt = '#,##0';
+    formatMoneyCell(sheet.getCell(`I${currentRow}`));
     currentRow++;
 
     sheet.mergeCells(`G${currentRow}:H${currentRow}`);
@@ -1275,7 +1288,7 @@ export const exportPelunasanExcel = async ({
     
     const valGrand = sheet.getCell(`I${currentRow}`);
     valGrand.value = Number(summary.grand_total);
-    valGrand.numFmt = '#,##0';
+    formatMoneyCell(valGrand);
     valGrand.font = { bold: true };
 
     sheet.columns = [
@@ -1343,7 +1356,7 @@ export const exportOmsetPerItemExcel = async ({
         excelRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
         
         excelRow.getCell(4).numFmt = '#,##0.##'; 
-        excelRow.getCell(5).numFmt = '#,##0'; 
+        formatMoneyCell(excelRow.getCell(5));
         
         currentRow++;
     });
@@ -1360,7 +1373,7 @@ export const exportOmsetPerItemExcel = async ({
     valueTotal.font = { bold: true, size: 12, color: { argb: 'FFFF0000' } }; 
     valueTotal.alignment = { horizontal: 'center', vertical: 'middle' };
     valueTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-    valueTotal.numFmt = '#,##0';
+    formatMoneyCell(valueTotal);
 
     sheet.columns = [
         { key: 'col1', width: 6 },
@@ -1434,7 +1447,7 @@ export const exportKeuanganExcel = async ({
         });
 
         for(let c = 3; c <= 9; c++) {
-            excelRow.getCell(c).numFmt = '#,##0';
+            formatMoneyCell(excelRow.getCell(c));
         }
         
         excelRow.getCell(5).font = { bold: true, color: { argb: 'FF1565C0' } }; 
@@ -1509,7 +1522,7 @@ export const exportKeuanganExcel = async ({
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 cell.alignment = { vertical: 'middle', horizontal: c === 3 ? 'left' : 'center' };
             });
-            dataRow.getCell(4).numFmt = '#,##0';
+            formatMoneyCell(dataRow.getCell(4));
             dataRow.getCell(4).font = { color: { argb: 'FFFF0000' } };
         }
 
@@ -1519,7 +1532,7 @@ export const exportKeuanganExcel = async ({
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 cell.alignment = { vertical: 'middle', horizontal: c === 8 ? 'left' : 'center' };
             });
-            dataRow.getCell(9).numFmt = '#,##0';
+            formatMoneyCell(dataRow.getCell(9));
             dataRow.getCell(9).font = { color: { argb: 'FF2E7D32' } };
         }
         currentRow++;
@@ -1534,7 +1547,7 @@ export const exportKeuanganExcel = async ({
     
     const valExp = sheet.getCell(`D${currentRow}`);
     valExp.value = totalExp;
-    valExp.numFmt = '#,##0';
+    formatMoneyCell(valExp);
     valExp.font = { bold: true, color: { argb: 'FFFF0000' } };
     valExp.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
@@ -1547,7 +1560,7 @@ export const exportKeuanganExcel = async ({
     
     const valInc = sheet.getCell(`I${currentRow}`);
     valInc.value = totalInc;
-    valInc.numFmt = '#,##0';
+    formatMoneyCell(valInc);
     valInc.font = { bold: true, color: { argb: 'FF2E7D32' } };
     valInc.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
@@ -1582,7 +1595,7 @@ export const exportKeuanganExcel = async ({
             cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
             if (color) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
         });
-        row.getCell(4).numFmt = '#,##0';
+        formatMoneyCell(row.getCell(4));
     };
 
     const usedSheetNames = new Set(workbook.worksheets.map((item) => item.name.toLowerCase()));
@@ -1769,8 +1782,8 @@ export const exportMaklunExcel = async ({
                         });
 
                         r.getCell(6).numFmt = '#,##0';
-                        r.getCell(7).numFmt = '#,##0';
-                        r.getCell(8).numFmt = '#,##0';
+                        formatMoneyCell(r.getCell(7));
+                        formatMoneyCell(r.getCell(8));
                         r.getCell(8).font = { bold: true, color: { argb: 'FF1565C0' } };
                     }
                 }
@@ -1786,7 +1799,7 @@ export const exportMaklunExcel = async ({
                 
                 const valSubTotal = sheet.getCell(`H${currentRow}`);
                 valSubTotal.value = subTotalMasuk;
-                valSubTotal.numFmt = '#,##0';
+                formatMoneyCell(valSubTotal);
                 valSubTotal.alignment = { horizontal: 'center', vertical: 'middle' };
                 valSubTotal.font = { bold: true, color: { argb: 'FF1565C0' } };
                 valSubTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -1814,7 +1827,7 @@ export const exportMaklunExcel = async ({
         
         const valTotalMasuk = sheet.getCell(`H${currentRow}`);
         valTotalMasuk.value = totalMasuk;
-        valTotalMasuk.numFmt = '#,##0';
+        formatMoneyCell(valTotalMasuk);
         valTotalMasuk.alignment = { horizontal: 'center', vertical: 'middle' };
         valTotalMasuk.font = { bold: true, color: { argb: 'FF1565C0' } };
         valTotalMasuk.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -1903,8 +1916,8 @@ export const exportMaklunExcel = async ({
                         });
 
                         r.getCell(6).numFmt = '#,##0';
-                        r.getCell(7).numFmt = '#,##0';
-                        r.getCell(8).numFmt = '#,##0';
+                        formatMoneyCell(r.getCell(7));
+                        formatMoneyCell(r.getCell(8));
                         r.getCell(8).font = { bold: true, color: { argb: 'FFFF0000' } };
                     }
                 }
@@ -1920,7 +1933,7 @@ export const exportMaklunExcel = async ({
                 
                 const valSubTotal = sheet.getCell(`H${currentRow}`);
                 valSubTotal.value = subTotalKeluar;
-                valSubTotal.numFmt = '#,##0';
+                formatMoneyCell(valSubTotal);
                 valSubTotal.alignment = { horizontal: 'center', vertical: 'middle' };
                 valSubTotal.font = { bold: true, color: { argb: 'FFFF0000' } };
                 valSubTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -1948,7 +1961,7 @@ export const exportMaklunExcel = async ({
         
         const valTotalKeluar = sheet.getCell(`H${currentRow}`);
         valTotalKeluar.value = totalKeluar;
-        valTotalKeluar.numFmt = '#,##0';
+        formatMoneyCell(valTotalKeluar);
         valTotalKeluar.alignment = { horizontal: 'center', vertical: 'middle' };
         valTotalKeluar.font = { bold: true, color: { argb: 'FFFF0000' } };
         valTotalKeluar.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -2052,7 +2065,7 @@ export const exportFailureExcel = async ({
 
 
         excelRow.getCell(9).numFmt = '#,##0';
-        excelRow.getCell(12).numFmt = '#,##0';
+        formatMoneyCell(excelRow.getCell(12));
         excelRow.getCell(12).font = { color: { argb: 'FFFF0000' } }; 
 
         currentRow++;
@@ -2067,7 +2080,7 @@ export const exportFailureExcel = async ({
     
     const valTotal = sheet.getCell(`L${currentRow}`);
     valTotal.value = totalLoss;
-    valTotal.numFmt = '#,##0';
+    formatMoneyCell(valTotal);
     valTotal.font = { bold: true, color: { argb: 'FFFF0000' } };
     valTotal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
@@ -2214,20 +2227,20 @@ export const exportGlobalStocksToExcel = async ({
                     cell.alignment = { vertical: 'middle', horizontal: colNumber === 2 ? 'left' : 'center', wrapText: true };
                 });
 
-                excelRow.getCell(3).numFmt = '#,##0';
+                formatStockCell(excelRow.getCell(3));
                 excelRow.getCell(3).font = { bold: true, color: { argb: 'FF002060' } };
 
                 let currC = 4;
                 daysInMonth.forEach(() => {
-                    excelRow.getCell(currC).numFmt = '#,##0';     
+                    formatStockCell(excelRow.getCell(currC));
                     excelRow.getCell(currC).font = { color: { argb: 'FF375623' } }; 
                     
-                    excelRow.getCell(currC + 1).numFmt = '#,##0'; 
+                    formatStockCell(excelRow.getCell(currC + 1));
                     excelRow.getCell(currC + 1).font = { color: { argb: 'FFC00000' } }; 
                     currC += 2;
                 });
 
-                excelRow.getCell(currC).numFmt = '#,##0';
+                formatStockCell(excelRow.getCell(currC));
                 excelRow.getCell(currC).font = { bold: true, color: { argb: 'FF703AD0' } };
 
                 currentRow++;
