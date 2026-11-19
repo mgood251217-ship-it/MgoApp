@@ -24,6 +24,16 @@ Tidak perlu mengganti `src/services/config.js` setiap berpindah mode. Untuk URL 
 
 Pengaturan aplikasi juga terpisah di folder data aplikasi: `npm run dev` (debug) memakai `settings.development.json`, sedangkan installer `npm run dist` (release) tetap memakai `settings.json`. Pengaturan produksi lama tetap tersedia; development mulai dengan pengaturan default. Build dengan opsi `--debug` juga memakai pengaturan development.
 
+## Build Windows di GitHub
+
+Setelah perubahan masuk ke branch utama GitHub:
+
+1. Isi repository variable `VITE_SERVER_URL` melalui **Settings > Secrets and variables > Actions > Variables** dengan URL produksi. Jika sudah diisi untuk Linux, tidak perlu dibuat lagi.
+2. Buka **Actions > Build Windows EXE > Run workflow**.
+3. Setelah selesai, unduh artifact **MgoDesktop-windows-x64** dan ekstrak installer `*-setup.exe`.
+
+Workflow memakai runner Windows dan konfigurasi NSIS MGO yang sama dengan build lokal. Hasilnya berupa artifact; untuk distribusi/update, unggah installer ke release lalu sesuaikan `download_url` dan versi pada `MgoAll/admin/controllers/version.json`.
+
 ## Linux (.deb)
 
 Build dilakukan di Linux (Ubuntu 22.04+ atau Debian 12+), dengan Node.js 24 dan Rust stable:
