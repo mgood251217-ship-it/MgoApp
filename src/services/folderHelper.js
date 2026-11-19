@@ -105,8 +105,10 @@ export const resolveBasePath = (settings, kategori) => {
 };
 
 export const joinPath = (base, name) => {
-    const cleanBase = String(base).replace(/[\\/]+$/, "");
-    return `${cleanBase}\\${name}`;
+    const path = String(base);
+    const separator = path.startsWith("/") && !path.startsWith("//") ? "/" : "\\";
+    const cleanBase = path.replace(/[\\/]+$/, "");
+    return `${cleanBase}${separator}${String(name).replace(/[\\/]+/g, separator)}`;
 };
 
 const CATEGORY_PATH_MAP = {

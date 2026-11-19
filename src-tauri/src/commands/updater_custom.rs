@@ -7,12 +7,21 @@ use tauri::{AppHandle, Emitter, Manager};
 #[tauri::command]
 pub async fn download_update(app: AppHandle, url: String) -> Value {
     let result: Result<PathBuf, String> = async {
-        let file_name = url
-            .rsplit('/')
-            .next()
-            .filter(|s| !s.is_empty())
-            .unwrap_or("MgoDesktopUpdate.exe")
-            .to_string();
+        let parsed = reqwest::Url::parse(&url).map_err(|_| "URL update tidak valid.")?;
+        if !matches!(parsed.scheme(), "https" | "http") {
+            return Err("URL update harus HTTP atau HTTPS.".into());
+        }
+        let file_name = parsed.path_segments().and_then(|mut parts| parts.next_back())
+            .filter(|name| !name.is_empty()).ok_or("Nama installer update tidak valid.")?;
+        #[cfg(windows)]
+        let extension = "exe";
+        #[cfg(target_os = "linux")]
+        let extension = "deb";
+        #[cfg(not(any(windows, target_os = "linux")))]
+        let extension = "";
+        if extension.is_empty() || !std::path::Path::new(file_name).extension().is_some_and(|ext| ext.eq_ignore_ascii_case(extension)) {
+            return Err("Format installer tidak sesuai sistem operasi.".into());
+        }
 
         let downloads_dir = app
             .path()
@@ -20,7 +29,7 @@ pub async fn download_update(app: AppHandle, url: String) -> Value {
             .map_err(|e| e.to_string())?;
         let dest_path = downloads_dir.join(&file_name);
 
-        let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+        let response = reqwest::get(parsed.clone()).await.map_err(|e| e.to_string())?;
         if !response.status().is_success() {
             return Err(format!("Gagal download, status {}", response.status()));
         }
@@ -86,9 +95,54 @@ fn launch_installer(file_path: &str) -> Result<(), String> {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+fn validate_debian_identity(package: &str, architecture: &str, system_architecture: &str) -> Result<(), String> {
+    if package.trim() != "mgo-desktop" {
+        return Err("Paket update bukan MgoDesktop. Unduh installer MGO yang benar.".into());
+    }
+    if architecture.trim() != system_architecture.trim() {
+        return Err("Arsitektur paket update berbeda dari komputer ini.".into());
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
 fn launch_installer(file_path: &str) -> Result<(), String> {
-    std::process::Command::new(file_path).spawn().map(|_| ()).map_err(|e| e.to_string())
+    use std::{path::Path, process::Command};
+    let path = Path::new(file_path);
+    if !path.is_absolute() || !path.is_file() || !path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("deb")) {
+        return Err("File installer DEB tidak ditemukan. Unduh ulang update.".into());
+    }
+    let path = path.canonicalize().map_err(|error| error.to_string())?;
+    let field = |name: &str| -> Result<String, String> {
+        let output = Command::new("/usr/bin/dpkg-deb").arg("--field").arg(&path).arg(name)
+            .output().map_err(|error| format!("Paket DEB tidak dapat diperiksa: {}", error))?;
+        if !output.status.success() {
+            return Err("File DEB rusak atau belum selesai diunduh. Unduh ulang update.".into());
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    };
+    let system = Command::new("/usr/bin/dpkg").arg("--print-architecture")
+        .output().map_err(|error| error.to_string())?;
+    if !system.status.success() {
+        return Err("Arsitektur Linux tidak dapat diperiksa.".into());
+    }
+    validate_debian_identity(&field("Package")?, &field("Architecture")?, &String::from_utf8_lossy(&system.stdout))?;
+    // Polkit menampilkan dialog sandi; aplikasi tetap berjalan sampai APT berhasil memasang paket.
+    let output = Command::new("/usr/bin/pkexec").arg("/usr/bin/apt-get")
+        .args(["install", "--yes", "--no-remove"]).arg(&path).output()
+        .map_err(|error| format!("Dialog administrator Linux tidak tersedia (pkexec): {}", error))?;
+    match output.status.code() {
+        Some(0) => Ok(()),
+        Some(126) => Err("Pemasangan update dibatalkan. Klik jalankan installer lagi untuk mencoba kembali.".into()),
+        Some(127) => Err("Izin administrator Linux tidak diperoleh. Pastikan polkit dan dialog autentikasi desktop tersedia.".into()),
+        _ => Err(format!("Pemasangan update gagal: {}", String::from_utf8_lossy(&output.stderr).trim())),
+    }
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+fn launch_installer(_: &str) -> Result<(), String> {
+    Err("Update installer belum didukung pada sistem operasi ini.".into())
 }
 
 #[tauri::command]

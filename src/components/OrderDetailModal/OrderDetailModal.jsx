@@ -1,3 +1,4 @@
+import { isWindows } from "../../services/platform";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import api from "../../api/axios";
 import Modal from "../Modal/Modal";
@@ -105,7 +106,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
             if (!res.data?.success) throw new Error(res.data?.message || "Gagal memperbarui proses order.");
 
             const iconStatus = { SELESAI: "selesai", DIPROSES: "proses", DIAMBIL: "diambil", BATAL: "cancel" }[processOrderData.status];
-            const paths = [...new Map(folder.dedupedFolderEntries
+            const paths = [...new Map((isWindows ? folder.dedupedFolderEntries : [])
                 .filter(({ info }) => info.status === "ada" && info.path)
                 .map(({ info }) => [info.path.toLowerCase(), info.path])).values()];
             const results = await Promise.allSettled(paths.map(async (folderPath) => {

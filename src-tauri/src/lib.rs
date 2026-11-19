@@ -48,6 +48,7 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle();
 
+            #[cfg(windows)]
             if let Err(e) = icon_folder::ensure_icons_installed(handle) {
                 eprintln!("Gagal setup icons: {}", e);
             }

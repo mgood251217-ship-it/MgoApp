@@ -5,3 +5,5 @@ pub mod icon_folder;
 pub mod updater_custom;
 pub mod misc;
 pub mod tutorial_video;
+
+pub mod data_paths;

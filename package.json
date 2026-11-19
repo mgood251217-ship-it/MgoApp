@@ -14,7 +14,8 @@
     "dev": "tauri dev",
     "build": "vite build",
     "tauri": "tauri",
-    "dist": "tauri build"
+    "dist": "tauri build",
+    "dist:deb": "tauri build --bundles deb"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

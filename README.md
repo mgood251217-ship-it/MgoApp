@@ -24,6 +24,27 @@ Tidak perlu mengganti `src/services/config.js` setiap berpindah mode. Untuk URL 
 
 Pengaturan aplikasi juga terpisah di folder data aplikasi: `npm run dev` (debug) memakai `settings.development.json`, sedangkan installer `npm run dist` (release) tetap memakai `settings.json`. Pengaturan produksi lama tetap tersedia; development mulai dengan pengaturan default. Build dengan opsi `--debug` juga memakai pengaturan development.
 
+## Linux (.deb)
+
+Build dilakukan di Linux (Ubuntu 22.04+ atau Debian 12+), dengan Node.js 24 dan Rust stable:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+npm ci
+npm run dist:deb
+```
+
+Siapkan `.env.production` seperti petunjuk konfigurasi server di atas. Paket tersedia di `src-tauri/target/release/bundle/deb/`; pasang dengan `sudo apt install ./MgoDesktop_2.1.2_amd64.deb` (sesuaikan nama file hasil build). Persyaratan lengkap mengikuti [panduan Tauri Linux](https://v2.tauri.app/start/prerequisites/).
+
+Dari Windows, gunakan GitHub **Actions > Build Linux DEB > Run workflow**. Isi repository variable `VITE_SERVER_URL` sekali dengan URL produksi. Unduh paket dari artifact `MgoDesktop-linux-amd64`; workflow ini tidak memublikasikan release.
+
+Untuk update, unggah `.deb` hasil build ke release, lalu isi `version_linux`, `min_required_version_linux`, dan `download_url_linux` di `MgoAll/admin/controllers/version.json`. Contoh nama aset: `MgoDesktop_2.1.2_amd64.deb`. Biarkan kolom Linux `null` sebelum paket tersedia. Tautan Windows dan Android tetap memakai kolom yang sudah ada.
+
+Saat update, MGO mengunduh `.deb`, meminta sandi administrator melalui polkit, lalu menunggu pemasangan selesai. Jika dibatalkan atau gagal, aplikasi tetap terbuka untuk mencoba lagi. Setelah berhasil, buka kembali MGO.
+
+Backup Linux berada di `~/.local/share/id.mgo.desktop/DataBackup/` (mengikuti `XDG_DATA_HOME` jika diatur). Untuk folder produksi LAN, mount share terlebih dahulu lalu pilih path Linux seperti `/mnt/produksi`; ikon status folder Explorer hanya berlaku pada Windows.
+
 ## ✨ Fitur Unggulan
 - 🛒 **Transaksi Full Fitur:** Sistem manajemen kasir super lengkap untuk menangani berbagai skenario transaksi.
 - ⚡ **Smart Caching System:** Menggunakan implementasi *cache* tingkat lanjut agar aplikasi tidak selalu *hit* ke database. Server dijamin aman, ringan, dan terhindar dari *overload*.
@@ -38,7 +59,7 @@ Pengaturan aplikasi juga terpisah di folder data aplikasi: `npm run dev` (debug)
 
 ## 💻 Persyaratan Sistem
 Untuk menjamin kelancaran performa *realtime* dan efisiensi tingkat tinggi, perangkat keras yang dibutuhkan sangat minimal:
-- **Sistem Operasi:** **Windows 10** atau yang lebih baru.
+- **Sistem Operasi:** **Windows 10** atau yang lebih baru; **Ubuntu 22.04+ / Debian 12+ (amd64)** untuk paket `.deb`.
 - **RAM:** Minimal **4 GB** (sangat hemat memori).
 
 ## 🛠️ Teknologi Inti

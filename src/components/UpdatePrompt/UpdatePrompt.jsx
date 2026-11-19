@@ -1,3 +1,4 @@
+import { isLinux } from "../../services/platform";
 import "./UpdatePrompt.css";
 import logo from "/logo.png";
 
@@ -35,7 +36,7 @@ export default function UpdatePrompt({ latestVersion, downloading, progress, man
                         <div className="update-prompt-progress-track">
                             <div className="update-prompt-progress-bar" style={{ width: `${progress}%` }}></div>
                         </div>
-                        <span className="update-prompt-progress-text">{installing ? "Membuka installer. Jika Windows meminta izin administrator, izinkan untuk melanjutkan." : `${progress}%`}</span>
+                        <span className="update-prompt-progress-text">{installing ? (isLinux ? "Memasang update. Masukkan sandi administrator Linux saat diminta, lalu buka kembali MGO setelah selesai." : "Membuka installer. Jika Windows meminta izin administrator, izinkan untuk melanjutkan.") : `${progress}%`}</span>
                     </div>
                 ) : (
                     <div className="update-prompt-actions">

@@ -118,12 +118,14 @@ pub struct SavePdfArgs {
 }
 
 #[tauri::command]
-pub fn save_pdf_data(args: SavePdfArgs) -> Value {
-    let program_data = std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());
+pub fn save_pdf_data(app: AppHandle, args: SavePdfArgs) -> Value {
+    let root = match super::data_paths::data_directory(&app) {
+        Ok(path) => path,
+        Err(error) => return serde_json::json!({ "success": false, "message": error.to_string() }),
+    };
     let today = chrono::Local::now();
 
-    let struk_dir: PathBuf = PathBuf::from(program_data)
-        .join("MgoDesktop")
+    let struk_dir: PathBuf = root
         .join("StrukBackup")
         .join(today.year().to_string())
         .join(format!("{:02}", today.month()))
@@ -146,14 +148,13 @@ pub fn save_pdf_data(args: SavePdfArgs) -> Value {
     }
 }
 
-fn backup_path(date: &str, prefix: &str) -> Result<PathBuf, String> {
+fn backup_path(app: &AppHandle, date: &str, prefix: &str) -> Result<PathBuf, String> {
     let parsed = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
         .map_err(|_| "Tanggal backup tidak valid.".to_string())?;
     if parsed.format("%Y-%m-%d").to_string() != date {
         return Err("Tanggal backup tidak valid.".into());
     }
-    let program_data = std::env::var("ProgramData").unwrap_or_else(|_| r"C:\ProgramData".to_string());
-    let mut directory = PathBuf::from(program_data).join("MgoDesktop").join("DataBackup");
+    let mut directory = super::data_paths::data_directory(app).map_err(|error| error.to_string())?.join("DataBackup");
     if cfg!(debug_assertions) {
         directory = directory.join("development");
     }
@@ -196,8 +197,8 @@ pub struct ExcelBackupArgs {
     pub base64_data: String,
 }
 
-fn save_excel_backup(args: ExcelBackupArgs, prefix: &str) -> Value {
-    let path = match backup_path(&args.date, prefix) {
+fn save_excel_backup(app: &AppHandle, args: ExcelBackupArgs, prefix: &str) -> Value {
+    let path = match backup_path(app, &args.date, prefix) {
         Ok(path) => path,
         Err(message) => return serde_json::json!({ "success": false, "message": message }),
     };
@@ -216,13 +217,13 @@ fn save_excel_backup(args: ExcelBackupArgs, prefix: &str) -> Value {
 }
 
 #[tauri::command]
-pub fn save_order_backup(args: ExcelBackupArgs) -> Value {
-    save_excel_backup(args, "Order")
+pub fn save_order_backup(app: AppHandle, args: ExcelBackupArgs) -> Value {
+    save_excel_backup(&app, args, "Order")
 }
 
 #[tauri::command]
-pub fn save_payment_backup(args: ExcelBackupArgs) -> Value {
-    save_excel_backup(args, "Payment")
+pub fn save_payment_backup(app: AppHandle, args: ExcelBackupArgs) -> Value {
+    save_excel_backup(&app, args, "Payment")
 }
 
 #[derive(Deserialize)]

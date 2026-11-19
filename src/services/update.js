@@ -1,6 +1,6 @@
 import api from "../api/axios";
 import config from "./config";
-import { isMobile } from "./platform";
+import { isMobile, isLinux } from "./platform";
 
 function compareVersions(a, b) {
     const pa = String(a).split(".").map(Number);
@@ -24,18 +24,23 @@ export async function checkUpdate() {
             return { hasUpdate: false, latestVersion: config.version };
         }
 
-        const latestVersion = data.data.version;
-        const downloadUrl = isMobile
-            ? (data.data.download_url_mobile || data.data.download_url)
-            : data.data.download_url;
-        const minRequiredVersion = data.data.min_required_version || latestVersion;
-        const releaseNotes = Array.isArray(data.data.release_notes) ? data.data.release_notes : [];
+        const info = data.data;
+        // Rilis Linux dapat diterbitkan terpisah dari Windows; jangan mengirim installer EXE ke Linux.
+        const downloadUrl = isLinux ? info.download_url_linux : isMobile
+            ? (info.download_url_mobile || info.download_url) : info.download_url;
+        if (isLinux && !downloadUrl) return { hasUpdate: false, latestVersion: config.version };
+        const latestVersion = isLinux ? (info.version_linux || info.version) : info.version;
+        const minRequiredVersion = isLinux
+            ? (info.min_required_version_linux || latestVersion)
+            : (info.min_required_version || latestVersion);
+        const notes = isLinux ? (info.release_notes_linux || info.release_notes) : info.release_notes;
+        const releaseNotes = Array.isArray(notes) ? notes : [];
 
         const hasUpdate = compareVersions(config.version, latestVersion) < 0;
         const forceUpdate = compareVersions(config.version, minRequiredVersion) < 0;
 
         return { hasUpdate, latestVersion, downloadUrl, forceUpdate, minRequiredVersion, releaseNotes };
-    } catch (err) {
+    } catch {
         return { hasUpdate: false, latestVersion: config.version };
     }
 }
