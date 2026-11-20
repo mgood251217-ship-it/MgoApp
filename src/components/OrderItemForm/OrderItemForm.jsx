@@ -14,6 +14,7 @@ import {
     searchOrderProducts
 } from "../../services/apiCache";
 import { variantGroups, variantChoices, matchProductVariant } from '../../services/productVariants';
+import { formatRupiah } from '../../services/helpers';
 
 const EMPTY_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
@@ -450,6 +451,7 @@ export default function OrderItemForm({
     };
 
     const selectedProduct = products.find(p => normalizeId(p.product_id) === normalizeId(formItem.product_id));
+    const basePrice = variantsLoading || variantIncomplete ? null : selectedProductVariant?.price ?? selectedProduct?.price;
     const selectedProductName = selectedProduct?.display_name?.toUpperCase() || selectedProduct?.name?.toUpperCase() || "";
     
     const isNoSize = selectedProduct?.unit_type?.toUpperCase() === "PCS" || selectedProduct?.unit_type === "~";
@@ -599,7 +601,6 @@ export default function OrderItemForm({
                     options={variantChoices(variantRows, formItem.variant_options || {}, index).map(value => ({ value, label: value }))}
                     placeholder={legacyWithoutVariant ? 'Sesuai nota lama / pilih varian' : `Pilih ${group}`} required={!legacyWithoutVariant} />
             ))}
-            {selectedProductVariant && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Harga dasar varian: Rp{Number(selectedProductVariant.price).toLocaleString('id-ID')}. {savedVariant && Number(selectedProductVariant.id) === Number(savedVariant.id) ? 'Mengikuti varian yang tersimpan di nota.' : ''}</p>}
 
             {isAnekaCetak && hasLaserRules && (
                 <div>
@@ -825,6 +826,13 @@ export default function OrderItemForm({
                 onChange={handleFormChange}
             />
 
+            {basePrice != null && <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                    <span>{selectedProductVariant ? 'Harga dasar varian' : 'Harga dasar produk'}</span>
+                    <strong style={{ color: 'var(--text)' }}>{formatRupiah(basePrice)}</strong>
+                </div>
+                {savedVariant && Number(selectedProductVariant?.id) === Number(savedVariant.id) && <small>Mengikuti varian yang tersimpan di nota.</small>}
+            </div>}
             {children}
 
             <div style={{ display: "flex", gap: "8px" }}>
