@@ -465,8 +465,8 @@ export default function Order() {
                 }
             />
 
-            <div style={{ display: "flex", gap: "24px", marginTop: "20px", alignItems: "flex-start" }}>
-                <div style={{ width: "30%", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div className="order-entry-layout">
+                <div className="order-entry-form">
                     <div style={{ background: "color-mix(in srgb, var(--background) 10%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                         <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
                         <OrderItemForm
@@ -519,9 +519,9 @@ export default function Order() {
                     </div>
                 </div>
 
-                <div style={{ width: "70%" }}>
+                <div className="order-entry-items">
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginBottom: "20px" }}>
+                    <div className="order-entry-summary">
                         <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomorator</div>
                             <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.nomorator || "-"}</div>

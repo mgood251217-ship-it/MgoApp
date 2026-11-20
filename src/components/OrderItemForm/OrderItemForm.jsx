@@ -10,7 +10,8 @@ import {
     getCachedProductFinishingPrices,
     getCachedProductLaserConversions,
     getCachedProductVariants,
-    getCachedProductBundles
+    getCachedProductBundles,
+    searchOrderProducts
 } from "../../services/apiCache";
 import { variantGroups, variantChoices, matchProductVariant } from '../../services/productVariants';
 
@@ -70,6 +71,39 @@ export default function OrderItemForm({
     const [productVariants, setProductVariants] = useState([]);
     const [productBundles, setProductBundles] = useState([]);
     const [variantsLoading, setVariantsLoading] = useState(false);
+    const [productSearch, setProductSearch] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const searchContainer = useRef(null);
+    const [searchError, setSearchError] = useState('');
+    const searchVersion = useRef(0);
+
+    useEffect(() => {
+        const close = event => { if (!searchContainer.current?.contains(event.target)) setSearchOpen(false); };
+        document.addEventListener('mousedown', close);
+        return () => document.removeEventListener('mousedown', close);
+    }, []);
+
+
+    useEffect(() => {
+        let cancelled = false;
+        const version = searchVersion.current;
+        const query = productSearch.trim();
+        if (query.length < 2) return;
+        const timer = setTimeout(async () => {
+            try {
+                const results = await searchOrderProducts(query);
+                if (!cancelled && version === searchVersion.current) setSearchResults(results);
+            } catch {
+                if (!cancelled && version === searchVersion.current) setSearchError('Pencarian gagal. Coba lagi atau gunakan pilihan produk di bawah.');
+            } finally {
+                if (!cancelled && version === searchVersion.current) setSearchLoading(false);
+            }
+        }, 400);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [productSearch]);
+
     const finishingRefs = useRef([]);
     const isFirstRenderRef = useRef(true);
 
@@ -146,6 +180,22 @@ export default function OrderItemForm({
         getCachedProductVariants(formItem.product_id, apply).then(apply);
         return () => { cancelled = true; };
     }, [formItem.product_id]);
+
+    const selectSearchResult = ({ product, variant }) => {
+        searchVersion.current++;
+        setProductSearch(''); setSearchResults([]); setSearchError(''); setSearchLoading(false); setSearchOpen(false);
+        setCategories(prev => prev.some(row => String(row.category_id) === String(product.category_id)) ? prev
+            : [...prev, { category_id: product.category_id, name: product.category }]);
+        setProducts(prev => prev.some(row => String(row.product_id) === String(product.product_id)) ? prev
+            : [...prev, { ...product, display_name: product.name }]);
+        setProductVariants(prev => variant ? [variant, ...prev.filter(row => String(row.product_id) === String(product.product_id) && String(row.id) !== String(variant.id))] : []);
+        if (String(formItem.category_id) !== String(product.category_id)) {
+            setFinishings([]); setPackageRules([]); setLaserConversions([]);
+        }
+        setFormItem(prev => ({ ...prev, category_id: String(product.category_id), product_id: String(product.product_id),
+            product_variant_id: variant ? String(variant.id) : '', variant_options: { ...variant?.options }, variant: null,
+            finishings: [], panjang: '', lebar: '', size: '', ukuranJersey: '', paketSize: '', kiloan: '', waktu: '', diskon: '', laser_product_id: '' }));
+    };
 
     const handleVariantChange = (index, value) => {
         const values = Object.fromEntries(optionGroups.map((name, i) => [name, i < index ? formItem.variant_options?.[name] || '' : i === index ? value : '']));
@@ -471,8 +521,8 @@ export default function OrderItemForm({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleSubmit, showCancel, onCancel]);
 
-    const categoryOptions = useMemo(() => categories.map(c => ({ value: c.category_id, label: isTextileCategory(c.name) ? "TEKSTIL" : c.name })), [categories]);
-    const productOptions = useMemo(() => products.map(p => ({ value: p.product_id, label: p.display_name })), [products]);
+    const categoryOptions = useMemo(() => categories.map(c => ({ value: normalizeId(c.category_id), label: isTextileCategory(c.name) ? "TEKSTIL" : c.name })), [categories]);
+    const productOptions = useMemo(() => products.map(p => ({ value: normalizeId(p.product_id), label: p.display_name })), [products]);
     const jerseySizeOptions = [
         { value: 'XS', label: 'XS' }, { value: 'S', label: 'S' }, { value: 'M', label: 'M' },
         { value: 'L', label: 'L' }, { value: 'XL', label: 'XL' }, { value: '2XL', label: '2XL' },
@@ -485,13 +535,39 @@ export default function OrderItemForm({
 
     return (
         <form onSubmit={handleSubmit}>
+            <div ref={searchContainer} style={{ marginBottom: 16, position: 'relative' }}>
+                <Input name="productSearch" label="Cari produk" labelPosition="left" labelWidth={110}
+                    value={productSearch} autoComplete="off" margin={0} onFocus={() => setSearchOpen(true)} placeholder="Nama produk atau varian, misalnya taslan..."
+                    disabled={isSubmitting}
+                    onChange={event => {
+                        searchVersion.current++;
+                        setProductSearch(event.target.value); setSearchResults([]); setSearchError('');
+                        setSearchLoading(event.target.value.trim().length >= 2); setSearchOpen(true);
+                    }} onKeyDown={event => {
+                        if (event.key === 'Enter') event.preventDefault();
+                        if (event.key === 'Escape') { event.preventDefault(); setSearchOpen(false); }
+                    }} />
+                {searchOpen && productSearch.trim().length >= 2 && <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
+                    maxHeight: 300, overflowY: 'auto', background: 'var(--bg-content)', color: 'var(--text)',
+                    border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: '0 6px 18px #0003' }}>
+                    <div aria-live="polite" style={{ fontSize: 12, color: 'var(--text-secondary)', padding: searchLoading || searchError || !searchResults.length ? '10px 12px' : 0 }}>
+                        {searchLoading ? 'Mencari...' : searchError || (!searchResults.length ? 'Produk tidak ditemukan.' : '')}
+                    </div>
+                    {searchResults.slice(0, 10).map(({ product, variant }) => <button type="button" key={`${product.product_id}:${variant?.id || 0}`}
+                        disabled={isSubmitting} onClick={() => selectSearchResult({ product, variant })}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', background: 'transparent', color: 'var(--text)', border: 0, borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                        <strong>{product.name}</strong>{variant && <span> - {variant.label}</span>}
+                        <small style={{ display: 'block', color: 'var(--text-secondary)' }}>{product.category} - Rp{Number(variant?.price ?? product.price).toLocaleString('id-ID')}</small>
+                    </button>)}
+                </div>}
+            </div>
             <div id="categorySelectField" tabIndex={-1} style={{ outline: "none" }}>
                 <Select
                     labelPosition="left"
                     labelWidth={110}
                     name="category_id"
                     label="Kategori"
-                    value={formItem.category_id}
+                    value={normalizeId(formItem.category_id) ?? ""}
                     onChange={handleCategoryChange}
                     options={categoryOptions}
                     placeholder="Pilih Kategori"
@@ -503,7 +579,7 @@ export default function OrderItemForm({
                 labelWidth={110}
                 name="product_id"
                 label="Produk"
-                value={formItem.product_id}
+                value={normalizeId(formItem.product_id) ?? ""}
                 onChange={handleProductChange}
                 options={productOptions}
                 placeholder="Pilih Produk"

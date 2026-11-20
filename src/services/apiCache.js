@@ -39,7 +39,7 @@ const getSharedResponse = (url, config = {}) => {
 const memoryFallback = new Map();
 const localOrderListeners = new Set();
 const localPaymentListeners = new Set();
-const cacheEntryLimits = { paginatedProducts: 100, orders: 50, transactionsDetail: 50 };
+const cacheEntryLimits = { paginatedProducts: 100, orderProductSearch: 50, orders: 50, transactionsDetail: 50 };
 let storageScope = getRequestScope();
 
 const syncStorageScope = () => {
@@ -631,6 +631,26 @@ export const getCachedProductVariants = async (productId, onUpdate, { throwOnErr
         if (throwOnError) throw error;
         return [];
     });
+};
+
+export const searchOrderProducts = async (search) => {
+    const query = search.trim().replace(/\s+/g, ' ').toLowerCase();
+    if (query.length < 2) return [];
+    const cached = getStorage('orderProductSearch', {})[query];
+    try {
+        const dataset = await getServerDataset();
+        const updatedAt = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0);
+        if (cached && !isCacheOutdated(cached.updatedAt, updatedAt) && Date.now() - cached.savedAt < 60000) return cached.data;
+        const response = await getSharedResponse('', { params: { action: 'search_order_products', search: query } });
+        if (!response.data?.success || !Array.isArray(response.data.data)) throw new Error('Pencarian produk gagal.');
+        const map = getStorage('orderProductSearch', {});
+        map[query] = { data: response.data.data, updatedAt, savedAt: Date.now() };
+        setStorage('orderProductSearch', map);
+        return response.data.data;
+    } catch (error) {
+        if (cached) return cached.data;
+        throw error;
+    }
 };
 
 export const getCachedPaginatedProducts = async (page, limit, search, onUpdate, categoryId = 0) => {
@@ -1389,6 +1409,8 @@ export const clearOrdersCache = () => {
 };
 
 export const clearCache = () => {
+    invalidateRequests(['search_order_products']);
+    removeStorage('orderProductSearch');
     invalidateRequests(["categories", "products_by_category", "pagination_products", "finishings", "finishings_by_category", "product_finishing_prices", "product_laser_conversions", "product_bundles", "product_variants"]);
     removeStorage("categories");
     removeStorage("categories_time");
