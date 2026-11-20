@@ -76,6 +76,7 @@ export default function OrderItemForm({
     const [searchResults, setSearchResults] = useState([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [discountOpen, setDiscountOpen] = useState(false);
     const searchContainer = useRef(null);
     const [searchError, setSearchError] = useState('');
     const searchVersion = useRef(0);
@@ -815,16 +816,21 @@ export default function OrderItemForm({
                 </div>
             )}
 
-            <Input
-                labelPosition="left"
-                labelWidth={110}
-                name="diskon"
-                step="0.01"
-                type="number"
-                label="Diskon"
-                value={formItem.diskon}
-                onChange={handleFormChange}
-            />
+            <div style={{ marginBottom: 12 }}>
+                <button type="button" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 38, padding: '8px 12px',
+                    border: '1px solid var(--border)', borderRadius: 'var(--radius)', background: 'var(--background)', color: 'var(--text)',
+                    font: 'inherit', fontSize: 13, fontWeight: 600, lineHeight: 1.4, textAlign: 'left', cursor: 'pointer', transition: 'background var(--transition)' }}
+                    onClick={() => setDiscountOpen(open => !open)}>
+                    <span style={{ flexShrink: 0, width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent',
+                        borderLeft: '6px solid currentColor', transform: discountOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform var(--transition)' }} aria-hidden="true" />
+                    <span>Diskon</span>
+                    {Number(formItem.diskon) > 0 && <span style={{ marginLeft: 'auto', color: 'var(--text-secondary)', fontWeight: 400 }}>{formatRupiah(formItem.diskon)}</span>}
+                </button>
+                {discountOpen && <Input
+                    labelPosition="left" labelWidth={110} name="diskon" step="0.01" type="number" label="Diskon"
+                    value={formItem.diskon} onChange={handleFormChange} style={{ marginTop: 12 }}
+                />}
+            </div>
 
             {basePrice != null && <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>

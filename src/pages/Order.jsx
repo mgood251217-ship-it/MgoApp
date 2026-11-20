@@ -38,6 +38,16 @@ export default function Order() {
     const [stores, setStores] = useState([]);
 
     const [noteInput, setNoteInput] = useState("");
+    const [noteOpen, setNoteOpen] = useState(false);
+    const [compactLayout, setCompactLayout] = useState(() => window.matchMedia('(max-width: 1100px)').matches);
+
+    useEffect(() => {
+        const media = window.matchMedia('(max-width: 1100px)');
+        const update = event => setCompactLayout(event.matches);
+        media.addEventListener('change', update);
+        return () => media.removeEventListener('change', update);
+    }, []);
+
     const [previewPrice, setPreviewPrice] = useState(0);
     const [previewTier, setPreviewTier] = useState(null);
     const [previewPromotion, setPreviewPromotion] = useState(null);
@@ -465,8 +475,8 @@ export default function Order() {
                 }
             />
 
-            <div className="order-entry-layout">
-                <div className="order-entry-form">
+            <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "minmax(0, 1fr)" : "clamp(360px, 38%, 500px) minmax(0, 1fr)", gap: 20, marginTop: 20, alignItems: "start" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
                     <div style={{ background: "color-mix(in srgb, var(--background) 10%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                         <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
                         <OrderItemForm
@@ -496,15 +506,22 @@ export default function Order() {
                         </OrderItemForm>
                     </div>
 
-                    <div style={{ backgroundColor: "color-mix(in srgb, var(--bg-content) 30%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                        <h3 style={{ marginBottom: "16px" }}>Catatan Pesanan</h3>
+                    <div style={{ background: 'var(--bg-content)', padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                        <button type="button" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 32, padding: '4px 0', border: 0,
+                            borderRadius: 'var(--radius)', background: 'var(--bg-content)', color: 'var(--text)', font: 'inherit', fontSize: 15,
+                            fontWeight: 600, lineHeight: 1.4, textAlign: 'left', cursor: 'pointer', transition: 'background var(--transition)' }}
+                            onClick={() => setNoteOpen(open => !open)}>
+                            <span style={{ flexShrink: 0, width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent',
+                                borderLeft: '6px solid currentColor', transform: noteOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform var(--transition)' }} aria-hidden="true" />
+                            <span>Catatan Pesanan</span>
+                        </button>
                         {orderInfo.note && (
-                            <div style={{ marginBottom: "16px", padding: "12px", backgroundColor: "rgba(var(--warning-rgb), 0.1)", color: "var(--warning)", borderRadius: "var(--radius)", borderLeft: "4px solid var(--warning)" }}>
+                            <div style={{ marginTop: 12, padding: 12, background: "color-mix(in srgb, var(--warning) 10%, var(--bg-content))", color: "var(--text)", borderRadius: "var(--radius)", borderLeft: "4px solid var(--warning)" }}>
                                 {orderInfo.note}
                             </div>
                         )}
-                        <Form id="formUpdateNote" onSubmit={handleUpdateNote}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {noteOpen && <Form id="formUpdateNote" onSubmit={handleUpdateNote}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: 12 }}>
                                 <Input
                                     name="noteInput"
                                     placeholder="Tulis catatan pesanan di sini..."
@@ -515,13 +532,13 @@ export default function Order() {
                                     Simpan Catatan
                                 </Button>
                             </div>
-                        </Form>
+                        </Form>}
                     </div>
                 </div>
 
-                <div className="order-entry-items">
+                <div style={{ minWidth: 0 }}>
 
-                    <div className="order-entry-summary">
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, marginBottom: 20, overflowWrap: "anywhere" }}>
                         <div style={{ background: "var(--background)", padding: "12px 16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomorator</div>
                             <div style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text)" }}>{orderMeta.nomorator || "-"}</div>
