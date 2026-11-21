@@ -26,6 +26,11 @@
       }
     }
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["mgodesktop"] }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis"],
