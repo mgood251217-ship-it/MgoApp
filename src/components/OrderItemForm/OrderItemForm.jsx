@@ -280,6 +280,7 @@ export default function OrderItemForm({
     useEffect(() => {
         let cancelled = false;
         const fetchProductsAndFinishings = async () => {
+            setFinishings([]);
             if (!formItem.category_id) {
                 setProducts([]);
                 setFinishings([]);
@@ -322,13 +323,13 @@ export default function OrderItemForm({
                 if (cancelled) return;
 
                 const applyFinishings = rows => { if (!cancelled) setFinishings(rows); };
-                const fetchedFinishings = await getCachedFinishingsByCategory(formItem.category_id, applyFinishings);
+                const fetchedFinishings = await getCachedFinishingsByCategory(formItem.category_id, applyFinishings, formItem.product_id, formItem.order_item_id);
                 applyFinishings(fetchedFinishings);
             } catch (err) {}
         };
         fetchProductsAndFinishings();
         return () => { cancelled = true; };
-    }, [formItem.category_id, selectedCategoryName]);
+    }, [formItem.category_id, selectedCategoryName, formItem.product_id, formItem.order_item_id]);
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
@@ -371,7 +372,7 @@ export default function OrderItemForm({
 
     const handleProductChange = (e) => {
         const product_id = e.target.value;
-        setFormItem(prev => ({ ...prev, product_id, finishings: prev.finishings.filter(id => !packageFinishingIds.includes(normalizeId(id))), size: "", paketSize: "", laser_product_id: "", product_variant_id: "", variant_options: {}, variant: null }));
+        setFormItem(prev => ({ ...prev, product_id, finishings: [], size: "", paketSize: "", laser_product_id: "", product_variant_id: "", variant_options: {}, variant: null }));
         focusField(resolveNextFieldAfterProduct(e.target.value));
     };
 

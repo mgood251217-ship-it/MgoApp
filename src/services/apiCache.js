@@ -39,7 +39,7 @@ const getSharedResponse = (url, config = {}) => {
 const memoryFallback = new Map();
 const localOrderListeners = new Set();
 const localPaymentListeners = new Set();
-const cacheEntryLimits = { paginatedProducts: 100, orderProductSearch: 50, orders: 50, transactionsDetail: 50 };
+const cacheEntryLimits = { finishingsByCategory: 100, paginatedProducts: 100, orderProductSearch: 50, orders: 50, transactionsDetail: 50 };
 let storageScope = getRequestScope();
 
 const syncStorageScope = () => {
@@ -499,22 +499,23 @@ export const getCachedGlobalStocks = async (month, onUpdate) => {
     return (await fetchLatest()) || {};
 };
 
-export const getCachedFinishingsByCategory = async (categoryId, onUpdate) => {
+export const getCachedFinishingsByCategory = async (categoryId, onUpdate, productId = 0, orderItemId = 0) => {
     if (!categoryId) return [];
 
+    const cacheKey = productId ? `product_${productId}_${orderItemId}` : categoryId;
     const finishingsMap = getStorage("finishingsByCategory", {});
-    const cachedItem = finishingsMap[categoryId];
+    const cachedItem = finishingsMap[cacheKey];
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = Math.max(dataset.finishings_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_finishing_prices_updated_at || 0);
+        const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_finishings_updated_at || 0, dataset.finishings_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_finishing_prices_updated_at || 0);
 
         if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
-                const res = await getSharedResponse("", { params: { action: "finishing_by_category", category_id: categoryId } });
+                const res = await getSharedResponse("", { params: { action: "finishing_by_category", category_id: categoryId, product_id: productId, order_item_id: orderItemId } });
                 const result = res.data?.data || [];
                 const currentMap = getStorage("finishingsByCategory", {});
-                currentMap[categoryId] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
+                currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
                 setStorage("finishingsByCategory", currentMap);
                 if (onUpdate) onUpdate(result);
                 return result;
