@@ -1,6 +1,6 @@
 const config = {
     appName: "MGO Desktop",
-    version: "2.1.2",
+    version: "2.1.3",
     serverUrl: import.meta.env.VITE_SERVER_URL.replace(/\/+$/, ""),
     timeout: 30000
 };
