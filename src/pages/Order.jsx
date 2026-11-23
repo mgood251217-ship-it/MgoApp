@@ -12,12 +12,14 @@ import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
 import { formatRupiah } from "../services/helpers";
 import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
+import FinishingOrderForm from "../components/OrderItemForm/FinishingOrderForm";
 import { getCachedOrderDetail, getCachedStoreNames, clearCacheOrderDetail } from "../services/apiCache";
 import { formatTime } from "../services/helpers"
 
 const tierUnitLabel = tier => tier?.unit_label || ({ pcs: 'pcs', m2: 'm\u00b2', cm2: 'cm\u00b2' })[tier?.measure] || 'pcs';
 
 const EMPTY_FORM_ITEM = {
+    item_type: "product", finishing_id: "",
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
     qty: "", diskon: "", finishings: [], kiloan: "", waktu: "", ukuranJersey: "", paketSize: "", size: "", laser_product_id: "", product_variant_id: "", variant: null
 };
@@ -179,7 +181,7 @@ export default function Order() {
     useEffect(() => {
         let cancelled = false;
         const getPrice = async () => {
-            if (!activeFormItem.product_id || !activeFormItem.qty) {
+            if (!(activeFormItem.item_type === "finishing" ? activeFormItem.finishing_id : activeFormItem.product_id) || !activeFormItem.qty) {
                 if (!cancelled) { setPreviewPrice(0); setPreviewTier(null); setPreviewPromotion(null); }
                 return;
             }
@@ -187,7 +189,9 @@ export default function Order() {
                 const payload = new FormData();
                 payload.append("order_id", order_id);
                 payload.append("order_item_id", activeFormItem.order_item_id || "");
-                payload.append("product_id", activeFormItem.product_id);
+                payload.append("item_type", activeFormItem.item_type || "product");
+                payload.append("finishing_id", activeFormItem.finishing_id || "");
+                payload.append("product_id", activeFormItem.product_id || "");
                 payload.append("laser_product_id", activeFormItem.laser_product_id || 0);
                 payload.append("product_variant_id", activeFormItem.product_variant_id || 0);
                 payload.append("quantity", activeFormItem.qty || 0);
@@ -229,11 +233,12 @@ export default function Order() {
 
     const handleCancelEdit = useCallback(() => {
         setInitialFormItem({ ...EMPTY_FORM_ITEM });
+        setActiveFormItem({ ...EMPTY_FORM_ITEM });
     }, []);
 
     const handleAddItem = async (submittedForm) => {
-        if (!submittedForm.category_id || !submittedForm.product_id || !submittedForm.qty) {
-            setAlertConfig({ show: true, type: "error", message: "Kategori, Produk, dan Quantity wajib diisi!" });
+        if (!submittedForm.qty || (submittedForm.item_type === "finishing" ? !submittedForm.finishing_id : (!submittedForm.category_id || !submittedForm.product_id))) {
+            setAlertConfig({ show: true, type: "error", message: submittedForm.item_type === "finishing" ? "Finishing dan jumlah wajib diisi." : "Kategori, Produk, dan Quantity wajib diisi!" });
             return;
         }
 
@@ -243,7 +248,9 @@ export default function Order() {
             payload.append("order_id", order_id);
             if (submittedForm.order_item_id) payload.append("order_item_id", submittedForm.order_item_id);
 
-            payload.append("product_id", submittedForm.product_id);
+            payload.append("item_type", submittedForm.item_type || "product");
+            payload.append("finishing_id", submittedForm.finishing_id || "");
+            payload.append("product_id", submittedForm.product_id || "");
             payload.append("laser_product_id", submittedForm.laser_product_id || 0);
             payload.append("product_variant_id", submittedForm.product_variant_id || 0);
             payload.append("judul", submittedForm.selectedProductName || "");
@@ -266,9 +273,12 @@ export default function Order() {
             } else {
                 setInitialFormItem({
                     ...EMPTY_FORM_ITEM,
+                    item_type: submittedForm.item_type || "product",
+                    finishing_id: submittedForm.finishing_id || "",
                     category_id: submittedForm.category_id,
                     product_id: submittedForm.product_id
                 });
+                if (submittedForm.item_type === 'finishing') setActiveFormItem({ ...EMPTY_FORM_ITEM, item_type: 'finishing', finishing_id: submittedForm.finishing_id || '' });
                 await clearCacheOrderDetail(order_id);
                 loadOrderData();
                 notifyOrderUpdate();
@@ -343,7 +353,10 @@ export default function Order() {
             w = parts[1] || w;
         }
 
+        if (row.item_type === 'finishing' && ['M', 'CM'].includes(row.unit_type)) p = String(row.size).match(/^([\d.]+)/)?.[1] || '';
         setInitialFormItem({
+            item_type: row.item_type || "product",
+            finishing_id: row.finishing_id || "",
             order_item_id: row.order_item_id,
             category_id: row.category_id || "",
             product_id: row.product_id || "",
@@ -363,6 +376,7 @@ export default function Order() {
             size: row.size || ""
         });
 
+        if (row.item_type === 'finishing') setActiveFormItem({ item_type: 'finishing', finishing_id: row.finishing_id, order_item_id: row.order_item_id, qty: row.quantity, panjang: p, lebar: w, diskon: row.diskon, finishings: currentFinishings });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -414,6 +428,8 @@ export default function Order() {
     }, [navigate, visibleRows, selectedItemId, handleOpenMaklun, initialFormItem.order_item_id, handleDeleteItem, handleCancelEdit]);
 
     const storeOptions = useMemo(() => stores.map(s => ({ value: s.store_id, label: s.name })), [stores]);
+
+    const ItemForm = initialFormItem.item_type === 'finishing' ? FinishingOrderForm : OrderItemForm;
 
     const tableColumns = useMemo(() => [
         { key: "judul", title: "Product", render: row => <>{row.judul}{row.variant && <small style={{ display: "block", color: "var(--text-secondary)" }}>Varian: {row.variant.label}</small>}{row.laser_material_name && <small style={{ display: "block", color: "var(--text-secondary)" }}>Bahan: {row.laser_material_name}</small>}{row.tier_pricing?.price != null && <small style={{ display: "block", color: "var(--text-secondary)" }}>Harga dasar bertingkat: {formatRupiah(row.tier_pricing.price)}/{tierUnitLabel(row.tier_pricing)}</small>}</> },
@@ -478,12 +494,19 @@ export default function Order() {
             <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "minmax(0, 1fr)" : "clamp(360px, 38%, 500px) minmax(0, 1fr)", gap: 20, marginTop: 20, alignItems: "start" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
                     <div style={{ background: "color-mix(in srgb, var(--background) 10%, transparent)", padding: "16px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                        <h3 style={{ marginBottom: "16px" }}>{initialFormItem.order_item_id ? "Edit Item" : "Form Item"}</h3>
-                        <OrderItemForm
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                            <h3 style={{ margin: 0 }}>{initialFormItem.order_item_id ? 'Edit Item' : 'Form Order'}</h3>
+                            <select aria-label="Jenis item" value={initialFormItem.item_type || 'product'} disabled={isSubmitting || Boolean(initialFormItem.order_item_id)}
+                                style={{ color: 'var(--text)', background: 'var(--bg-content)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 10px' }}
+                                onChange={event => { const next = { ...EMPTY_FORM_ITEM, item_type: event.target.value }; setInitialFormItem(next); setActiveFormItem(next); }}>
+                                <option value="product">Produk</option><option value="finishing">Finishing</option>
+                            </select>
+                        </div>
+                        <ItemForm key={`${initialFormItem.item_type}:${initialFormItem.order_item_id || "new"}`}
                             initialData={initialFormItem}
                             isSubmitting={isSubmitting}
                             onSubmit={handleAddItem}
-                            onChange={(currentFormItem) => setActiveFormItem(currentFormItem)}
+                            onChange={currentFormItem => { setActiveFormItem(currentFormItem); if (currentFormItem.item_type === "finishing") setInitialFormItem(currentFormItem); }}
                             submitText={initialFormItem.order_item_id ? "Update Item" : "Tambah Item"}
                             submitIcon={initialFormItem.order_item_id ? "edit" : "add"}
                             submitVariant={initialFormItem.order_item_id ? "warning" : "success"}
@@ -503,7 +526,7 @@ export default function Order() {
                             {previewPromotion && <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}>
                                 Promo beli {previewPromotion.buy_quantity} gratis {previewPromotion.free_quantity}: total {previewPromotion.quantity} pcs, bayar {previewPromotion.paid_quantity}, gratis {previewPromotion.bonus_quantity}.
                             </p>}
-                        </OrderItemForm>
+                        </ItemForm>
                     </div>
 
                     <div style={{ background: 'var(--bg-content)', padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
