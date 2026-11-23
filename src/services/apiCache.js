@@ -115,6 +115,16 @@ const isCacheOutdated = (cachedTime, serverTime) => {
     return cached < server || (server > 0 && server < 1e12 && cached > 1e12);
 };
 
+// Detail order memakai nama dari master, jadi perubahan master juga membatalkan cache.
+const getOrderCacheVersion = dataset => Math.max(
+    dataset.orders_updated_at || 0,
+    dataset.products_updated_at || 0,
+    dataset.categories_updated_at || 0,
+    dataset.finishings_updated_at || 0,
+    dataset.product_variants_updated_at || 0,
+    dataset.production_components_updated_at || 0,
+);
+
 const getCleanedDailyMap = (key) => {
     const map = getStorage(key, {}) || {};
     const today = new Date().toDateString();
@@ -597,7 +607,7 @@ export const getCachedProductBundles = async (onUpdate, { throwOnError = false }
         const dataset = await getServerDataset();
         const serverTime = Math.max(dataset.product_bundles_updated_at || 0, dataset.products_updated_at || 0,
             dataset.product_variants_updated_at || 0, dataset.product_laser_conversion_updated_at || 0,
-            dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0);
+            dataset.categories_updated_at || 0, dataset.finishings_updated_at || 0, dataset.production_components_updated_at || 0);
         if (cached && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
         const res = await getSharedResponse('', { params: { action: 'product_bundles' } });
         if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('Gagal memuat paket gabungan.');
@@ -617,7 +627,7 @@ export const getCachedProductVariants = async (productId, onUpdate, { throwOnErr
     const cached = getStorage(key, {})[productId];
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = Math.max(dataset.product_variants_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0);
+        const serverTime = Math.max(dataset.product_variants_updated_at || 0, dataset.products_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0, dataset.production_components_updated_at || 0);
         const hasPriceTiers = cached?.data?.every(variant => Array.isArray(variant.price_tiers));
         if (cached && hasPriceTiers && !isCacheOutdated(cached.updatedAt, serverTime)) return cached.data;
         const res = await getSharedResponse('', { params: { action: 'product_variants', product_id: productId } });
@@ -729,7 +739,7 @@ export const getCachedOrdersAnalysis = async (onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -916,7 +926,7 @@ export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -953,7 +963,7 @@ export const getCachedOrderDetail = async (orderId, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const globalOrderUpdate = dataset.orders_updated_at || 0;
+        const globalOrderUpdate = getOrderCacheVersion(dataset);
         let specificOrderUpdate = 0;
 
         if (dataset.order_trigger && dataset.order_trigger[cacheKey]) {
@@ -996,7 +1006,7 @@ export const getCachedTransactionsCapture = async (startDate, endDate, onUpdate)
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -1033,7 +1043,7 @@ export const getCachedTransactionsDetail = async (startDate, endDate, search, on
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -1070,7 +1080,7 @@ export const getCachedAllOrderDetail = async (startDate, endDate, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -1106,7 +1116,7 @@ export const getCachedPiutang = async (onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -1139,7 +1149,7 @@ export const getCachedReport = async (onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -1173,7 +1183,7 @@ export const getCachedProductUsed = async (startDate, endDate, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = dataset.orders_updated_at || 0;
+        const serverTime = getOrderCacheVersion(dataset);
 
         if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
@@ -1208,7 +1218,7 @@ export const getCachedOmsetItem = async (startDate, endDate, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const serverTime = dataset.orders_updated_at || 0;
+        const serverTime = getOrderCacheVersion(dataset);
 
         if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
@@ -1243,7 +1253,7 @@ export const getCachedStatistics = async (startDate, endDate, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, paymentTime);
 
@@ -1314,7 +1324,7 @@ export const getCachedFinance = async (startDate, endDate, onUpdate) => {
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
-        const orderTime = dataset.orders_updated_at || 0;
+        const orderTime = getOrderCacheVersion(dataset);
         const financeTime = dataset.finance_updated_at || 0;
         const paymentTime = dataset.payments_updated_at || 0;
         const serverTime = Math.max(orderTime, financeTime, paymentTime);
@@ -1376,9 +1386,10 @@ export const clearFailuresCache = () => {
 };
 
 export const clearProductCache = () => {
-    invalidateRequests(["pagination_products", "products_by_category", "product_variants", "product_finishing_prices", "product_laser_conversions", "product_bundles"]);
+    invalidateRequests(["pagination_products", "products_by_category", "product_variants", "product_finishing_prices", "product_laser_conversions", "product_bundles", "search_order_products"]);
     setStorage("paginatedProducts", {});
     setStorage("productsByCategory", {});
+    for (const key of ["productVariantsByProduct", "productBundles", "productFinishingPricesByCategory", "productLaserConversionsByCategory", "orderProductSearch"]) removeStorage(key);
 };
 
 export const clearFinishingCache = () => {
@@ -1387,6 +1398,8 @@ export const clearFinishingCache = () => {
     removeStorage("finishings_time");
     setStorage("finishingsByCategory", {});
     setStorage("productFinishingPricesByCategory", {});
+    removeStorage("productLaserConversionsByCategory");
+    removeStorage("productBundles");
 };
 
 export const clearCategoryCache = () => {
@@ -1410,17 +1423,7 @@ export const clearOrdersCache = () => {
 };
 
 export const clearCache = () => {
-    invalidateRequests(['search_order_products']);
-    removeStorage('orderProductSearch');
-    invalidateRequests(["categories", "products_by_category", "pagination_products", "finishings", "finishings_by_category", "product_finishing_prices", "product_laser_conversions", "product_bundles", "product_variants"]);
-    removeStorage("categories");
-    removeStorage("categories_time");
-    setStorage("productsByCategory", {});
-    setStorage("finishingsByCategory", {});
-    setStorage("productFinishingPricesByCategory", {});
-    setStorage("paginatedProducts", {});
-    removeStorage("finishings");
-    removeStorage("finishings_time");
+    clearCategoryCache();
 };
 
 export const clearAllCache = () => {
