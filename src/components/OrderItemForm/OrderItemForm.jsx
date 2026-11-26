@@ -14,7 +14,7 @@ import {
     searchOrderProducts
 } from "../../services/apiCache";
 import { variantGroups, variantChoices, matchProductVariant } from '../../services/productVariants';
-import { formatRupiah } from '../../services/helpers';
+import { formatRupiah, usesTimeUnit } from '../../services/helpers';
 
 const EMPTY_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
@@ -352,7 +352,7 @@ export default function OrderItemForm({
         if (selectedCategoryName === "PAKET INDOOR OUTDOOR" && paketSizesMap[pName]?.length > 0) {
             return "paketSize";
         }
-        if (pName === "SETTING" || pName === "POTONG AKRILIK") {
+        if (usesTimeUnit(prod, selectedCategoryName)) {
             return "waktu";
         }
         if (isSublimMaterialByWeight(selectedCategoryName, prod)) {
@@ -467,7 +467,7 @@ export default function OrderItemForm({
     const isSublim = selectedCategoryName === "SUBLIM";
     const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
     
-    const isWaktu = selectedProductName === "SETTING" || selectedProductName === "POTONG AKRILIK";
+    const isWaktu = usesTimeUnit(selectedProduct, selectedCategoryName);
     const isBahanKiloan = isSublimMaterialByWeight(selectedCategoryName, selectedProduct);
     const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
 
@@ -671,8 +671,10 @@ export default function OrderItemForm({
                         name="waktu"
                         type="number"
                         step="any"
-                        label="Waktu"
-                        placeholder="Waktu pengerjaan..."
+                        label="Waktu (menit)"
+                        min={selectedCategoryName === "JASA" && selectedProductName === "SETTING" ? 15 : 0.0001}
+                        required
+                        placeholder="Durasi pengerjaan..."
                         value={formItem.waktu}
                         onChange={handleFormChange}
                     />

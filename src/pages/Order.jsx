@@ -10,7 +10,7 @@ import Form from "../components/Form/Form";
 import Modal from "../components/Modal/Modal";
 import Icon from "../components/Icon/Icon";
 import Alert from "../components/Alert/Alert";
-import { formatRupiah } from "../services/helpers";
+import { formatRupiah, minutesFromSize } from "../services/helpers";
 import OrderItemForm from "../components/OrderItemForm/OrderItemForm";
 import FinishingOrderForm from "../components/OrderItemForm/FinishingOrderForm";
 import { getCachedOrderDetail, getCachedStoreNames, clearCacheOrderDetail } from "../services/apiCache";
@@ -370,7 +370,7 @@ export default function Order() {
             diskon: row.diskon || "",
             finishings: currentFinishings,
             kiloan: row.kiloan || "",
-            waktu: row.waktu || "",
+            waktu: row.waktu || minutesFromSize(row.size),
             ukuranJersey: row.size || "",
             paketSize: row.size || "",
             size: row.size || ""

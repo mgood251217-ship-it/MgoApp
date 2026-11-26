@@ -1,3 +1,19 @@
+export const usesTimeUnit = (product, category = product?.category) => {
+    const unit = String(product?.unit_type || "").trim().toUpperCase();
+    const name = String(product?.name || product?.display_name || "").trim().toUpperCase();
+    return unit === "MENIT" || (["PCS", "~"].includes(unit)
+        && String(category || "").trim().toUpperCase() === "JASA"
+        && ["SETTING", "POTONG AKRILIK"].includes(name));
+};
+
+export const minutesFromSize = (size) => {
+    const text = String(size || "").trim();
+    const hours = text.match(/^(\d+(?:\.\d+)?)\s*Jam\s+(\d+(?:\.\d+)?)\s*Menit$/i);
+    if (hours) return Number(hours[1]) * 60 + Number(hours[2]);
+    const minutes = text.match(/^(\d+(?:\.\d+)?)\s*Menit$/i);
+    return minutes ? Number(minutes[1]) : "";
+};
+
 export function delay(ms) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
