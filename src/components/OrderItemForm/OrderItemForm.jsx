@@ -14,7 +14,7 @@ import {
     searchOrderProducts
 } from "../../services/apiCache";
 import { variantGroups, variantChoices, matchProductVariant } from '../../services/productVariants';
-import { formatRupiah, usesTimeUnit } from '../../services/helpers';
+import { formatRupiah, usesTimeUnit, usesWeightUnit } from '../../services/helpers';
 
 const EMPTY_ITEM = {
     order_item_id: "", category_id: "", product_id: "", panjang: "", lebar: "",
@@ -24,9 +24,6 @@ const EMPTY_ITEM = {
 
 const isTextileCategory = name => ["TEKSTIL", "PAKAIAN", "JERSEY"].includes(String(name || '').trim().toUpperCase());
 const materialWeightFromSize = size => String(size || '').trim().match(/^(\d+(?:\.\d+)?)\s*KG$/i)?.[1] || '';
-const isSublimMaterialByWeight = (category, product) => String(category || '').trim().toUpperCase() === 'SUBLIM'
-    && String(product?.name || product?.display_name || '').toUpperCase().includes('BAHAN')
-    && String(product?.unit_type || '').toUpperCase() === 'PCS';
 const normalizeId = value => value?.toString() ?? value;
 const finishingKey = value => [...new Set((Array.isArray(value) ? value : String(value || '').split(',')).filter(id => Number(id) > 0).map(Number))].sort((a, b) => a - b).join(',');
 const sizeKey = value => String(value || '').trim() === '-' ? '' : String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
@@ -355,7 +352,7 @@ export default function OrderItemForm({
         if (usesTimeUnit(prod, selectedCategoryName)) {
             return "waktu";
         }
-        if (isSublimMaterialByWeight(selectedCategoryName, prod)) {
+        if (usesWeightUnit(prod, selectedCategoryName)) {
             return "kiloan";
         }
         if (selectedCategoryName === "DTF" && pName.includes("KAOS") && pUnit === "PCS") {
@@ -468,7 +465,7 @@ export default function OrderItemForm({
     const isPaketIndoorOutdoor = selectedCategoryName === "PAKET INDOOR OUTDOOR";
     
     const isWaktu = usesTimeUnit(selectedProduct, selectedCategoryName);
-    const isBahanKiloan = isSublimMaterialByWeight(selectedCategoryName, selectedProduct);
+    const isBahanKiloan = usesWeightUnit(selectedProduct, selectedCategoryName);
     const isTransferPaperOrPrintPres = selectedProductName.includes("TRANSFERPAPER") || selectedProductName.includes("PRINT PRES");
 
     const hideFinishing = ["PAKET INDOOR OUTDOOR", "STAMP", "MERCENDISE", "MERCENDISE AKRILIK"].includes(selectedCategoryName);

@@ -1,4 +1,4 @@
-import api from "../api/axios";
+import api, { PRODUCT_UNIT_SCHEMA } from "../api/axios";
 import { getTodayDate } from "./helpers";
 
 const pendingRequests = new Map();
@@ -451,12 +451,12 @@ export const getCachedProductsByCategory = async (categoryId, onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = Math.max(dataset.products_updated_at || 0, dataset.categories_updated_at || 0);
 
-        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
+        if (!cachedItem || cachedItem.unitSchema !== PRODUCT_UNIT_SCHEMA || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await getSharedResponse("", { params: { action: "products_by_category", category_id: categoryId } });
                 const result = res.data?.data || [];
                 const currentMap = getStorage("productsByCategory", {});
-                currentMap[categoryId] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
+                currentMap[categoryId] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now(), unitSchema: PRODUCT_UNIT_SCHEMA };
                 setStorage("productsByCategory", currentMap);
                 if (onUpdate) onUpdate(result);
                 return result;
@@ -651,11 +651,11 @@ export const searchOrderProducts = async (search) => {
     try {
         const dataset = await getServerDataset();
         const updatedAt = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0);
-        if (cached && !isCacheOutdated(cached.updatedAt, updatedAt) && Date.now() - cached.savedAt < 60000) return cached.data;
+        if (cached && cached.unitSchema === PRODUCT_UNIT_SCHEMA && !isCacheOutdated(cached.updatedAt, updatedAt) && Date.now() - cached.savedAt < 60000) return cached.data;
         const response = await getSharedResponse('', { params: { action: 'search_order_products', search: query } });
         if (!response.data?.success || !Array.isArray(response.data.data)) throw new Error('Pencarian produk gagal.');
         const map = getStorage('orderProductSearch', {});
-        map[query] = { data: response.data.data, updatedAt, savedAt: Date.now() };
+        map[query] = { data: response.data.data, updatedAt, savedAt: Date.now(), unitSchema: PRODUCT_UNIT_SCHEMA };
         setStorage('orderProductSearch', map);
         return response.data.data;
     } catch (error) {
@@ -675,7 +675,7 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate, 
         const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_variants_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_price_tiers_updated_at || 0, dataset.product_promotions_updated_at || 0);
         const hasProductDetails = cachedItem?.result?.data?.every(product => Object.hasOwn(product, "variant_count") && Array.isArray(product.price_tiers) && Object.hasOwn(product, "promotion") && Object.hasOwn(product, "package_count") && Object.hasOwn(product, "laser_conversion_count") && Object.hasOwn(product, "has_bundle"));
 
-        if (!cachedItem || !hasProductDetails || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
+        if (!cachedItem || cachedItem.unitSchema !== PRODUCT_UNIT_SCHEMA || !hasProductDetails || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await getSharedResponse("", { params: { action: "pagination_products", page, limit, search, category_id: category } });
                 const result = {
@@ -683,7 +683,7 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate, 
                     total_pages: res.data?.data?.total_pages ?? 1
                 };
                 const currentMap = getStorage("paginatedProducts", {});
-                currentMap[cacheKey] = { result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
+                currentMap[cacheKey] = { result, updatedAt: serverTime > 0 ? serverTime : Date.now(), unitSchema: PRODUCT_UNIT_SCHEMA };
                 setStorage("paginatedProducts", currentMap);
                 if (onUpdate) onUpdate(result);
                 return result;

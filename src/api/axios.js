@@ -2,9 +2,12 @@ import axios from "axios";
 import config from "../services/config";
 import { isDesktop } from "../services/platform";
 
+export const PRODUCT_UNIT_SCHEMA = 2;
+
 const api = axios.create({
 	baseURL: `${config.serverUrl}/api/`,
 	timeout: 10000,
+	params: { unit_schema: PRODUCT_UNIT_SCHEMA },
 	withCredentials: true,
 	headers: {
 		"X-Client-Type": isDesktop ? "desktop-app" : "mobile-app"

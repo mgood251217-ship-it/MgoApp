@@ -6,6 +6,13 @@ export const usesTimeUnit = (product, category = product?.category) => {
         && ["SETTING", "POTONG AKRILIK"].includes(name));
 };
 
+export const usesWeightUnit = (product, category = product?.category) => {
+    const unit = String(product?.unit_type || "").trim().toUpperCase();
+    const name = String(product?.name || product?.display_name || "").toUpperCase();
+    return unit === "KG" || (unit === "PCS" && name.includes("BAHAN")
+        && String(category || "").trim().toUpperCase() === "SUBLIM");
+};
+
 export const minutesFromSize = (size) => {
     const text = String(size || "").trim();
     const hours = text.match(/^(\d+(?:\.\d+)?)\s*Jam\s+(\d+(?:\.\d+)?)\s*Menit$/i);
