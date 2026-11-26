@@ -22,6 +22,7 @@ import {
 } from "../services/apiCache";
 
 const numberFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 8 });
+const tracksStock = row => row.track_stock == null ? row.unit_type !== '~' : Number(row.track_stock) === 1;
 const unitLabels = { PCS: "pcs", "~": "pcs", M2: "m\u00b2", CM2: "cm\u00b2" };
 const detailTitles = { variants: "Varian Produk", tiers: "Harga Bertingkat", packages: "Harga Paket", laser: "Konversi Print Laser" };
 
@@ -335,7 +336,7 @@ export default function Products() {
     const mappedProducts = useMemo(() => {
         return products.map(p => ({
             ...p,
-            stock: (
+            stock: !tracksStock(p) ? <span>Tanpa batas</span> : (
                 <Input
                     key={`prod-${p.product_id}-${p.stock}`}
                     defaultValue={p.stock || 0}
@@ -355,7 +356,7 @@ export default function Products() {
     const mappedFinishings = useMemo(() => {
         return finishings.filter(finishing => !categoryId || String(finishing.category_id) === categoryId).map(f => ({
             ...f,
-            stock: (
+            stock: !tracksStock(f) ? <span>Tanpa batas</span> : (
                 <Input
                     key={`fin-${f.finishing_id}-${f.stock}`}
                     defaultValue={f.stock || 0}
