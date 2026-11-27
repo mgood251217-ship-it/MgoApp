@@ -568,12 +568,12 @@ export const getCachedFinishingsByCategory = withCacheScope(async (cache, catego
         const dataset = await getServerDataset();
         const serverTime = Math.max(dataset.products_updated_at || 0, dataset.product_finishings_updated_at || 0, dataset.finishings_updated_at || 0, dataset.categories_updated_at || 0, dataset.product_finishing_prices_updated_at || 0);
 
-        if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
+        if (!cachedItem || cachedItem.unitSchema !== PRODUCT_UNIT_SCHEMA || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await getSharedResponse("", { params: { action: "finishing_by_category", category_id: categoryId, product_id: productId, order_item_id: orderItemId } });
                 const result = res.data?.data || [];
                 const currentMap = getStorage("finishingsByCategory", {});
-                currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now() };
+                currentMap[cacheKey] = { data: result, updatedAt: serverTime > 0 ? serverTime : Date.now(), unitSchema: PRODUCT_UNIT_SCHEMA };
                 setStorage("finishingsByCategory", currentMap);
                 if (onUpdate) onUpdate(result);
                 return result;
@@ -753,17 +753,19 @@ export const getCachedFinishings = withCacheScope(async (cache, onUpdate) => {
     const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("finishings", null);
     const cachedTime = getStorage("finishings_time", 0);
+    const unitSchema = getStorage("finishings_unit_schema", 0);
 
     const fetchLatest = async () => {
         const dataset = await getServerDataset();
         const serverTime = dataset.finishings_updated_at || 0;
 
-        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
+        if (!cachedData || unitSchema !== PRODUCT_UNIT_SCHEMA || isCacheOutdated(cachedTime, serverTime)) {
             try {
                 const res = await getSharedResponse("", { params: { action: "finishings" } });
                 const result = res.data?.data || [];
                 setStorage("finishings", result);
                 setStorage("finishings_time", serverTime > 0 ? serverTime : Date.now());
+                setStorage("finishings_unit_schema", PRODUCT_UNIT_SCHEMA);
                 if (onUpdate) onUpdate(result);
                 return result;
             } catch (err) {
@@ -1020,7 +1022,7 @@ export const getCachedOrderDetail = withCacheScope(async (cache, orderId, onUpda
 
         const serverTime = Math.max(globalOrderUpdate, specificOrderUpdate);
 
-        if (!cachedItem || !Array.isArray(cachedItem.data?.discounts) || cachedItem.data?.items?.some(item => !Object.prototype.hasOwnProperty.call(item, 'laser_product_id') || !Object.prototype.hasOwnProperty.call(item, 'tier_pricing') || !Object.prototype.hasOwnProperty.call(item, 'promotion') || !Object.prototype.hasOwnProperty.call(item, 'variant')) || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
+        if (!cachedItem || !Array.isArray(cachedItem.data?.discounts) || cachedItem.data?.items?.some(item => (item.item_type === 'finishing' && !Object.prototype.hasOwnProperty.call(item, 'finishing_measure')) || !Object.prototype.hasOwnProperty.call(item, 'laser_product_id') || !Object.prototype.hasOwnProperty.call(item, 'tier_pricing') || !Object.prototype.hasOwnProperty.call(item, 'promotion') || !Object.prototype.hasOwnProperty.call(item, 'variant')) || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
                 const res = await getSharedResponse("", { params: { action: "order_detail", order_id: orderId } });
                 const result = res.data?.data || null;
@@ -1440,9 +1442,10 @@ export const clearProductCache = () => {
 };
 
 export const clearFinishingCache = () => {
-    invalidateRequests(["finishings", "finishings_by_category", "product_finishing_prices", "product_laser_conversions", "product_bundles"]);
+    invalidateRequests(["finishings", "finishing_by_category", "product_finishing_prices", "product_laser_conversions", "product_bundles"]);
     removeStorage("finishings");
     removeStorage("finishings_time");
+    removeStorage("finishings_unit_schema");
     setStorage("finishingsByCategory", {});
     setStorage("productFinishingPricesByCategory", {});
     removeStorage("productLaserConversionsByCategory");

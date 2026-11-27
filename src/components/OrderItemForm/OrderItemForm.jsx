@@ -458,7 +458,7 @@ export default function OrderItemForm({
     const isDTF = selectedCategoryName === "DTF";
     const isDTFUV = selectedCategoryName === "DTF UV";
     const isAkrilik = selectedCategoryName === "AKRILIK";
-    const usesCentimeters = isAkrilik || selectedProduct?.unit_type?.toUpperCase() === "CM2";
+    const usesCentimeters = isAkrilik || ["CM", "CM2"].includes(selectedProduct?.unit_type?.toUpperCase());
     const isTekstil = isTextileCategory(selectedCategoryName);
     const isDtfKaosPcs = isDTF && selectedProductName.includes("KAOS") && selectedProduct?.unit_type?.toUpperCase() === "PCS";
     const isSublim = selectedCategoryName === "SUBLIM";

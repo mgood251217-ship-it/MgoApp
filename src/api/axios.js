@@ -2,7 +2,7 @@ import axios from "axios";
 import config from "../services/config";
 import { isDesktop } from "../services/platform";
 
-export const PRODUCT_UNIT_SCHEMA = 2;
+export const PRODUCT_UNIT_SCHEMA = 4;
 
 const api = axios.create({
 	baseURL: `${config.serverUrl}/api/`,

@@ -353,10 +353,12 @@ export default function Order() {
             w = parts[1] || w;
         }
 
-        if (row.item_type === 'finishing' && ['M', 'CM'].includes(row.unit_type)) p = String(row.size).match(/^([\d.]+)/)?.[1] || '';
+        if (row.item_type === 'finishing' && (row.finishing_measure === 'length' || /^\d+(?:\.\d+)?\s*(?:M|CM)$/i.test(String(row.size)))) p = String(row.size).match(/^([\d.]+)/)?.[1] || '';
         setInitialFormItem({
             item_type: row.item_type || "product",
             finishing_id: row.finishing_id || "",
+            finishing_measure: row.finishing_measure,
+            original_finishing_id: row.finishing_id,
             order_item_id: row.order_item_id,
             category_id: row.category_id || "",
             product_id: row.product_id || "",
@@ -376,7 +378,7 @@ export default function Order() {
             size: row.size || ""
         });
 
-        if (row.item_type === 'finishing') setActiveFormItem({ item_type: 'finishing', finishing_id: row.finishing_id, order_item_id: row.order_item_id, qty: row.quantity, panjang: p, lebar: w, diskon: row.diskon, finishings: currentFinishings });
+        if (row.item_type === 'finishing') setActiveFormItem({ item_type: 'finishing', finishing_id: row.finishing_id, finishing_measure: row.finishing_measure, original_finishing_id: row.finishing_id, order_item_id: row.order_item_id, qty: row.quantity, panjang: p, lebar: w, diskon: row.diskon, finishings: currentFinishings });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 

@@ -21,8 +21,10 @@ export default function FinishingOrderForm({ initialData, onChange, onSubmit, is
     }, []);
     const selected = finishings.find(row => String(row.finishing_id) === String(initialData.finishing_id));
     const unit = String(selected?.unit_type || '').toUpperCase();
-    const area = ['M2', 'CM2'].includes(unit);
-    const length = area || ['M', 'CM'].includes(unit);
+    const length = Boolean(initialData.order_item_id) && initialData.finishing_measure === 'length'
+        && String(initialData.finishing_id) === String(initialData.original_finishing_id || initialData.finishing_id);
+    const area = !length && ['M', 'M2', 'CM', 'CM2'].includes(unit);
+    const centimeters = ['CM', 'CM2'].includes(unit);
     const update = patch => {
         const value = { ...initialData, ...patch, item_type: 'finishing', product_id: '', category_id: '' };
         const finishing = finishings.find(row => String(row.finishing_id) === String(value.finishing_id));
@@ -38,16 +40,16 @@ export default function FinishingOrderForm({ initialData, onChange, onSubmit, is
             <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', fontSize: 14 }}>Ukuran (P x L)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ flex: 1 }}>
-                    <Input name="panjang" placeholder={`Panjang (${unit === 'CM2' ? 'cm' : 'm'})`} type="number" min="0.0001" step="any" required
+                    <Input name="panjang" placeholder={`Panjang (${centimeters ? 'cm' : 'm'})`} type="number" min="0.0001" step="any" required
                         value={initialData.panjang || ''} onChange={event => update({ panjang: event.target.value })} disabled={isSubmitting} />
                 </div>
                 <span style={{ fontWeight: 'bold', color: 'var(--text)', marginBottom: 12 }}>X</span>
                 <div style={{ flex: 1 }}>
-                    <Input name="lebar" placeholder={`Lebar (${unit === 'CM2' ? 'cm' : 'm'})`} type="number" min="0.0001" step="any" required
+                    <Input name="lebar" placeholder={`Lebar (${centimeters ? 'cm' : 'm'})`} type="number" min="0.0001" step="any" required
                         value={initialData.lebar || ''} onChange={event => update({ lebar: event.target.value })} disabled={isSubmitting} />
                 </div>
             </div>
-        </div> : length && <Input label={`Panjang (${unit === 'CM' ? 'cm' : 'm'})`} name="panjang"
+        </div> : length && <Input label={`Panjang (${centimeters ? 'cm' : 'm'})`} name="panjang"
             type="number" min="0.0001" step="any" required value={initialData.panjang || ''} onChange={event => update({ panjang: event.target.value })} disabled={isSubmitting} />}
         <Input label="Quantity" name="qty" type="number" min="1" max="1000000" step="1" required
             value={initialData.qty || ''} onChange={event => update({ qty: event.target.value })} disabled={isSubmitting} />

@@ -23,7 +23,7 @@ import {
 
 const numberFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 8 });
 const tracksStock = row => row.track_stock == null ? row.unit_type !== '~' : Number(row.track_stock) === 1;
-const unitLabels = { PCS: "pcs", "~": "pcs", M2: "m\u00b2", CM2: "cm\u00b2", MENIT: "menit", KG: "kg" };
+const unitLabels = { PCS: "pcs", "~": "pcs", M: "m\u00b2", M2: "m\u00b2", CM: "cm\u00b2", CM2: "cm\u00b2", MENIT: "menit", KG: "kg" };
 const detailTitles = { variants: "Varian Produk", tiers: "Harga Bertingkat", packages: "Harga Paket", laser: "Konversi Print Laser" };
 
 function PriceTiers({ rules = [], unit }) {
