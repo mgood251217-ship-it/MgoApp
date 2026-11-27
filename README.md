@@ -45,11 +45,11 @@ npm ci
 npm run dist:deb
 ```
 
-Siapkan `.env.production` seperti petunjuk konfigurasi server di atas. Paket tersedia di `src-tauri/target/release/bundle/deb/`; pasang dengan `sudo apt install ./MgoDesktop_2.1.2_amd64.deb` (sesuaikan nama file hasil build). Persyaratan lengkap mengikuti [panduan Tauri Linux](https://v2.tauri.app/start/prerequisites/).
+Siapkan `.env.production` seperti petunjuk konfigurasi server di atas. Paket tersedia di `src-tauri/target/release/bundle/deb/`; pasang dengan `sudo apt install ./MgoDesktop_2.1.4_amd64.deb` (sesuaikan nama file hasil build). Persyaratan lengkap mengikuti [panduan Tauri Linux](https://v2.tauri.app/start/prerequisites/).
 
 Dari Windows, gunakan GitHub **Actions > Build Linux DEB > Run workflow**. Isi repository variable `VITE_SERVER_URL` sekali dengan URL produksi. Unduh paket dari artifact `MgoDesktop-linux-amd64`; workflow ini tidak memublikasikan release.
 
-Untuk update, unggah `.deb` hasil build ke release, lalu isi `version_linux`, `min_required_version_linux`, dan `download_url_linux` di `MgoAll/admin/controllers/version.json`. Contoh nama aset: `MgoDesktop_2.1.2_amd64.deb`. Biarkan kolom Linux `null` sebelum paket tersedia. Tautan Windows dan Android tetap memakai kolom yang sudah ada.
+Untuk update, unggah `.deb` hasil build ke release, lalu isi `version_linux`, `min_required_version_linux`, dan `download_url_linux` di `MgoAll/admin/controllers/version.json`. Contoh nama aset: `MgoDesktop_2.1.4_amd64.deb`. Biarkan kolom Linux `null` sebelum paket tersedia. Tautan Windows dan Android tetap memakai kolom yang sudah ada.
 
 Saat update, MGO mengunduh `.deb`, meminta sandi administrator melalui polkit, lalu menunggu pemasangan selesai. Jika dibatalkan atau gagal, aplikasi tetap terbuka untuk mencoba lagi. Setelah berhasil, buka kembali MGO.
 
