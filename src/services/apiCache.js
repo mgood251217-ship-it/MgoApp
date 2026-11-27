@@ -1,17 +1,22 @@
 import api, { PRODUCT_UNIT_SCHEMA } from "../api/axios";
-import { getTodayDate } from "./helpers";
+import { getTodayDate, getSessionIdentity } from "./helpers";
 
 const pendingRequests = new Map();
 const requestVersions = new Map();
 let cacheGeneration = 0;
 
+const readCacheSession = () => {
+    try { return JSON.parse(localStorage.getItem("mgo_session") || "null"); }
+    catch { return null; }
+};
+
+const getCacheOwner = (session = readCacheSession()) => JSON.stringify([
+    api.defaults?.baseURL || "", getSessionIdentity(session)
+]);
+
 const getRequestScope = () => {
-    try {
-        const session = JSON.parse(localStorage.getItem("mgo_session") || "null");
-        return JSON.stringify([session?.token, session?.user?.user_id, session?.store?.store_id]);
-    } catch {
-        return "";
-    }
+    const session = readCacheSession();
+    return JSON.stringify([getCacheOwner(session), session?.token || ""]);
 };
 
 const getSharedResponse = (url, config = {}) => {
@@ -40,19 +45,39 @@ const memoryFallback = new Map();
 const localOrderListeners = new Set();
 const localPaymentListeners = new Set();
 const cacheEntryLimits = { finishingsByCategory: 100, paginatedProducts: 100, orderProductSearch: 50, orders: 50, transactionsDetail: 50 };
-let storageScope = getRequestScope();
+let storageScope = null;
+let persistentStorageReady = false;
+
+const clearStoredCache = () => {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("mgo_cache_")) keys.push(key);
+    }
+    keys.forEach(key => localStorage.removeItem(key));
+    return keys.length;
+};
 
 const syncStorageScope = () => {
     const scope = getRequestScope();
     if (scope === storageScope) return;
     storageScope = scope;
     resetRuntimeCache();
+    persistentStorageReady = false;
+    try {
+        const owner = getCacheOwner();
+        if (localStorage.getItem("mgo_cache_owner") !== owner) {
+            clearStoredCache();
+            localStorage.setItem("mgo_cache_owner", owner);
+        }
+        persistentStorageReady = true;
+    } catch { /* Tanpa penanda pemilik, gunakan cache memori sesi ini saja. */ }
 };
 
 const getStorage = (key, defaultVal) => {
     syncStorageScope();
     try {
-        const value = memoryFallback.get(key) ?? localStorage.getItem(`mgo_cache_${key}`);
+        const value = memoryFallback.get(key) ?? (persistentStorageReady ? localStorage.getItem(`mgo_cache_${key}`) : null);
         return value ? JSON.parse(value) : defaultVal;
     } catch {
         return defaultVal;
@@ -72,6 +97,7 @@ const setStorage = (key, value) => {
     }
     const serialized = JSON.stringify(value);
     try {
+        if (!persistentStorageReady) throw new Error("Penyimpanan cache sesi tidak tersedia.");
         localStorage.setItem(`mgo_cache_${key}`, serialized);
         memoryFallback.delete(key);
     } catch {
@@ -170,28 +196,49 @@ const getServerDataset = async () => {
     return datasetPromise;
 };
 
-export const validateStoreCache = (newStoreName) => {
-    const oldStoreName = localStorage.getItem("last_store_name");
-
-    if (oldStoreName && oldStoreName !== newStoreName) {
-        const recaptchaBackup = localStorage.getItem("_grecaptcha");
-
-        resetRuntimeCache();
-        localStorage.clear();
-
-        if (recaptchaBackup !== null) {
-            localStorage.setItem("_grecaptcha", recaptchaBackup);
-        }
-
-        console.log(`Cache dibersihkan karena pindah dari toko "${oldStoreName}" ke "${newStoreName}"`);
-    }
-
-    if (newStoreName) {
-        localStorage.setItem("last_store_name", newStoreName);
+// Setiap pembacaan, penulisan, dan callback tetap terikat pada sesi pemanggil.
+const withCacheScope = (load) => async (...args) => {
+    syncStorageScope();
+    const scope = getRequestScope();
+    const generation = cacheGeneration;
+    const isActive = () => scope === getRequestScope() && generation === cacheGeneration;
+    const assertActive = () => {
+        if (isActive()) return;
+        const error = new Error("Sesi cache berubah.");
+        error.name = "AbortError";
+        throw error;
+    };
+    const guard = operation => (...values) => {
+        assertActive();
+        return operation(...values);
+    };
+    const guardAsync = operation => async (...values) => {
+        assertActive();
+        const value = await operation(...values);
+        assertActive();
+        return value;
+    };
+    const cache = {
+        getStorage: guard(getStorage),
+        setStorage: guard(setStorage),
+        getCleanedDailyMap: guard(getCleanedDailyMap),
+        getSharedResponse: guardAsync(getSharedResponse),
+        getServerDataset: guardAsync(getServerDataset)
+    };
+    const scopedArgs = args.map(value => typeof value === "function"
+        ? (...values) => { if (isActive()) value(...values); } : value);
+    try {
+        const result = await load(cache, ...scopedArgs);
+        assertActive();
+        return result;
+    } catch (error) {
+        if (error.name === "AbortError") return null;
+        throw error;
     }
 };
 
-export const getCachedStoreData = async (onUpdate) => {
+export const getCachedStoreData = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("storeData", null);
     const cachedTime = getStorage("storeData_time", 0);
 
@@ -215,14 +262,15 @@ export const getCachedStoreData = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-}
+});
 
-export const getCachedUsers = async (onUpdate) => {
+export const getCachedUsers = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("users", null);
     const cachedTime = getStorage("users_time", 0);
 
@@ -246,14 +294,14 @@ export const getCachedUsers = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedInitials = async (onUpdate) => {
+});
+export const getCachedInitials = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("initials", null);
     const cachedTime = getStorage("initials_time", 0);
 
@@ -277,14 +325,14 @@ export const getCachedInitials = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedMachines = async (onUpdate) => {
+});
+export const getCachedMachines = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("machines", null);
     const cachedTime = getStorage("machines_time", 0);
 
@@ -308,14 +356,14 @@ export const getCachedMachines = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedLocations = async (onUpdate) => {
+});
+export const getCachedLocations = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("locations", null);
     const cachedTime = getStorage("locations_time", 0);
 
@@ -339,14 +387,14 @@ export const getCachedLocations = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedStoreNames = async (onUpdate) => {
+});
+export const getCachedStoreNames = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("storeNames", null);
     const cachedTime = getStorage("storeNames_time", 0);
 
@@ -370,14 +418,14 @@ export const getCachedStoreNames = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedFailures = async (startDate, endDate, onUpdate) => {
+});
+export const getCachedFailures = withCacheScope(async (cache, startDate, endDate, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}`;
     const failuresMap = getCleanedDailyMap("failures");
     const cachedItem = failuresMap[cacheKey];
@@ -403,14 +451,14 @@ export const getCachedFailures = async (startDate, endDate, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedCategories = async (onUpdate) => {
+});
+export const getCachedCategories = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("categories", null);
     const cachedTime = getStorage("categories_time", 0);
 
@@ -434,14 +482,14 @@ export const getCachedCategories = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedProductsByCategory = async (categoryId, onUpdate) => {
+});
+export const getCachedProductsByCategory = withCacheScope(async (cache, categoryId, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     if (!categoryId) return [];
 
     const productsMap = getStorage("productsByCategory", {});
@@ -468,14 +516,14 @@ export const getCachedProductsByCategory = async (categoryId, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedGlobalStocks = async (month, onUpdate) => {
+});
+export const getCachedGlobalStocks = withCacheScope(async (cache, month, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     if (!month) return {};
 
     const stocksMap = getStorage("globalStocksByMonth", {});
@@ -502,14 +550,14 @@ export const getCachedGlobalStocks = async (month, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || {};
-};
-
-export const getCachedFinishingsByCategory = async (categoryId, onUpdate, productId = 0, orderItemId = 0) => {
+});
+export const getCachedFinishingsByCategory = withCacheScope(async (cache, categoryId, onUpdate, productId = 0, orderItemId = 0) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     if (!categoryId) return [];
 
     const cacheKey = productId ? `product_${productId}_${orderItemId}` : categoryId;
@@ -537,14 +585,14 @@ export const getCachedFinishingsByCategory = async (categoryId, onUpdate, produc
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedProductFinishingPrices = async (categoryId, onUpdate, { throwOnError = false } = {}) => {
+});
+export const getCachedProductFinishingPrices = withCacheScope(async (cache, categoryId, onUpdate, { throwOnError = false } = {}) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     if (!categoryId) return [];
     const cacheKey = "productFinishingPricesByCategory";
     const stored = getStorage(cacheKey, {})[categoryId];
@@ -572,9 +620,9 @@ export const getCachedProductFinishingPrices = async (categoryId, onUpdate, { th
         if (throwOnError) throw error;
         return [];
     });
-};
-
-export const getCachedProductLaserConversions = async (categoryId, onUpdate, { throwOnError = false } = {}) => {
+});
+export const getCachedProductLaserConversions = withCacheScope(async (cache, categoryId, onUpdate, { throwOnError = false } = {}) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     if (!categoryId) return [];
     const key = "productLaserConversionsByCategory";
     const cached = getStorage(key, {})[categoryId];
@@ -598,9 +646,9 @@ export const getCachedProductLaserConversions = async (categoryId, onUpdate, { t
         if (throwOnError) throw error;
         return [];
     });
-};
-
-export const getCachedProductBundles = async (onUpdate, { throwOnError = false } = {}) => {
+});
+export const getCachedProductBundles = withCacheScope(async (cache, onUpdate, { throwOnError = false } = {}) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const key = 'productBundles';
     const cached = getStorage(key, null);
     const fetchLatest = async () => {
@@ -619,9 +667,9 @@ export const getCachedProductBundles = async (onUpdate, { throwOnError = false }
         if (throwOnError) throw error;
         return [];
     });
-};
-
-export const getCachedProductVariants = async (productId, onUpdate, { throwOnError = false } = {}) => {
+});
+export const getCachedProductVariants = withCacheScope(async (cache, productId, onUpdate, { throwOnError = false } = {}) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     if (!productId) return [];
     const key = 'productVariantsByProduct';
     const cached = getStorage(key, {})[productId];
@@ -642,9 +690,9 @@ export const getCachedProductVariants = async (productId, onUpdate, { throwOnErr
         if (throwOnError) throw error;
         return [];
     });
-};
-
-export const searchOrderProducts = async (search) => {
+});
+export const searchOrderProducts = withCacheScope(async (cache, search) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const query = search.trim().replace(/\s+/g, ' ').toLowerCase();
     if (query.length < 2) return [];
     const cached = getStorage('orderProductSearch', {})[query];
@@ -662,9 +710,9 @@ export const searchOrderProducts = async (search) => {
         if (cached) return cached.data;
         throw error;
     }
-};
-
-export const getCachedPaginatedProducts = async (page, limit, search, onUpdate, categoryId = 0) => {
+});
+export const getCachedPaginatedProducts = withCacheScope(async (cache, page, limit, search, onUpdate, categoryId = 0) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const category = Number(categoryId) || 0;
     const cacheKey = `${category}_${page}_${limit}_${search}`;
     const paginatedMap = getStorage("paginatedProducts", {});
@@ -695,14 +743,14 @@ export const getCachedPaginatedProducts = async (page, limit, search, onUpdate, 
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.result;
     }
 
     return (await fetchLatest()) || { data: [], total_pages: 1 };
-};
-
-export const getCachedFinishings = async (onUpdate) => {
+});
+export const getCachedFinishings = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("finishings", null);
     const cachedTime = getStorage("finishings_time", 0);
 
@@ -726,14 +774,14 @@ export const getCachedFinishings = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedOrdersAnalysis = async (onUpdate) => {
+});
+export const getCachedOrdersAnalysis = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("ordersAnalysis", null);
     const cachedTime = getStorage("ordersAnalysis_time", 0);
 
@@ -759,12 +807,12 @@ export const getCachedOrdersAnalysis = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || { chart_30: {}, chart_365: {}, summary: {} };
-}
+});
 
 export const subscribeLocalOrdersCache = listener => {
     localOrderListeners.add(listener);
@@ -832,7 +880,6 @@ export const getLocalOrdersForBackup = (date = getTodayDate()) => {
     }
     return [...latest.values()].sort((a, b) => Number(a.order_id) - Number(b.order_id));
 };
-
 export const subscribeLocalPaymentsCache = listener => {
     localPaymentListeners.add(listener);
     return () => localPaymentListeners.delete(listener);
@@ -919,7 +966,8 @@ export const getLocalPaymentsForBackup = (date = getTodayDate()) => {
     return payments.sort((a, b) => a.date.localeCompare(b.date) || Number(a.payment_id) - Number(b.payment_id));
 };
 
-export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {
+export const getCachedOrders = withCacheScope(async (cache, startDate, endDate, search, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}_${search}`;
     const ordersMap = getCleanedDailyMap("orders");
     const cachedItem = ordersMap[cacheKey];
@@ -949,14 +997,14 @@ export const getCachedOrders = async (startDate, endDate, search, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || {};
-};
-
-export const getCachedOrderDetail = async (orderId, onUpdate) => {
+});
+export const getCachedOrderDetail = withCacheScope(async (cache, orderId, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = String(orderId);
     const orderMap = getCleanedDailyMap("orderDetail");
     const cachedItem = orderMap[cacheKey];
@@ -992,14 +1040,14 @@ export const getCachedOrderDetail = async (orderId, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedTransactionsCapture = async (startDate, endDate, onUpdate) => {
+});
+export const getCachedTransactionsCapture = withCacheScope(async (cache, startDate, endDate, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}`;
     const transactionsMap = getCleanedDailyMap("transactionsCapture");
     const cachedItem = transactionsMap[cacheKey];
@@ -1029,14 +1077,14 @@ export const getCachedTransactionsCapture = async (startDate, endDate, onUpdate)
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || {};
-};
-
-export const getCachedTransactionsDetail = async (startDate, endDate, search, onUpdate) => {
+});
+export const getCachedTransactionsDetail = withCacheScope(async (cache, startDate, endDate, search, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}_${search}`;
     const transactionsDetailMap = getCleanedDailyMap("transactionsDetail");
     const cachedItem = transactionsDetailMap[cacheKey];
@@ -1066,14 +1114,14 @@ export const getCachedTransactionsDetail = async (startDate, endDate, search, on
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || {};
-};
-
-export const getCachedAllOrderDetail = async (startDate, endDate, onUpdate) => {
+});
+export const getCachedAllOrderDetail = withCacheScope(async (cache, startDate, endDate, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}`;
     const allOrderDetailMap = getCleanedDailyMap("allOrderDetail");
     const cachedItem = allOrderDetailMap[cacheKey];
@@ -1103,14 +1151,14 @@ export const getCachedAllOrderDetail = async (startDate, endDate, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || {};
-};
-
-export const getCachedPiutang = async (onUpdate) => {
+});
+export const getCachedPiutang = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("piutang", null);
     const cachedTime = getStorage("piutang_time", 0);
 
@@ -1136,14 +1184,14 @@ export const getCachedPiutang = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || { data: [], total: 0 };
-};
-
-export const getCachedReport = async (onUpdate) => {
+});
+export const getCachedReport = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedData = getStorage("report", null);
     const cachedTime = getStorage("report_time", 0);
 
@@ -1169,14 +1217,14 @@ export const getCachedReport = async (onUpdate) => {
     };
 
     if (cachedData) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedData;
     }
 
     return (await fetchLatest()) || { data: [], total: 0 };
-};
-
-export const getCachedProductUsed = async (startDate, endDate, onUpdate) => {
+});
+export const getCachedProductUsed = withCacheScope(async (cache, startDate, endDate, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}`;
     const productUsedMap = getCleanedDailyMap("productUsed");
     const cachedItem = productUsedMap[cacheKey];
@@ -1204,14 +1252,14 @@ export const getCachedProductUsed = async (startDate, endDate, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedOmsetItem = async (startDate, endDate, onUpdate) => {
+});
+export const getCachedOmsetItem = withCacheScope(async (cache, startDate, endDate, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}`;
     const omsetItemMap = getCleanedDailyMap("omsetItem");
     const cachedItem = omsetItemMap[cacheKey];
@@ -1239,14 +1287,14 @@ export const getCachedOmsetItem = async (startDate, endDate, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || [];
-};
-
-export const getCachedStatistics = async (startDate, endDate, onUpdate) => {
+});
+export const getCachedStatistics = withCacheScope(async (cache, startDate, endDate, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}`;
     const statisticMap = getCleanedDailyMap("statistic");
     const cachedItem = statisticMap[cacheKey];
@@ -1276,14 +1324,14 @@ export const getCachedStatistics = async (startDate, endDate, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || {};
-};
-
-export const getCachedExpenditureCategories = async (onUpdate) => {
+});
+export const getCachedExpenditureCategories = withCacheScope(async (cache, onUpdate) => {
+    const { getStorage, setStorage, getSharedResponse, getServerDataset } = cache;
     const cachedItem = getStorage("expenditureCategories", null);
     const hasCache = Array.isArray(cachedItem?.data);
 
@@ -1311,13 +1359,13 @@ export const getCachedExpenditureCategories = async (onUpdate) => {
     };
 
     if (hasCache) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
     return fetchLatest();
-};
-
-export const getCachedFinance = async (startDate, endDate, onUpdate) => {
+});
+export const getCachedFinance = withCacheScope(async (cache, startDate, endDate, onUpdate) => {
+    const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
     const cacheKey = `${startDate}_${endDate}`;
     const financeMap = getCleanedDailyMap("finance");
     const cachedItem = financeMap[cacheKey];
@@ -1348,13 +1396,12 @@ export const getCachedFinance = async (startDate, endDate, onUpdate) => {
     };
 
     if (cachedItem) {
-        fetchLatest();
+        fetchLatest().catch(() => null);
         return cachedItem.data;
     }
 
     return (await fetchLatest()) || {};
-};
-
+});
 export const clearAllOrderCaches = () => {
     invalidateRequests(["order_detail"]);
     setStorage("orderDetail", {});
@@ -1428,19 +1475,12 @@ export const clearCache = () => {
 
 export const clearAllCache = () => {
     try {
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith("mgo_cache_")) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach((key) => localStorage.removeItem(key));
-
-        return { success: true, cleared: keysToRemove.length };
-    } catch (e) {
+        return { success: true, cleared: clearStoredCache() };
+    } catch {
         return { success: false, cleared: 0 };
     } finally {
+        storageScope = null;
+        persistentStorageReady = false;
         resetRuntimeCache();
     }
 };

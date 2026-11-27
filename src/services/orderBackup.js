@@ -1,6 +1,7 @@
 import { getLocalOrdersForBackup, getLocalPaymentsForBackup } from "./apiCache";
 import { tauriApi } from "../lib/tauriApi";
 import { authStore } from "./session";
+import { getSessionIdentity } from "./helpers";
 
 const pending = new Map();
 const states = new Map();
@@ -33,9 +34,7 @@ const writeBackup = async (session, date, records, type) => {
     const backup = backupTypes[type];
     const isCurrentSession = () => {
         const current = authStore.getUser();
-        return current?.token === session.token && current?.user?.user_id === session.user?.user_id
-            && current?.user?.username === session.user?.username
-            && current?.store?.name === session.store.name;
+        return getSessionIdentity(current) === getSessionIdentity(session) && current?.token === session.token;
     };
     if (!isCurrentSession()) return;
     if (!records.length) {

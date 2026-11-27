@@ -5,8 +5,9 @@ import Boot from "../pages/Boot/Boot";
 import MainLayout from "../layouts/MainLayout";
 import { useSession } from "../services/session";
 import { isDesktop } from "../services/platform";
-import { getLocalOrdersForBackup, subscribeLocalOrdersCache, getLocalPaymentsForBackup, subscribeLocalPaymentsCache, clearAllCache } from "../services/apiCache";
+import { getLocalOrdersForBackup, subscribeLocalOrdersCache, getLocalPaymentsForBackup, subscribeLocalPaymentsCache } from "../services/apiCache";
 import { authStore } from "../services/session";
+import { getSessionIdentity } from "../services/helpers";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { isTauri } from "@tauri-apps/api/core";
 import api from "../api/axios";
@@ -42,17 +43,15 @@ export default function AppRouter() {
                     if (!active) return;
                     setOpeningStore(true);
                     try {
+                        authStore.beginSessionChange();
                         const body = new FormData();
                         body.append("ticket", ticket);
                         const { data } = await api.post("/?action=desktop_login", body);
                         if (!data.success || !data.data?.user || !data.data?.store) throw new Error(data.message || "Sesi toko tidak valid.");
-                        clearAllCache();
-                        localStorage.setItem("last_store_name", data.data.store.name);
                         authStore.setSession(data.data);
                         setSessionVersion(version => version + 1);
                     } catch (error) {
                         // Respons terputus bisa terjadi setelah cookie server sudah berganti.
-                        clearAllCache();
                         authStore.logout();
                         await Swal.fire({ icon: "error", title: "Gagal membuka toko", text: error.response?.data?.message || error.message || "Klik Kelola kembali dari Center." });
                     } finally {
@@ -115,7 +114,7 @@ export default function AppRouter() {
     if (openingStore) return <Splash message="Membuka sesi toko..." />;
 
     if (authenticated) {
-        return <MainLayout key={sessionVersion} />;
+        return <MainLayout key={`${getSessionIdentity(session)}:${sessionVersion}`} />;
     }
 
     return (

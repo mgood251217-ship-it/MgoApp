@@ -1,3 +1,11 @@
+export const getSessionIdentity = (session) => {
+    if (!session?.user || !session?.store) return "";
+    const store = session.store.store_id || session.user.store_id
+        || JSON.stringify([session.store.name, session.store.address]);
+    const user = session.user.user_id || session.user.username;
+    return JSON.stringify([String(store), String(user || "")]);
+};
+
 export const usesTimeUnit = (product, category = product?.category) => {
     const unit = String(product?.unit_type || "").trim().toUpperCase();
     const name = String(product?.name || product?.display_name || "").trim().toUpperCase();
