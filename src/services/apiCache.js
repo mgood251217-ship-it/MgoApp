@@ -970,7 +970,10 @@ export const getLocalPaymentsForBackup = (date = getTodayDate()) => {
 
 export const getCachedOrders = withCacheScope(async (cache, startDate, endDate, search, onUpdate) => {
     const { setStorage, getSharedResponse, getServerDataset, getCleanedDailyMap } = cache;
-    const cacheKey = `${startDate}_${endDate}_${search}`;
+    const session = readCacheSession();
+    const productionSection = session?.user?.role === 'PRODUKSI'
+        ? session.user.production_sections?.[0] || 'OUTDOOR' : '';
+    const cacheKey = `${startDate}_${endDate}_${search}${productionSection ? `_production_${productionSection}_v1` : ''}`;
     const ordersMap = getCleanedDailyMap("orders");
     const cachedItem = ordersMap[cacheKey];
 
@@ -978,7 +981,7 @@ export const getCachedOrders = withCacheScope(async (cache, startDate, endDate, 
         const dataset = await getServerDataset();
         const orderTime = getOrderCacheVersion(dataset);
         const paymentTime = dataset.payments_updated_at || 0;
-        const serverTime = Math.max(orderTime, paymentTime);
+        const serverTime = Math.max(orderTime, paymentTime, productionSection ? dataset.users_updated_at || 0 : 0);
 
         if (!cachedItem || isCacheOutdated(cachedItem.updatedAt, serverTime)) {
             try {
