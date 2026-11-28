@@ -12,6 +12,7 @@ import { clearAllCache } from "../services/apiCache";
 import { useSession } from "../services/session";
 import { canBackupOrders, getOrderBackupState, getPaymentBackupState, subscribeOrderBackup } from "../services/orderBackup";
 import { tauriApi } from "../lib/tauriApi";
+import { isWindows } from "../services/platform";
 
 const PATH_FIELDS = [
     { key: "path_indoor", label: "Path Indoor" },
@@ -944,6 +945,18 @@ export default function Settings() {
                                 <h3 style={{ color: "var(--text)", margin: 0, fontSize: "18px" }}>Path Folder Produksi</h3>
                             </div>
                             
+                            {isWindows && (
+                                <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", color: "var(--text)", fontSize: 13, cursor: "pointer" }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.change_folder_icon_on_process === true}
+                                        onChange={(e) => handleInputChange("change_folder_icon_on_process", e.target.checked)}
+                                        style={{ width: 18, height: 18 }}
+                                    />
+                                    Ubah ikon folder secara default saat proses order
+                                </label>
+                            )}
+
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
                                 {PATH_FIELDS.map(({ key, label }) => (
                                     <div key={key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

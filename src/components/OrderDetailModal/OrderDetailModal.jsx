@@ -28,7 +28,8 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
     const [processOrderData, setProcessOrderData] = useState({
         order_id: "",
         status: "",
-        user_id: ""
+        user_id: "",
+        change_folder_icon: false
     });
 
     const [renamingPath, setRenamingPath] = useState(null);
@@ -77,18 +78,20 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
         setMaklunModalOpen(true);
     };
 
-    const handleOpenProcess = () => {
+    const handleOpenProcess = async () => {
+        const settings = isWindows ? await window.electron.getSettings().catch(() => ({})) : {};
         setProcessOrderData({
             order_id: viewOrderDetails?.order_id || "",
             status: "",
-            user_id: ""
+            user_id: "",
+            change_folder_icon: settings?.change_folder_icon_on_process === true
         });
         setProcessModalOpen(true);
     };
 
     const handleProcessSubmit = async (e) => {
         e.preventDefault();
-        if (processingOrder || checkingOrderFolders || !processOrderData.status || (processOrderData.status === "DIAMBIL" && !processOrderData.user_id)) return;
+        if (processingOrder || (processOrderData.change_folder_icon && checkingOrderFolders) || !processOrderData.status || (processOrderData.status === "DIAMBIL" && !processOrderData.user_id)) return;
         setProcessingOrder(true);
         try {
             const payload = new FormData();
@@ -106,7 +109,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
             if (!res.data?.success) throw new Error(res.data?.message || "Gagal memperbarui proses order.");
 
             const iconStatus = { SELESAI: "selesai", DIPROSES: "proses", DIAMBIL: "diambil", BATAL: "cancel" }[processOrderData.status];
-            const paths = [...new Map((isWindows ? folder.dedupedFolderEntries : [])
+            const paths = [...new Map((isWindows && processOrderData.change_folder_icon ? folder.dedupedFolderEntries : [])
                 .filter(({ info }) => info.status === "ada" && info.path)
                 .map(({ info }) => [info.path.toLowerCase(), info.path])).values()];
             const results = await Promise.allSettled(paths.map(async (folderPath) => {
@@ -120,6 +123,7 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                 type: failures.length ? "error" : "success",
                 message: failures.length
                     ? `Status order sudah tersimpan, tetapi ikon folder gagal diperbarui: ${failures.join("; ")}`
+                    : !processOrderData.change_folder_icon ? "Status order berhasil diperbarui."
                     : paths.length ? "Status order dan ikon folder berhasil diperbarui." : "Status order berhasil diperbarui. Tidak ada folder terdeteksi untuk diganti ikonnya."
             });
             setProcessModalOpen(false);
@@ -643,13 +647,26 @@ export default function OrderDetailModal({ open, onClose, viewOrderDetails, view
                         </div>
                     )}
 
+                    {isWindows && (
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", color: "var(--text)", cursor: "pointer" }}>
+                            <input
+                                type="checkbox"
+                                checked={processOrderData.change_folder_icon}
+                                onChange={(e) => setProcessOrderData(prev => ({ ...prev, change_folder_icon: e.target.checked }))}
+                                disabled={processingOrder}
+                                style={{ width: 18, height: 18 }}
+                            />
+                            Ubah ikon folder
+                        </label>
+                    )}
+
                     <Button
                         type="submit"
                         size="full-lg"
                         variant="primary"
                         icon={<Icon name="save" />}
                         loading={processingOrder}
-                        disabled={checkingOrderFolders || !processOrderData.status || (processOrderData.status === "DIAMBIL" && !processOrderData.user_id)}
+                        disabled={(processOrderData.change_folder_icon && checkingOrderFolders) || !processOrderData.status || (processOrderData.status === "DIAMBIL" && !processOrderData.user_id)}
                     >
                         Update Proses
                     </Button>
