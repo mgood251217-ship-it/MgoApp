@@ -50,6 +50,8 @@ function MapClickHandler({ onMapClick }) {
     return null;
 }
 
+const productionSections = ['OUTDOOR', 'INDOOR', 'DTF', 'SUBLIM', 'ENGRAVE'];
+
 export default function Store() {
     const { showAlert, alertElement } = usePageAlert();
     const [users, setUsers] = useState([]);
@@ -67,6 +69,8 @@ export default function Store() {
         password: "",
         initial: "",
         role: "ADMIN",
+        production_sections: ["OUTDOOR"],
+        production_sections_available: false,
         picture: null,
         old_picture: "",
     };
@@ -122,7 +126,8 @@ export default function Store() {
         if (name === "picture") {
             setUserFormData(prev => ({ ...prev, picture: files[0] }));
         } else {
-            setUserFormData(prev => ({ ...prev, [name]: value }));
+            setUserFormData(prev => ({ ...prev, [name]: value,
+                ...(name === 'role' && value === 'PRODUKSI' && !prev.production_sections.length ? { production_sections: ['OUTDOOR'] } : {}) }));
         }
     };
 
@@ -134,6 +139,8 @@ export default function Store() {
             password: "",
             initial: row.initial,
             role: row.role,
+            production_sections: Array.isArray(row.production_sections) && row.production_sections.length ? row.production_sections : ["OUTDOOR"],
+            production_sections_available: Array.isArray(row.production_sections),
             picture: null,
             old_picture: row.picture || "",
         });
@@ -154,6 +161,10 @@ export default function Store() {
             payload.append("username", userFormData.username);
             payload.append("initial", userFormData.initial);
             payload.append("role", userFormData.role);
+            if (userFormData.production_sections_available) {
+                payload.append("production_sections_present", "1");
+                if (userFormData.role === 'PRODUKSI') userFormData.production_sections.forEach(section => payload.append("production_sections[]", section));
+            }
 
             if (userFormData.password) {
                 payload.append("password", userFormData.password);
@@ -360,7 +371,7 @@ export default function Store() {
         },
         { key: "name", title: "Nama" },
         { key: "username", title: "Username" },
-        { key: "role", title: "Role" },
+        { key: "role", title: "Role", render: row => <>{row.role}{row.role === 'PRODUKSI' && <small style={{ display: 'block', color: 'var(--text-secondary)' }}>{Array.isArray(row.production_sections) && row.production_sections.length ? row.production_sections.join(', ') : 'OUTDOOR'}</small>}</> },
         { key: "initial", title: "Initial" }
     ], []);
 
@@ -589,6 +600,17 @@ export default function Store() {
                         onChange={handleUserInputChange} 
                         options={roleOptions} 
                     />
+                    {userFormData.role === 'PRODUKSI' && <fieldset style={{ border: 0, padding: 0, margin: '0 0 16px' }} disabled={!userFormData.production_sections_available || loadingUserForm}>
+                        <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Bagian Produksi</legend>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {productionSections.map(section => <label key={section} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={userFormData.production_sections.includes(section)} style={{ width: 18, height: 18 }}
+                                    onChange={event => setUserFormData(previous => ({ ...previous, production_sections: event.target.checked ? [...previous.production_sections, section] : previous.production_sections.filter(value => value !== section) }))} />
+                                <span>{section}</span>
+                            </label>)}
+                        </div>
+                        {!userFormData.production_sections_available && <small>Pengaturan bagian produksi belum tersedia.</small>}
+                    </fieldset>}
                     <input 
                         type="file" 
                         name="picture" 

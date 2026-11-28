@@ -278,7 +278,7 @@ export const getCachedUsers = withCacheScope(async (cache, onUpdate) => {
         const dataset = await getServerDataset();
         const serverTime = dataset.users_updated_at || 0;
 
-        if (!cachedData || isCacheOutdated(cachedTime, serverTime)) {
+        if (!Array.isArray(cachedData) || !cachedData.every(user => Object.hasOwn(user, "production_sections")) || isCacheOutdated(cachedTime, serverTime)) {
             try {
                 const res = await getSharedResponse("", { params: { action: "users" } });
                 const result = res.data?.data || [];
